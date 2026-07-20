@@ -20,8 +20,11 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'telefono',
         'email',
         'password',
+        'rol',
+        'sucursal_id',
     ];
 
     /**
@@ -45,5 +48,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Conecta cada usuario con su sucursal asignada.
+     * Sirve para mostrar la columna Sucursal y filtrar usuarios por sucursal activa.
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 }

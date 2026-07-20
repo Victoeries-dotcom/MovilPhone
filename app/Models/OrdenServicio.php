@@ -11,17 +11,26 @@ class OrdenServicio extends Model
     protected $fillable = [
         'numero_os',
         'cliente_id',
+        // Guarda el teléfono extra capturado en Nueva OS para avisos adicionales al cliente.
+        'cliente_telefono_extra',
         'sucursal_id',
         'tecnico_id',
         'estado',
         'marca',
         'modelo',
+        // Guarda el tipo de dispositivo capturado en Nueva OS y se muestra en el detalle de la orden.
+        'tipo_dispositivo',
         'imei',
         'problema_reportado',
         'problema_diagnosticado',
         'accesorios_entregados',
         'estado_fisico',
+        // Permite guardar el patrón, PIN o contraseña del dispositivo desde el formulario de órdenes.
+        'contrasena_dispositivo',
         'cobro_diagnostico',
+        // Guarda el anticipo recibido al crear la OS y se conecta con reportes/caja si luego se usa para cobros.
+        'anticipo',
+        'metodo_pago_anticipo',
         'presupuesto_total',
         'mano_obra',
         'fecha_entrega_estimada',
@@ -45,12 +54,12 @@ class OrdenServicio extends Model
 
     public function cliente()
     {
-       return $this->belongsTo(Cliente::class, 'cliente_id');
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function sucursal()
     {
-      return $this->belongsTo(Sucursal::class, 'sucursal_id');
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
     }
 
     public function tecnico()

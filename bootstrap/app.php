@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\ProtectDemoMode;
+use App\Http\Middleware\RoleMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,7 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        /*
+         * Registra permisos y proteccion de demostracion para todas las rutas web.
+         * Se conecta con users.rol, configuraciones.modo_demo y los grupos definidos en routes/web.php.
+         */
+        $middleware->alias([
+            'role' => RoleMiddleware::class,
+        ]);
+        $middleware->web(append: [ProtectDemoMode::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

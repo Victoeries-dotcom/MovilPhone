@@ -51,9 +51,51 @@
         user-select: none;
     }
 
-    /* Los campos de acceso solo aparecen para el rol Usuario y se conectan con UsuarioController::update. */
-    .usuario-password-field { display: none; }
-    .usuario-password-field.visible { display: block; }
+    /* La sección confirma que existe una credencial sin intentar recuperar el hash irreversible de Laravel. */
+    .usuario-password-section {
+        display: none;
+        grid-column: 1 / -1;
+        padding: 16px;
+        border: 1px solid #dbe3ef;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .usuario-password-section.visible { display: block; }
+
+    .usuario-password-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        margin-top: 6px;
+        padding: 0 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #334155;
+        font-weight: 700;
+    }
+
+    .usuario-password-status svg { width: 18px; height: 18px; color: #16a34a; }
+
+    .usuario-password-action { margin-top: 12px; }
+
+    /* El formulario de reemplazo permanece cerrado hasta pulsar Actualizar contraseña. */
+    .usuario-password-update {
+        display: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #dbe3ef;
+    }
+
+    .usuario-password-update.visible { display: grid; }
+
+    @media (max-width: 720px) {
+        .usuario-password-update { grid-template-columns: 1fr; }
+    }
 </style>
 
 <div class="page-header">
@@ -114,18 +156,36 @@
                 </ul>
             </div>
 
-            {{-- Contraseña opcional: por seguridad nunca se muestra la actual, solo se cambia si se escribe una nueva. --}}
-            <div class="form-group usuario-password-field">
-                <label>Nueva contraseña</label>
-                <input type="password" name="password" id="u_password" autocomplete="new-password" minlength="6"/>
-                <span class="usuario-edit-hint">Déjalo en blanco para conservar la contraseña actual.</span>
-            </div>
-            <div class="form-group usuario-password-field">
-                <label>Confirmar nueva contraseña</label>
-                <input type="password" name="password_confirmation" id="u_password_confirmation" autocomplete="new-password" minlength="6"/>
-                <label class="usuario-show-pass">
-                    <input type="checkbox" onclick="usuarioTogglePasswordVisibility()"> Mostrar contraseña
-                </label>
+            {{-- La contraseña actual no se puede recuperar; esta sección se conecta con el hash seguro de users.password. --}}
+            <div class="usuario-password-section" id="usuario-password-section">
+                <label>Contraseña actual</label>
+                <div class="usuario-password-status" role="status">
+                    <i data-lucide="shield-check" aria-hidden="true"></i>
+                    <span>Protegida y configurada</span>
+                </div>
+                <span class="usuario-edit-hint">Por seguridad, Laravel nunca muestra la contraseña guardada.</span>
+
+                <button type="button" class="btn usuario-password-action" id="usuario-password-update-toggle"
+                        onclick="usuarioTogglePasswordUpdate()">
+                    <i data-lucide="key-round" aria-hidden="true"></i>
+                    <span>Actualizar contraseña</span>
+                </button>
+
+                {{-- Al abrirse, estos campos reemplazan la credencial mediante UsuarioController::update. --}}
+                <div class="usuario-password-update" id="usuario-password-update">
+                    <div class="form-group">
+                        <label>Nueva contraseña</label>
+                        <input type="password" name="password" id="u_password" autocomplete="new-password" minlength="6"/>
+                        <span class="usuario-edit-hint">Mínimo 6 caracteres.</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar nueva contraseña</label>
+                        <input type="password" name="password_confirmation" id="u_password_confirmation" autocomplete="new-password" minlength="6"/>
+                        <label class="usuario-show-pass">
+                            <input type="checkbox" id="u_show_password" onclick="usuarioTogglePasswordVisibility()"> Mostrar contraseña
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -151,13 +211,55 @@
         const info = document.getElementById('usuario-rol-info');
         info.classList.toggle('visible', rol === 'usuario');
 
-        // Muestra las credenciales para Usuario y las exige al convertir un rol que antes no tenía acceso.
+        // Muestra el estado de la credencial únicamente para Usuario y obliga a definirla durante una conversión.
         const convirtiendoAUsuario = rol === 'usuario' && @json($usuario->rol !== 'usuario');
-        document.querySelectorAll('.usuario-password-field').forEach(function (campo) {
-            campo.classList.toggle('visible', rol === 'usuario');
-        });
-        document.getElementById('u_password').required = convirtiendoAUsuario;
-        document.getElementById('u_password_confirmation').required = convirtiendoAUsuario;
+        document.getElementById('usuario-password-section').classList.toggle('visible', rol === 'usuario');
+
+        if (convirtiendoAUsuario) {
+            usuarioSetPasswordUpdate(true);
+        } else if (rol !== 'usuario') {
+            usuarioSetPasswordUpdate(false);
+        }
+    }
+
+    /* Abre o cierra el reemplazo de contraseña y sincroniza los campos obligatorios con el controlador. */
+    function usuarioSetPasswordUpdate(open) {
+        const panel = document.getElementById('usuario-password-update');
+        const toggle = document.getElementById('usuario-password-update-toggle');
+        const password = document.getElementById('u_password');
+        const confirmation = document.getElementById('u_password_confirmation');
+
+        panel.classList.toggle('visible', open);
+        password.required = open;
+        confirmation.required = open;
+        // Reconstruye el contenido porque Lucide reemplaza el elemento <i> por un SVG al dibujarlo.
+        toggle.innerHTML = `<i data-lucide="${open ? 'x' : 'key-round'}" aria-hidden="true"></i><span>${open ? 'Cancelar actualización' : 'Actualizar contraseña'}</span>`;
+
+        if (!open) {
+            password.value = '';
+            confirmation.value = '';
+            password.type = 'password';
+            confirmation.type = 'password';
+            document.getElementById('u_show_password').checked = false;
+        }
+
+        window.lucide?.createIcons();
+    }
+
+    /* Controla el botón Actualizar y evita cancelar cuando el rol se está convirtiendo por primera vez. */
+    function usuarioTogglePasswordUpdate() {
+        const convirtiendoAUsuario = document.getElementById('u_rol').value === 'usuario'
+            && @json($usuario->rol !== 'usuario');
+        const panel = document.getElementById('usuario-password-update');
+
+        if (convirtiendoAUsuario && panel.classList.contains('visible')) {
+            document.getElementById('u_password').focus();
+            return;
+        }
+
+        const open = !panel.classList.contains('visible');
+        usuarioSetPasswordUpdate(open);
+        if (open) document.getElementById('u_password').focus();
     }
 
     /* Alterna visibilidad de los campos de nueva contraseña. */

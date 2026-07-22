@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
     });
 
     /* Inventario y categorias quedan protegidos para captura y administracion. */
-    Route::middleware('role:superusuario,capturista')->group(function () {
+    Route::middleware('role:superusuario,capturista,usuario')->group(function () {
         Route::resource('inventario', InventarioController::class);
         Route::resource('categorias', CategoriaController::class);
     });
@@ -78,8 +78,8 @@ Route::middleware('auth')->group(function () {
             ->parameters(['caja' => 'movimientoCaja']);
     });
 
-    /* Ventas se conecta solo con vendedores y superusuarios. */
-    Route::middleware('role:superusuario,vendedor')->group(function () {
+    /* Ventas se conecta solo con vendedores, superusuarios y el rol "usuario". */
+    Route::middleware('role:superusuario,vendedor,usuario')->group(function () {
         Route::resource('ventas', VentaController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
     });
 

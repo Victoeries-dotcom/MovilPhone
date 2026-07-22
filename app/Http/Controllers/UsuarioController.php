@@ -46,14 +46,19 @@ class UsuarioController extends Controller
             'email'    => 'required|email|unique:users,email',
             'rol'      => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
             'sucursal_id' => 'required|exists:sucursales,id',
+            // Solo el rol "usuario" tiene login real, por eso la contraseña se exige nada más en ese caso.
+            'password' => 'required_if:rol,usuario|nullable|string|min:6|confirmed',
         ]);
 
         $usuario = User::create([
             'name'     => $request->name,
             'telefono' => $request->telefono,
             'email'    => $request->email,
-            // Laravel exige guardar password en users; se genera automático para no pedirlo en pantalla.
-            'password' => Hash::make(Str::random(32)),
+            // Si el rol es "usuario" se guarda la contraseña que definió el admin en el wizard.
+            // Para los demás roles (sin acceso al sistema) se genera una aleatoria como antes.
+            'password' => $request->rol === 'usuario'
+                ? Hash::make($request->password)
+                : Hash::make(Str::random(32)),
             'rol'      => $request->rol,
             'sucursal_id' => $request->sucursal_id,
         ]);
@@ -74,21 +79,35 @@ class UsuarioController extends Controller
 
     public function update(Request $request, User $usuario)
     {
+        // Al convertir otro rol en Usuario exige una contraseña inicial; se conecta con el acceso de inicio de sesión.
+        $reglaPassword = $request->rol === 'usuario' && $usuario->rol !== 'usuario'
+            ? 'required|string|min:6|confirmed'
+            : 'nullable|string|min:6|confirmed';
+
         $request->validate([
             'name'     => 'required|string',
             'telefono' => 'nullable|string|max:20',
             'email'    => 'required|email|unique:users,email,'.$usuario->id,
             'rol'      => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
             'sucursal_id' => 'required|exists:sucursales,id',
+            // Para un Usuario existente es opcional; si queda en blanco conserva su contraseña actual.
+            'password' => $reglaPassword,
         ]);
 
-        $usuario->update([
+        $data = [
             'name'     => $request->name,
             'telefono' => $request->telefono,
             'email'    => $request->email,
             'rol'      => $request->rol,
             'sucursal_id' => $request->sucursal_id,
-        ]);
+        ];
+
+        // Solo se toca el password si el admin escribió una nueva; si no, se deja la que ya tenía.
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $usuario->update($data);
 
         AdminActivityLogger::registrar('USUARIOS', 'EDITAR', 'Usuario '.$usuario->name.' actualizado.', $usuario->sucursal_id, $usuario);
 

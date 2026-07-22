@@ -250,8 +250,17 @@
             <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->is('clientes*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="contact"></i></span> Clientes
             </a>
+            <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->is('inventario*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="package-open"></i></span> Inventario
+            </a>
             <a href="{{ route('caja.index') }}" class="nav-link {{ request()->is('caja*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="wallet-cards"></i></span> Caja
+            </a>
+            <a href="{{ route('categorias.index') }}" class="nav-link {{ request()->is('categorias*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="tags"></i></span> Categorías
+            </a>
+            <a href="{{ route('ventas.index') }}" class="nav-link {{ request()->is('ventas*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="shopping-cart"></i></span> Ventas
             </a>
         @endif
     @endauth

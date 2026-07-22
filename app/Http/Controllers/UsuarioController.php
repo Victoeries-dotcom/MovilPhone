@@ -40,6 +40,11 @@ class UsuarioController extends Controller
 
     public function store(Request $request)
     {
+        // Normaliza el correo antes de validarlo para conectarlo de forma consistente con el login.
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->email)),
+        ]);
+
         $request->validate([
             'name'     => 'required|string',
             'telefono' => 'nullable|string|max:20',
@@ -79,6 +84,11 @@ class UsuarioController extends Controller
 
     public function update(Request $request, User $usuario)
     {
+        // Elimina espacios accidentales del correo y usa la misma forma que LoginRequest.
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->email)),
+        ]);
+
         // Al convertir otro rol en Usuario exige una contraseña inicial; se conecta con el acceso de inicio de sesión.
         $reglaPassword = $request->rol === 'usuario' && $usuario->rol !== 'usuario'
             ? 'required|string|min:6|confirmed'
@@ -103,7 +113,8 @@ class UsuarioController extends Controller
         ];
 
         // Solo se toca el password si el admin escribió una nueva; si no, se deja la que ya tenía.
-        if ($request->filled('password')) {
+        $passwordActualizada = $request->filled('password');
+        if ($passwordActualizada) {
             $data['password'] = Hash::make($request->password);
         }
 
@@ -111,7 +122,12 @@ class UsuarioController extends Controller
 
         AdminActivityLogger::registrar('USUARIOS', 'EDITAR', 'Usuario '.$usuario->name.' actualizado.', $usuario->sucursal_id, $usuario);
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
+        // Confirma de forma explícita si también se reemplazó la credencial usada por el login.
+        $mensaje = $passwordActualizada
+            ? 'Usuario y contraseña actualizados correctamente.'
+            : 'Usuario actualizado correctamente.';
+
+        return redirect()->route('usuarios.index')->with('success', $mensaje);
     }
 
     public function destroy(User $usuario)

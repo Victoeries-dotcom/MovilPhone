@@ -13,6 +13,17 @@ use Illuminate\Validation\ValidationException;
 class LoginRequest extends FormRequest
 {
     /**
+     * Normaliza el correo antes de autenticarlo.
+     * Se conecta con users.email y evita rechazos por espacios o mayúsculas accidentales.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => Str::lower(trim((string) $this->email)),
+        ]);
+    }
+
+    /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool

@@ -144,6 +144,14 @@
         <i data-lucide="search" aria-hidden="true"></i>
         <span>Buscar</span>
     </button>
+
+    @if(request()->hasAny(['buscar', 'bajo_stock']))
+        {{-- Restablece búsqueda y stock sin perder la categoría activa, igual que el módulo del archivo externo. --}}
+        <a href="{{ route('inventario.index', request()->only('categoria')) }}" class="btn inventory-clear-button">
+            <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+            <span>Limpiar</span>
+        </a>
+    @endif
 </form>
 
 {{-- Tabla principal: muestra los productos filtrados y conecta cada acción con las rutas de Inventario. --}}
@@ -229,6 +237,7 @@
                                 <i data-lucide="package-open" aria-hidden="true"></i>
                                 <strong>No hay productos para mostrar</strong>
                                 <span>Ajusta los filtros o agrega el primer producto de esta sucursal.</span>
+                                <a href="{{ route('inventario.create') }}" class="btn btn-primary">Agregar producto</a>
                             </div>
                         </td>
                     </tr>

@@ -2044,6 +2044,16 @@ body .inventory-search-button {
 }
 body .inventory-search-button:hover { transform:translateY(-1px); background:#292929; }
 body .inventory-search-button svg { width:15px; height:15px; }
+body .inventory-clear-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:43px;
+    padding:0 14px;
+    white-space:nowrap;
+}
+body .inventory-clear-button svg { width:15px; height:15px; }
 
 /* Tabla propia de Inventario: conserva la lectura compacta de la referencia sin la barra genérica de otras tablas. */
 body .inventory-table-panel {
@@ -2174,6 +2184,7 @@ body .inventory-empty-state {
 body .inventory-empty-state svg { width:30px; height:30px; }
 body .inventory-empty-state strong { color:var(--ui-ink); }
 body .inventory-empty-state span { font-size:10px; }
+body .inventory-empty-state .btn { margin-top:5px; }
 
 /* Tema claro: fija los blancos y grises exactos de la referencia sin afectar el modo oscuro global. */
 html[data-ui-theme="light"] body .inventory-summary-card,

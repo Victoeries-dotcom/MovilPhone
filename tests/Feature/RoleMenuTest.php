@@ -81,6 +81,26 @@ class RoleMenuTest extends TestCase
     }
 
     /**
+     * Verifica que el panel sin sucursal muestre el mensaje centrado y su fondo de garza.
+     * Se conecta con DashboardController, home.blade.php y el recurso público dashboard-heron.jpg.
+     */
+    public function test_panel_sin_sucursal_muestra_la_orientacion_visual(): void
+    {
+        $superusuario = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => null,
+        ]);
+
+        $this
+            ->actingAs($superusuario)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('dashboard-branch-empty', false)
+            ->assertSee('Selecciona una sucursal')
+            ->assertSee('images/dashboard-heron.jpg', false);
+    }
+
+    /**
      * Verifica la seguridad del backend aunque alguien escriba directamente una URL administrativa.
      * Se conecta con RoleMiddleware y mantiene Reportes, Actividad y Configuración para Super Usuario.
      */

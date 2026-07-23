@@ -20,12 +20,21 @@
 </div>
 
 @if(!$sucursal)
-    {{-- Estado vacio: orienta al admin cuando todavia no existe una sucursal activa. --}}
-    <div class="ui-empty-state">
-        <span class="ui-empty-icon"><i data-lucide="store"></i></span>
-        <h2>Selecciona una sucursal</h2>
-        <p>Los indicadores apareceran cuando el sistema tenga una sucursal activa.</p>
-    </div>
+    {{-- Estado vacío: centra la orientación y usa la garza animada como fondo sin alterar la selección de sucursal. --}}
+    <section class="dashboard-branch-empty" aria-labelledby="dashboardBranchEmptyTitle">
+        {{-- La imagen se sirve desde public/images y su movimiento es solamente visual mediante CSS. --}}
+        <div class="dashboard-branch-empty-visual" aria-hidden="true">
+            <img src="{{ asset('images/dashboard-heron.jpg') }}" alt="">
+        </div>
+
+        {{-- El contenido permanece sobre la animación y guía al usuario hacia el selector existente del menú. --}}
+        <div class="dashboard-branch-empty-content">
+            <span class="dashboard-branch-empty-icon"><i data-lucide="store"></i></span>
+            <span class="dashboard-branch-empty-kicker">CONFIGURACIÓN INICIAL</span>
+            <h2 id="dashboardBranchEmptyTitle">Selecciona una sucursal</h2>
+            <p>Los indicadores aparecerán cuando el sistema tenga una sucursal activa.</p>
+        </div>
+    </section>
 @else
     {{-- Indicadores: comparan la actividad de hoy con ayer usando DashboardController. --}}
     <section class="dashboard-kpis" aria-label="Indicadores de hoy">

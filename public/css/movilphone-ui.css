@@ -849,6 +849,106 @@ body .dashboard-header h1 { margin:3px 0 4px; font-size:29px; }
 body .dashboard-header p { color:#93a0b8; }
 body .dashboard-eyebrow, body .dashboard-section-kicker { color:#8f7bf2; font-size:9px; font-weight:850; letter-spacing:.12em; }
 body .dashboard-actions { display:flex; gap:8px; }
+/*
+ * Estado sin sucursal: centra el mensaje del panel y presenta la garza generada.
+ * Se conecta con home.blade.php y solo aparece cuando DashboardController no entrega una sucursal activa.
+ */
+body .dashboard-branch-empty {
+    position:relative;
+    min-height:clamp(390px,calc(100vh - 285px),650px);
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    isolation:isolate;
+    border:1px solid var(--ui-border);
+    border-radius:8px;
+    background:#111a30;
+    box-shadow:var(--ui-shadow-sm);
+}
+body .dashboard-branch-empty::after {
+    content:"";
+    position:absolute;
+    z-index:-1;
+    inset:0;
+    background:
+        linear-gradient(180deg,rgba(17,26,48,.22),rgba(17,26,48,.72)),
+        linear-gradient(90deg,rgba(17,26,48,.5),transparent 38%,rgba(17,26,48,.36));
+    pointer-events:none;
+}
+body .dashboard-branch-empty-visual {
+    position:absolute;
+    z-index:-2;
+    inset:-4%;
+    overflow:hidden;
+}
+body .dashboard-branch-empty-visual::after {
+    content:"";
+    position:absolute;
+    right:-15%;
+    bottom:8%;
+    left:-15%;
+    height:30%;
+    background:linear-gradient(105deg,transparent 20%,rgba(255,255,255,.16) 48%,transparent 72%);
+    background-size:220% 100%;
+    mix-blend-mode:screen;
+    opacity:.48;
+    animation:dashboard-water-glint 8s ease-in-out infinite;
+}
+body .dashboard-branch-empty-visual img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center 58%;
+    filter:grayscale(.12) brightness(.58) contrast(.88);
+    opacity:.5;
+    transform:scale(1.04);
+    animation:dashboard-heron-drift 12s ease-in-out infinite alternate;
+    will-change:transform;
+}
+body .dashboard-branch-empty-content {
+    position:relative;
+    width:min(620px,calc(100% - 40px));
+    padding:28px 22px;
+    color:#f8fafc;
+    text-align:center;
+    text-shadow:0 2px 18px rgba(7,12,24,.72);
+}
+body .dashboard-branch-empty-icon {
+    display:inline-flex;
+    width:48px;
+    height:48px;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:14px;
+    border:1px solid rgba(255,255,255,.24);
+    border-radius:8px;
+    background:rgba(12,20,38,.44);
+    color:#fff;
+    box-shadow:0 12px 28px rgba(8,15,29,.18);
+    backdrop-filter:blur(10px);
+}
+body .dashboard-branch-empty-icon svg { width:22px; height:22px; }
+body .dashboard-branch-empty-kicker {
+    display:block;
+    margin-bottom:8px;
+    color:#86efac;
+    font-size:9px;
+    font-weight:850;
+    letter-spacing:.16em;
+}
+body .dashboard-branch-empty h2 {
+    margin:0;
+    color:#fff;
+    font-size:clamp(26px,3vw,40px);
+    letter-spacing:0;
+}
+body .dashboard-branch-empty p {
+    max-width:520px;
+    margin:9px auto 0;
+    color:#d9e2ee;
+    font-size:13px;
+    line-height:1.65;
+}
 body .dashboard-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
 body .dashboard-kpi, body .dashboard-section { border:1px solid var(--ui-border); border-radius:8px; background:#18213a; box-shadow:var(--ui-shadow-sm); }
 body .dashboard-kpi { min-height:145px; padding:18px; transition:transform var(--ui-ease), border-color var(--ui-ease); }
@@ -1062,6 +1162,36 @@ html[data-ui-theme="light"] body .quick-view-field strong { color:#17213d; }
 
 html[data-ui-theme="light"] body .dashboard-kpi,
 html[data-ui-theme="light"] body .dashboard-section { border-color:#dbe3ef; background:#fff; box-shadow:var(--ui-shadow-sm); }
+/*
+ * Modo claro: integra la garza con el lienzo blanco y conserva contraste suficiente en el mensaje centrado.
+ * Se conecta con el selector de tema de layout.blade.php mediante data-ui-theme="light".
+ */
+html[data-ui-theme="light"] body .dashboard-branch-empty {
+    border-color:#dbe3ef;
+    background:#eef2f5;
+}
+html[data-ui-theme="light"] body .dashboard-branch-empty::after {
+    background:
+        linear-gradient(180deg,rgba(244,247,249,.06),rgba(240,244,247,.32)),
+        linear-gradient(90deg,rgba(244,247,249,.22),transparent 40%,rgba(239,243,246,.16));
+}
+html[data-ui-theme="light"] body .dashboard-branch-empty-visual img {
+    filter:grayscale(.06) brightness(1.02) contrast(.93);
+    opacity:.72;
+}
+html[data-ui-theme="light"] body .dashboard-branch-empty-content {
+    color:#111827;
+    text-shadow:0 2px 18px rgba(255,255,255,.92);
+}
+html[data-ui-theme="light"] body .dashboard-branch-empty-icon {
+    border-color:rgba(15,23,42,.12);
+    background:rgba(255,255,255,.56);
+    color:#111827;
+    box-shadow:0 12px 28px rgba(15,23,42,.08);
+}
+html[data-ui-theme="light"] body .dashboard-branch-empty-kicker { color:#15803d; }
+html[data-ui-theme="light"] body .dashboard-branch-empty h2 { color:#111827; }
+html[data-ui-theme="light"] body .dashboard-branch-empty p { color:#475569; }
 html[data-ui-theme="light"] body .dashboard-header p,
 html[data-ui-theme="light"] body .dashboard-team { color:#64748b; }
 html[data-ui-theme="light"] body .dashboard-kpi-label { color:#64748b; }
@@ -1455,6 +1585,23 @@ html[data-ui-theme="light"] body .branch-table-row.is-selected td { background:#
 html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
 
 @keyframes ui-loading-dot { to { transform:translateY(-7px); opacity:.45; } }
+/* Animaciones ambientales: producen movimiento sereno sin modificar datos ni interacción del panel. */
+@keyframes dashboard-heron-drift {
+    from { transform:scale(1.04) translate3d(-.7%,.5%,0); }
+    to { transform:scale(1.085) translate3d(.7%,-.7%,0); }
+}
+@keyframes dashboard-water-glint {
+    0%,100% { background-position:125% 0; opacity:.18; }
+    50% { background-position:-25% 0; opacity:.5; }
+}
+
+/* Accesibilidad: respeta la preferencia del sistema y mantiene la composición sin movimiento. */
+@media (prefers-reduced-motion:reduce) {
+    body .dashboard-branch-empty-visual img,
+    body .dashboard-branch-empty-visual::after {
+        animation:none;
+    }
+}
 
 /* Respuesta: redistribuye buscador, paneles y herramientas sin superponer contenido. */
 @media (max-width:1180px) {
@@ -1483,6 +1630,16 @@ html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
     body .branch-focus-header .btn { width:100%; text-align:center; }
     body .dashboard-header { align-items:stretch; flex-direction:column; }
     body .dashboard-actions { display:grid; grid-template-columns:1fr 1fr; }
+    body .dashboard-branch-empty {
+        min-height:430px;
+    }
+    body .dashboard-branch-empty-visual img {
+        object-position:64% center;
+    }
+    body .dashboard-branch-empty-content {
+        width:calc(100% - 24px);
+        padding:24px 12px;
+    }
     body .dashboard-kpis { grid-template-columns:1fr; }
     body .dashboard-order-row { grid-template-columns:32px 1fr auto; }
     body .dashboard-order-tech { display:none; }

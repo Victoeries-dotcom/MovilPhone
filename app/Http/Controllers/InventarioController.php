@@ -29,6 +29,10 @@ class InventarioController extends Controller
         if ($request->bajo_stock) {
             $query->whereColumn('cantidad_disponible', '<=', 'stock_minimo');
         }
+        if ($request->filled('categoria')) {
+            // Filtra las piezas por la categoría seleccionada en la vista y conserva el límite de la sucursal activa.
+            $query->where('categoria', $request->string('categoria')->trim()->toString());
+        }
         if ($request->filled('buscar')) {
             $buscar = $request->buscar;
             $query->where(function ($q) use ($buscar) {
@@ -55,6 +59,10 @@ class InventarioController extends Controller
 
         $stats = [
             'total' => (clone $statsQuery)->count(),
+            // Suma solo existencias reales; las cantidades agotadas o negativas no reducen el indicador disponible.
+            'unidades' => (clone $statsQuery)
+                ->selectRaw('SUM(CASE WHEN cantidad_disponible > 0 THEN cantidad_disponible ELSE 0 END) as total')
+                ->value('total') ?? 0,
             'bajo' => (clone $statsQuery)
                 ->whereColumn('cantidad_disponible', '<=', 'stock_minimo')
                 ->count(),
@@ -64,7 +72,15 @@ class InventarioController extends Controller
                 ->value('total') ?? 0,
         ];
 
-        return view('inventario.index', compact('inventario', 'stats', 'sucursalActiva'));
+        // Alimenta las pestañas de categorías con valores existentes únicamente en la sucursal activa.
+        $categorias = (clone $statsQuery)
+            ->whereNotNull('categoria')
+            ->where('categoria', '<>', '')
+            ->distinct()
+            ->orderBy('categoria')
+            ->pluck('categoria');
+
+        return view('inventario.index', compact('inventario', 'stats', 'sucursalActiva', 'categorias'));
     }
 
     public function create()

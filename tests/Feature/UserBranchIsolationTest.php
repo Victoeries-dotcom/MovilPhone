@@ -48,6 +48,10 @@ class UserBranchIsolationTest extends TestCase
         ));
 
         Inventario::create($this->datosInventario('PIEZA SOLO BUCTZOTZ', $buctzotz->id));
+        Inventario::create(array_merge(
+            $this->datosInventario('PIEZA OTRA CATEGORIA BUCTZOTZ', $buctzotz->id),
+            ['categoria' => 'OTRA CATEGORIA']
+        ));
         Inventario::create($this->datosInventario('PIEZA SOLO IZAMAL', $izamal->id));
 
         MovimientoCaja::create($this->datosMovimiento('MOVIMIENTO SOLO BUCTZOTZ', $buctzotz->id, $usuario->id));
@@ -75,7 +79,19 @@ class UserBranchIsolationTest extends TestCase
 
         $this->actingAs($usuario)->withSession($sesion)->get(route('inventario.index'))
             ->assertOk()
+            // Comprueba que la nueva interfaz reciba los indicadores y controles conectados al inventario de la sede.
+            ->assertSee('Control de productos')
+            ->assertSee('Unidades en existencia')
+            ->assertSee('Categorías')
+            ->assertSee('inventory-filter-panel', false)
             ->assertSee('PIEZA SOLO BUCTZOTZ')
+            ->assertDontSee('PIEZA SOLO IZAMAL');
+
+        // Verifica que las pestañas de categoría filtren dentro de Buctzotz sin mostrar otras categorías ni sucursales.
+        $this->actingAs($usuario)->withSession($sesion)->get(route('inventario.index', ['categoria' => 'PRUEBA']))
+            ->assertOk()
+            ->assertSee('PIEZA SOLO BUCTZOTZ')
+            ->assertDontSee('PIEZA OTRA CATEGORIA BUCTZOTZ')
             ->assertDontSee('PIEZA SOLO IZAMAL');
 
         $this->actingAs($usuario)->withSession($sesion)->get(route('caja.index'))

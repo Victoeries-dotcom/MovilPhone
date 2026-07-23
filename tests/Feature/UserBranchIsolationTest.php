@@ -96,8 +96,65 @@ class UserBranchIsolationTest extends TestCase
 
         $this->actingAs($usuario)->withSession($sesion)->get(route('caja.index'))
             ->assertOk()
+            // Comprueba que la interfaz profesional mantenga filtros y tabla sin el alta manual solicitada.
+            ->assertSee('cash-filter-panel', false)
+            ->assertSee('cash-table-panel', false)
+            ->assertDontSee('Registrar movimiento')
             ->assertSee('MOVIMIENTO SOLO BUCTZOTZ')
             ->assertDontSee('MOVIMIENTO SOLO IZAMAL');
+    }
+
+    /**
+     * Verifica que el superusuario conserve Corte de caja sin mostrar Registrar movimiento.
+     * Se conecta con caja.index y con la autorización exclusiva definida en routes/web.php.
+     */
+    public function test_caja_muestra_solo_corte_al_superusuario(): void
+    {
+        $sucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
+        $superusuario = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => $sucursal->id,
+        ]);
+
+        $this
+            ->actingAs($superusuario)
+            ->withSession([
+                'sucursal_id' => $sucursal->id,
+                'sucursal_nombre' => $sucursal->nombre,
+            ])
+            ->get(route('caja.index'))
+            ->assertOk()
+            ->assertSee('Corte de caja')
+            ->assertSee(route('caja.corte'), false)
+            ->assertDontSee('Registrar movimiento');
+    }
+
+    /**
+     * Impide borrar desde Caja un cobro automático generado por una venta.
+     * Se conecta con MovimientoCajaController::destroy y protege la consistencia con Ventas.
+     */
+    public function test_caja_no_elimina_movimientos_ligados_a_ventas(): void
+    {
+        [$buctzotz, , $usuario] = $this->crearContextoDeSucursales();
+        $movimiento = MovimientoCaja::create(array_merge(
+            $this->datosMovimiento('VENTA PROTEGIDA', $buctzotz->id, $usuario->id),
+            ['categoria' => 'Venta de productos']
+        ));
+
+        $this
+            ->actingAs($usuario)
+            ->withSession([
+                'sucursal_id' => $buctzotz->id,
+                'sucursal_nombre' => $buctzotz->nombre,
+            ])
+            ->delete(route('caja.destroy', $movimiento))
+            ->assertRedirect(route('caja.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('movimientos_caja', [
+            'id' => $movimiento->id,
+            'categoria' => 'Venta de productos',
+        ]);
     }
 
     /**

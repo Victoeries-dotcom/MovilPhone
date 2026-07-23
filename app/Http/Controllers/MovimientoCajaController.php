@@ -241,7 +241,7 @@ class MovimientoCajaController extends Controller
     }
 
     /**
-     * Elimina únicamente movimientos manuales para proteger los cobros ligados a órdenes.
+     * Elimina únicamente movimientos manuales para proteger cobros de órdenes y ventas.
      * Se conecta con la doble confirmación de caja.index y con AdminActivityLogger.
      */
     public function destroy(MovimientoCaja $movimientoCaja)
@@ -250,9 +250,10 @@ class MovimientoCajaController extends Controller
         $sucursalIdActivo = $this->sucursalActivaId();
         abort_if(! $sucursalIdActivo || (int) $movimientoCaja->sucursal_id !== $sucursalIdActivo, 403);
 
-        if ($movimientoCaja->os_id) {
+        // Las operaciones automáticas se administran desde su módulo de origen para conservar inventario y totales.
+        if ($movimientoCaja->os_id || $movimientoCaja->categoria === 'Venta de productos') {
             return redirect()->route('caja.index')
-                ->with('error', 'Los movimientos ligados a una orden se administran desde la orden de servicio.');
+                ->with('error', 'Los movimientos ligados a una orden o venta se administran desde su módulo de origen.');
         }
 
         $descripcion = $movimientoCaja->categoria.' por $'.number_format($movimientoCaja->monto, 2);

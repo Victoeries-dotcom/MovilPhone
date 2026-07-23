@@ -66,7 +66,12 @@ class UserBranchIsolationTest extends TestCase
         $this->actingAs($usuario)->withSession($sesion)->get(route('ordenes.index'))
             ->assertOk()
             ->assertSee('BUC-PRUEBA-0001')
-            ->assertDontSee('IZA-PRUEBA-0001');
+            ->assertDontSee('IZA-PRUEBA-0001')
+            // Comprueba que la nueva cabecera operativa conecte solo con rutas autorizadas para Usuario.
+            ->assertSee('Vender productos')
+            ->assertSee(route('ventas.create'), false)
+            ->assertSee(route('ordenes.index', ['estado' => 'GARANTÍA']), false)
+            ->assertSee('orders-filter-panel', false);
 
         $this->actingAs($usuario)->withSession($sesion)->get(route('inventario.index'))
             ->assertOk()

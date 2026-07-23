@@ -1,192 +1,241 @@
 @extends('layout')
 
 @section('content')
-<div class="page-header">
-    <h1>Órdenes de Servicio</h1>
-    {{-- Acciones superiores: Caja es operativa y Garantía permanece conectada exclusivamente con Configuración administrativa. --}}
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:flex-end;">
-        @if(auth()->user()->rol === 'superusuario')
-            <a href="{{ route('configuracion.garantia') }}" class="btn">🛡️ Garantía</a>
-        @endif
-        <button type="button" class="btn btn-danger" onclick="abrirModalEgreso()">🔴 Egreso</button>
-        <button type="button" class="btn btn-success" onclick="abrirModalIngreso()">🟢 Ingreso</button>
-        <a href="{{ route('ordenes.create') }}" class="btn btn-primary">+ Nueva OS</a>
+{{-- Cabecera operativa: conecta accesos rápidos con Ventas, Caja y la creación de una nueva orden. --}}
+<div class="page-header orders-page-header">
+    <div>
+        <h1>Órdenes de Servicio</h1>
+        <p class="orders-page-subtitle">
+            Sucursal: <strong>{{ $sucursalActiva?->nombre ?? 'Sin seleccionar' }}</strong>
+        </p>
+    </div>
+    <div class="orders-page-actions">
+        <a href="{{ route('ventas.create') }}" class="btn orders-action-primary">
+            <i data-lucide="package-check" aria-hidden="true"></i>
+            <span>Vender productos</span>
+        </a>
+        {{-- Garantía filtra las órdenes de la sucursal activa sin abrir Configuración, que es exclusiva del Super Usuario. --}}
+        <a href="{{ route('ordenes.index', ['estado' => 'GARANTÍA']) }}" class="btn orders-action-neutral">
+            <i data-lucide="shield-check" aria-hidden="true"></i>
+            <span>Garantía</span>
+        </a>
+        <button type="button" class="btn btn-danger orders-action-outline" onclick="abrirModalEgreso()">
+            <i data-lucide="circle-minus" aria-hidden="true"></i>
+            <span>Egreso</span>
+        </button>
+        <button type="button" class="btn btn-success orders-action-outline" onclick="abrirModalIngreso()">
+            <i data-lucide="circle-plus" aria-hidden="true"></i>
+            <span>Ingreso</span>
+        </button>
+        <a href="{{ route('ordenes.create') }}" class="btn orders-action-primary">
+            <i data-lucide="plus" aria-hidden="true"></i>
+            <span>Nueva OS</span>
+        </a>
     </div>
 </div>
 
-{{-- Identifica la sucursal que controla el listado y se conecta con OrdenServicioController::index. --}}
-<div style="margin-bottom:1rem;">
-    <span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;">
-        Sucursal: {{ $sucursalActiva?->nombre ?? 'Sin seleccionar' }}
-    </span>
-</div>
-
-<div class="stats-grid">
-    <div class="stat-card">
+{{-- Indicadores: muestran los conteos calculados por OrdenServicioController::index para la sucursal seleccionada. --}}
+<section class="stats-grid orders-stats" aria-label="Resumen de estados">
+    <article class="stat-card orders-stat-card orders-stat-waiting">
         <div class="stat-label">En espera</div>
         <div class="stat-num blue">{{ $stats['recibidos'] }}</div>
-    </div>
-    <div class="stat-card">
+    </article>
+    <article class="stat-card orders-stat-card orders-stat-diagnostic">
         <div class="stat-label">Diagnóstico</div>
         <div class="stat-num amber">{{ $stats['diagnostico'] }}</div>
-    </div>
-    <div class="stat-card">
+    </article>
+    <article class="stat-card orders-stat-card orders-stat-repair">
         <div class="stat-label">Reparación</div>
         <div class="stat-num amber">{{ $stats['reparacion'] }}</div>
-    </div>
-    <div class="stat-card">
+    </article>
+    <article class="stat-card orders-stat-card orders-stat-ready">
         <div class="stat-label">Listo para recoger</div>
         <div class="stat-num green">{{ $stats['listos'] }}</div>
-    </div>
-    <div class="stat-card">
+    </article>
+    <article class="stat-card orders-stat-card orders-stat-delivered">
         <div class="stat-label">Entregado</div>
         <div class="stat-num green">{{ $stats['entregado'] }}</div>
-    </div>
-    <div class="stat-card">
+    </article>
+    <article class="stat-card orders-stat-card orders-stat-rejected">
         <div class="stat-label">No quedó / Rechazado</div>
         <div class="stat-num red">{{ $stats['rechazado'] }}</div>
-    </div>
-    <div class="stat-card">
+    </article>
+    <article class="stat-card orders-stat-card orders-stat-warranty">
         <div class="stat-label">Garantía</div>
-        <div class="stat-num" style="color:#9d174d;">{{ $stats['garantia'] }}</div>
-    </div>
-</div>
+        <div class="stat-num">{{ $stats['garantia'] }}</div>
+    </article>
+</section>
 
-{{-- Filtros de órdenes: se conectan con OrdenServicioController::index por medio de search y estado. --}}
-<form method="GET" style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;">
-    <input type="text" name="search" placeholder="Buscar por nombre o teléfono…" value="{{ request('search') }}" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:300px;"/>
-    <select name="estado" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
-        <option value="">Todos los estados</option>
-        @foreach([
-            'RECIBIDO' => 'En espera',
+{{-- Filtros: envían search y estado por GET a OrdenServicioController::index y conservan el aislamiento por sucursal. --}}
+<form method="GET" class="orders-filter-panel">
+    <label class="orders-filter-field orders-filter-search">
+        <span class="orders-filter-label"><i data-lucide="search" aria-hidden="true"></i> Buscar cliente</span>
+        <span class="orders-input-wrap">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <input type="search" name="search" placeholder="Nombre o teléfono..." value="{{ request('search') }}">
+        </span>
+    </label>
+    <label class="orders-filter-field">
+        <span class="orders-filter-label"><i data-lucide="list-filter" aria-hidden="true"></i> Estado de la orden</span>
+        <span class="orders-select-wrap">
+            <i data-lucide="list-filter" aria-hidden="true"></i>
+            <select name="estado">
+                <option value="">Todos los estados</option>
+                @foreach([
+                    'RECIBIDO' => 'En espera',
+                    'EN DIAGNÓSTICO' => 'Diagnóstico',
+                    'EN REPARACIÓN' => 'Reparación',
+                    'TERMINADO' => 'Listo para recoger',
+                    'NOTIFICADO' => 'Notificado',
+                    'ENTREGADO' => 'Entregado',
+                    'RECHAZADO' => 'No quedó / Rechazado',
+                    'GARANTÍA' => 'Garantía',
+                ] as $estado => $label)
+                    <option value="{{ $estado }}" {{ request('estado') === $estado ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
+            </select>
+        </span>
+    </label>
+    <div class="orders-filter-actions">
+        <button type="submit" class="btn orders-action-primary">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <span>Buscar</span>
+        </button>
+        @if(request('search') || request('estado'))
+            <a href="{{ route('ordenes.index') }}" class="btn" title="Quitar filtros">
+                <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                <span>Limpiar</span>
+            </a>
+        @endif
+    </div>
+</form>
+
+{{-- Listado: cada tarjeta conserva las acciones conectadas con detalle, sticker, entrega, estados, edición y eliminación. --}}
+<section class="orders-list" aria-label="Órdenes registradas">
+@forelse($ordenes as $orden)
+    @php
+        // Estos indicadores controlan el color y las acciones visibles de las órdenes cerradas.
+        $esEntregado = $orden->estado === 'ENTREGADO';
+        $esRechazado = $orden->estado === 'RECHAZADO';
+        $esGarantia = $orden->estado === 'GARANTÍA';
+        $esCerrada = $esEntregado || $esRechazado || $esGarantia;
+        $claseResultado = $esEntregado ? 'is-delivered' : ($esRechazado ? 'is-rejected' : ($esGarantia ? 'is-warranty' : ''));
+        $badgeClass = [
+            'RECIBIDO' => 'badge-recibido',
+            'EN DIAGNÓSTICO' => 'badge-diagnostico',
+            'ESPERANDO AUTORIZACIÓN' => 'badge-espera',
+            'AUTORIZADO' => 'badge-autorizado',
+            'RECHAZADO' => 'badge-rechazado',
+            'EN REPARACIÓN' => 'badge-reparacion',
+            'ESPERANDO REFACCIÓN' => 'badge-espera',
+            'TERMINADO' => 'badge-terminado',
+            'NOTIFICADO' => 'badge-terminado',
+            'ENTREGADO' => 'badge-entregado',
+            'GARANTÍA' => 'badge-garantia',
+        ][$orden->estado] ?? 'badge-recibido';
+        $badgeLabel = [
+            'RECIBIDO' => 'Recibido',
             'EN DIAGNÓSTICO' => 'Diagnóstico',
             'EN REPARACIÓN' => 'Reparación',
             'TERMINADO' => 'Listo para recoger',
             'NOTIFICADO' => 'Notificado',
             'ENTREGADO' => 'Entregado',
+            'RECHAZADO' => 'Rechazado',
+            'GARANTÍA' => 'En garantía',
+        ][$orden->estado] ?? $orden->estado;
+        // Las opciones usan los valores exactos almacenados en ordenes_servicio.estado.
+        $estadosRapidos = [
+            'EN DIAGNÓSTICO' => 'Diagnóstico',
+            'EN REPARACIÓN' => 'Reparación',
+            'TERMINADO' => 'Listo para recoger',
             'RECHAZADO' => 'No quedó / Rechazado',
             'GARANTÍA' => 'Garantía',
-        ] as $estado => $label)
-            <option value="{{ $estado }}" {{ request('estado') === $estado ? 'selected' : '' }}>{{ $label }}</option>
-        @endforeach
-    </select>
-    <button type="submit" class="btn btn-primary">Buscar</button>
-    @if(request('search') || request('estado'))
-        <a href="{{ route('ordenes.index') }}" class="btn">Limpiar</a>
-    @endif
-</form>
-
-@forelse($ordenes as $orden)
-@php
-    // Estos indicadores controlan el color y las acciones visibles de las órdenes cerradas.
-    $esEntregado = $orden->estado === 'ENTREGADO';
-    $esRechazado = $orden->estado === 'RECHAZADO';
-    $esGarantia = $orden->estado === 'GARANTÍA';
-    $esCerrada = $esEntregado || $esRechazado || $esGarantia;
-@endphp
-<div class="card" style="margin-bottom:1rem;position:relative;overflow:hidden;
-    {{ $esEntregado ? 'border:2px solid #16a34a;background:#f0fdf4;' : '' }}
-    {{ $esRechazado ? 'border:2px solid #dc2626;background:#fff5f5;' : '' }}
-    {{ $esGarantia ? 'border:2px solid #9d174d;background:#fdf4f8;' : '' }}">
-    @if($esCerrada)
-        {{-- La barra lateral permite identificar rápidamente el resultado final de la orden. --}}
-        <div style="position:absolute;inset:0 auto 0 0;width:6px;background:{{ $esEntregado ? '#16a34a' : ($esRechazado ? '#dc2626' : '#9d174d') }};"></div>
-    @endif
-    <div class="card-header" style="{{ $esCerrada ? 'padding-left:1rem;' : '' }}">
-        <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-                <strong>{{ $orden->numero_os }}</strong>
-                @php
-                    $badgeClass = [
-                        'RECIBIDO' => 'badge-recibido',
-                        'EN DIAGNÓSTICO' => 'badge-diagnostico',
-                        'ESPERANDO AUTORIZACIÓN' => 'badge-espera',
-                        'AUTORIZADO' => 'badge-autorizado',
-                        'RECHAZADO' => 'badge-rechazado',
-                        'EN REPARACIÓN' => 'badge-reparacion',
-                        'ESPERANDO REFACCIÓN' => 'badge-espera',
-                        'TERMINADO' => 'badge-terminado',
-                        'NOTIFICADO' => 'badge-terminado',
-                        'ENTREGADO' => 'badge-entregado',
-                        'GARANTÍA' => 'badge-garantia',
-                    ][$orden->estado] ?? 'badge-recibido';
-                @endphp
-                <span class="badge {{ $badgeClass }}">{{ $orden->estado }}</span>
-                @if($esEntregado)
-                    <span style="font-size:12px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:20px;border:1px solid #bbf7d0;">✅ Completado</span>
-                @elseif($esRechazado)
-                    <span style="font-size:12px;font-weight:700;color:#b91c1c;background:#fee2e2;padding:2px 8px;border-radius:20px;border:1px solid #fecaca;">❌ No quedó</span>
-                @elseif($esGarantia)
-                    <span style="font-size:12px;font-weight:700;color:#9d174d;background:#fce7f3;padding:2px 8px;border-radius:20px;border:1px solid #fbcfe8;">🛡️ En garantía</span>
-                @endif
-                <span style="font-size:11px;color:#888">{{ $orden->sucursal->nombre }}</span>
-            </div>
-            <div style="font-size:13px;color:#555">{{ $orden->cliente->nombre }} · {{ $orden->cliente->telefono_principal }}</div>
-            <div style="font-size:12px;color:#888;margin-top:2px">
-                {{ $orden->tipo_dispositivo ? $orden->tipo_dispositivo.' · ' : '' }}
-                {{ $orden->marca }} {{ $orden->modelo }}
-                {{ $orden->tecnico ? ' · Técnico: '.$orden->tecnico->name : '' }}
-            </div>
-            <div style="font-size:12px;color:#888;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0">{{ $orden->problema_reportado }}</div>
-            @if((float) $orden->anticipo > 0)
-                {{-- Muestra el dinero recibido y se conecta con ordenes_servicio.anticipo y Caja. --}}
-                <div style="font-size:12px;color:#15803d;font-weight:700;margin-top:6px;">
-                    💰 Anticipo: ${{ number_format($orden->anticipo, 2) }}
+        ];
+    @endphp
+    <article class="card order-service-card {{ $claseResultado }}">
+        <div class="order-service-content">
+            <div class="order-service-summary">
+                <div class="order-service-heading">
+                    <strong>{{ $orden->numero_os }}</strong>
+                    <span class="badge {{ $badgeClass }}">{{ $badgeLabel }}</span>
+                    @if($esEntregado)
+                        <span class="order-result-badge is-success"><i data-lucide="badge-check"></i> Completado</span>
+                    @elseif($esRechazado)
+                        <span class="order-result-badge is-danger"><i data-lucide="circle-x"></i> No quedó</span>
+                    @elseif($esGarantia)
+                        <span class="order-result-badge is-warranty"><i data-lucide="shield-check"></i> En garantía</span>
+                    @endif
                 </div>
-            @endif
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:flex-start;">
-            <a href="{{ route('ordenes.show', $orden) }}" class="btn">Ver detalle</a>
-            @if($orden->estado === 'RECIBIDO')
-                {{-- El sticker se imprime al recibir el equipo; después se conserva desde el detalle. --}}
-                <a href="{{ route('ordenes.sticker', $orden) }}" class="btn">🏷️ Sticker</a>
-            @endif
-            @if($orden->estado === 'TERMINADO')
-                {{-- Botón Entregar: abre el modal final y se conecta con la ruta ordenes.entregar. --}}
-                <button type="button" class="btn btn-success"
-                    onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ $orden->cobro_diagnostico ?? 0 }}, {{ $orden->tecnico_id ?? 'null' }})">
-                    📦 Entregar
-                </button>
-            @endif
-            {{-- Menú rápido de estados: se conecta con la ruta ordenes.avanzarEstado para actualizar esta OS desde la lista principal. --}}
-            @php
-                // Cada llave es el estado exacto guardado en ordenes_servicio.estado y cada texto es lo que verá el usuario.
-                $estadosRapidos = [
-                    'EN DIAGNÓSTICO' => '🔍 Diagnóstico',
-                    'EN REPARACIÓN' => '🔧 Reparación',
-                    'TERMINADO' => '✅ Listo para Recoger',
-                    'RECHAZADO' => '❌ No Quedó / Rechazado',
-                    'GARANTÍA' => '🛡️ Garantía',
-                ];
-            @endphp
-            @if(!$esCerrada)
-                {{-- Las órdenes cerradas dejan de mostrar cambios rápidos para evitar estados incoherentes. --}}
-                <form method="POST" action="{{ route('ordenes.avanzarEstado', $orden) }}">
-                    @csrf
-                    <select name="estado"
-                        onchange="manejarCambioEstadoOrden(this, {{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ (float) ($orden->anticipo ?? 0) }})"
-                        style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;cursor:pointer;">
-                        <option value="">📋 Cambiar estado</option>
-                        @foreach($estadosRapidos as $estadoRapido => $labelEstado)
-                            <option value="{{ $estadoRapido }}" {{ $orden->estado === $estadoRapido ? 'disabled' : '' }}>{{ $labelEstado }}</option>
-                        @endforeach
-                    </select>
+                <p class="order-service-client">
+                    {{ $orden->cliente->nombre ?? 'Sin cliente' }} · {{ $orden->cliente->telefono_principal ?? 'Sin teléfono' }}
+                </p>
+                <p class="order-service-device">
+                    {{ $orden->tipo_dispositivo ? $orden->tipo_dispositivo.' · ' : '' }}
+                    {{ trim(($orden->marca ?? '').' '.($orden->modelo ?? '')) }}
+                    {{ $orden->tecnico ? ' · Técnico: '.$orden->tecnico->name : '' }}
+                </p>
+                <p class="order-service-problem">{{ $orden->problema_reportado }}</p>
+                @if((float) $orden->anticipo > 0)
+                    {{-- El anticipo proviene de ordenes_servicio y se refleja también en movimientos_caja. --}}
+                    <p class="order-service-advance"><i data-lucide="circle-dollar-sign"></i> Anticipo: ${{ number_format($orden->anticipo, 2) }}</p>
+                @endif
+            </div>
+
+            <div class="order-service-actions">
+                <a href="{{ route('ordenes.show', $orden) }}" class="btn">
+                    <i data-lucide="eye" aria-hidden="true"></i><span>Ver detalle</span>
+                </a>
+                @if($orden->estado === 'RECIBIDO')
+                    {{-- El sticker se imprime al recibir el equipo y se conecta con ordenes.sticker. --}}
+                    <a href="{{ route('ordenes.sticker', $orden) }}" class="btn">
+                        <i data-lucide="tag" aria-hidden="true"></i><span>Sticker</span>
+                    </a>
+                @endif
+                @if($orden->estado === 'TERMINADO')
+                    {{-- Entregar abre el flujo que registra técnico, cobro final y movimiento de Caja. --}}
+                    <button type="button" class="btn btn-success"
+                        onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ $orden->cobro_diagnostico ?? 0 }}, {{ $orden->tecnico_id ?? 'null' }})">
+                        <i data-lucide="package-check" aria-hidden="true"></i><span>Entregar</span>
+                    </button>
+                @endif
+                @if(!$esCerrada)
+                    {{-- El selector se conecta con ordenes.avanzarEstado y abre el modal especial cuando se elige RECHAZADO. --}}
+                    <form method="POST" action="{{ route('ordenes.avanzarEstado', $orden) }}" class="order-status-form">
+                        @csrf
+                        <span class="orders-select-wrap order-status-select">
+                            <i data-lucide="clock-3" aria-hidden="true"></i>
+                            <select name="estado"
+                                aria-label="Cambiar estado de {{ $orden->numero_os }}"
+                                onchange="manejarCambioEstadoOrden(this, {{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ (float) ($orden->anticipo ?? 0) }})">
+                                <option value="">Cambiar estado</option>
+                                @foreach($estadosRapidos as $estadoRapido => $labelEstado)
+                                    <option value="{{ $estadoRapido }}" {{ $orden->estado === $estadoRapido ? 'disabled' : '' }}>{{ $labelEstado }}</option>
+                                @endforeach
+                            </select>
+                        </span>
+                    </form>
+                @endif
+                <a href="{{ route('ordenes.edit', $orden) }}" class="btn">
+                    <i data-lucide="pencil" aria-hidden="true"></i><span>Editar</span>
+                </a>
+                <form method="POST" action="{{ route('ordenes.destroy', $orden) }}"
+                    onsubmit="return confirmarEliminacionSistema(event, 'la orden de servicio', '{{ addslashes($orden->numero_os) }}');">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i data-lucide="trash-2" aria-hidden="true"></i><span>Eliminar</span>
+                    </button>
                 </form>
-            @endif
-            <a href="{{ route('ordenes.edit', $orden) }}" class="btn">Editar</a>
-            <form method="POST" action="{{ route('ordenes.destroy', $orden) }}"
-                onsubmit="return confirmarEliminacionSistema(event, 'la orden de servicio', '{{ addslashes($orden->numero_os) }}');">
-                @csrf @method('DELETE')
-                <button type="submit" class="btn btn-danger">Eliminar</button>
-            </form>
+            </div>
         </div>
-    </div>
-</div>
+    </article>
 @empty
-<div style="text-align:center;color:#888;padding:3rem;font-size:14px">
-    No hay órdenes registradas para {{ $sucursalActiva?->nombre ?? 'la sucursal seleccionada' }}.
-</div>
+    <div class="orders-empty-state">
+        <i data-lucide="clipboard-x" aria-hidden="true"></i>
+        <strong>No hay órdenes que coincidan</strong>
+        <span>No se encontraron registros para {{ $sucursalActiva?->nombre ?? 'la sucursal seleccionada' }}.</span>
+    </div>
 @endforelse
+</section>
 
 {{-- Modal de rechazo: solicita motivo y devolución antes de conectar con ordenes.rechazar. --}}
 <div id="modal-rechazar-orden" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1100;align-items:center;justify-content:center;padding:1rem;">

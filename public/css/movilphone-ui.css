@@ -1491,6 +1491,327 @@ html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
     body .ui-selected-count { width:100%; margin:0; }
 }
 
+/*
+ * Órdenes de Servicio: reproduce la vista operativa del proyecto Hector con una composición más limpia.
+ * Se conecta con resources/views/ordenes/index.blade.php; las clases solo presentan datos y no alteran rutas ni permisos.
+ */
+body .orders-page-header {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:24px;
+}
+body .orders-page-header > div:first-child { min-width:0; }
+body .orders-page-subtitle {
+    margin:.35rem 0 0;
+    color:var(--ui-muted);
+    font-size:12px;
+}
+body .orders-page-subtitle strong { color:var(--ui-ink); }
+body .orders-page-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+}
+body .orders-action-primary {
+    border-color:#080808 !important;
+    background:#080808 !important;
+    color:#fff !important;
+}
+body .orders-action-primary:hover {
+    border-color:#252525 !important;
+    background:#252525 !important;
+    color:#fff !important;
+}
+body .orders-action-neutral { background:var(--ui-surface) !important; }
+body .orders-action-outline { background:transparent; }
+
+/* Los siete indicadores conservan un ancho estable y muestran el color del estado sin desplazar el contenido. */
+body .orders-stats {
+    display:grid;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:1.5rem;
+}
+body .orders-stat-card {
+    min-width:0;
+    min-height:134px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:1.3rem 1.45rem;
+}
+body .orders-stat-card .stat-label {
+    min-height:30px;
+    letter-spacing:0;
+    line-height:1.35;
+}
+body .orders-stat-card .stat-num { margin-top:6px; }
+body .orders-stat-warranty .stat-num { color:#b0003a !important; }
+body .orders-stat-warranty::after { background:#b0003a !important; }
+
+/* El panel de filtros envuelve buscador y estado en controles etiquetados para facilitar el trabajo repetitivo. */
+body .orders-filter-panel {
+    display:grid;
+    grid-template-columns:minmax(280px,1fr) minmax(230px,280px) auto;
+    align-items:end;
+    gap:14px;
+    margin-bottom:1.6rem;
+    padding:1rem 1.15rem;
+    border:1px solid var(--ui-border);
+    border-radius:8px;
+    background:var(--ui-surface);
+    box-shadow:var(--ui-shadow-sm);
+}
+body .orders-filter-field {
+    display:flex;
+    min-width:0;
+    flex-direction:column;
+    gap:7px;
+}
+body .orders-filter-label {
+    display:flex;
+    align-items:center;
+    gap:7px;
+    color:var(--ui-muted);
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:0;
+    text-transform:uppercase;
+}
+body .orders-filter-label svg { width:13px; height:13px; }
+body .orders-input-wrap,
+body .orders-select-wrap {
+    position:relative;
+    display:flex;
+    align-items:center;
+    min-width:0;
+    height:46px;
+    border:1px solid var(--ui-border-strong);
+    border-radius:7px;
+    background:var(--ui-surface-soft);
+    transition:border-color var(--ui-ease), box-shadow var(--ui-ease), background var(--ui-ease);
+}
+body .orders-input-wrap:focus-within,
+body .orders-select-wrap:focus-within {
+    border-color:#16a34a;
+    box-shadow:0 0 0 3px rgba(22,163,74,.13);
+}
+body .orders-input-wrap > svg,
+body .orders-select-wrap > svg {
+    position:absolute;
+    left:14px;
+    width:16px;
+    height:16px;
+    color:var(--ui-muted);
+    pointer-events:none;
+    z-index:1;
+}
+body .orders-input-wrap input,
+body .orders-select-wrap select {
+    width:100%;
+    height:100%;
+    min-width:0;
+    padding:0 14px 0 42px !important;
+    border:0 !important;
+    border-radius:7px !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:var(--ui-ink) !important;
+}
+body .orders-select-wrap select { cursor:pointer; }
+body .orders-filter-actions {
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+body .orders-filter-actions .btn { min-height:46px; }
+
+/* Las tarjetas concentran datos a la izquierda y acciones a la derecha, igual que el flujo de taller de referencia. */
+body .orders-list { display:flex; flex-direction:column; gap:14px; }
+body .order-service-card {
+    position:relative;
+    overflow:hidden;
+    margin:0;
+    padding:0;
+    background:var(--ui-surface) !important;
+}
+body .order-service-card::before {
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:4px;
+    background:transparent;
+}
+body .order-service-card.is-delivered {
+    border-color:#22a861 !important;
+    background:rgba(16,185,129,.07) !important;
+}
+body .order-service-card.is-delivered::before { background:#22a861; }
+body .order-service-card.is-rejected {
+    border-color:#dc4555 !important;
+    background:rgba(239,68,68,.07) !important;
+}
+body .order-service-card.is-rejected::before { background:#dc4555; }
+body .order-service-card.is-warranty {
+    border-color:#b0003a !important;
+    background:rgba(176,0,58,.07) !important;
+}
+body .order-service-card.is-warranty::before { background:#b0003a; }
+body .order-service-content {
+    display:grid;
+    grid-template-columns:minmax(260px,1fr) auto;
+    align-items:start;
+    gap:24px;
+    min-height:142px;
+    padding:1.25rem 1.35rem 1.25rem 1.55rem;
+}
+body .order-service-summary { min-width:0; max-width:680px; }
+body .order-service-heading {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+}
+body .order-service-heading > strong {
+    color:var(--ui-ink);
+    font-size:15px;
+    font-weight:850;
+}
+body .order-result-badge {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:3px 8px;
+    border:1px solid currentColor;
+    border-radius:999px;
+    font-size:9px;
+    font-weight:800;
+}
+body .order-result-badge svg { width:12px; height:12px; }
+body .order-result-badge.is-success { color:#07824f; background:rgba(16,185,129,.1); }
+body .order-result-badge.is-danger { color:#cf3347; background:rgba(239,68,68,.1); }
+body .order-result-badge.is-warranty { color:#b0003a; background:rgba(176,0,58,.1); }
+body .order-service-client,
+body .order-service-device,
+body .order-service-problem,
+body .order-service-advance {
+    margin:0;
+    letter-spacing:0;
+}
+body .order-service-client { color:var(--ui-ink-soft); font-size:12px; }
+body .order-service-device {
+    margin-top:3px;
+    color:var(--ui-muted);
+    font-size:10px;
+    text-transform:uppercase;
+}
+body .order-service-problem {
+    width:min(100%,560px);
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--ui-border);
+    color:var(--ui-muted);
+    font-size:11px;
+}
+body .order-service-advance {
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin-top:8px;
+    color:#0b9b5d;
+    font-size:11px;
+    font-weight:800;
+}
+body .order-service-advance svg { width:14px; height:14px; }
+body .order-service-actions {
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-end;
+    gap:7px;
+    flex-wrap:wrap;
+}
+body .order-service-actions form { margin:0; }
+body .order-service-actions .btn { min-height:38px; white-space:nowrap; }
+body .order-status-form { min-width:210px; }
+body .order-status-select { height:38px; background:var(--ui-surface-soft); }
+body .order-status-select select { font-size:11px; }
+body .orders-empty-state {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:210px;
+    padding:2rem;
+    border:1px dashed var(--ui-border-strong);
+    border-radius:8px;
+    background:var(--ui-surface);
+    color:var(--ui-muted);
+    text-align:center;
+}
+body .orders-empty-state > svg { width:30px; height:30px; }
+body .orders-empty-state strong { color:var(--ui-ink); }
+body .orders-empty-state span { font-size:11px; }
+
+/*
+ * Tema claro: usa blanco, negro, rojo y verde como la interfaz solicitada.
+ * Se conecta con el selector de tema global y mantiene el mismo HTML en ambos modos.
+ */
+html[data-ui-theme="light"] body .orders-page-subtitle strong,
+html[data-ui-theme="light"] body .order-service-heading > strong { color:#111827; }
+html[data-ui-theme="light"] body .orders-action-primary {
+    border-color:#070707 !important;
+    background:#070707 !important;
+    color:#fff !important;
+}
+html[data-ui-theme="light"] body .orders-action-primary:hover {
+    border-color:#292929 !important;
+    background:#292929 !important;
+}
+html[data-ui-theme="light"] body .orders-action-neutral,
+html[data-ui-theme="light"] body .orders-filter-panel,
+html[data-ui-theme="light"] body .order-service-card,
+html[data-ui-theme="light"] body .orders-empty-state { border-color:#dde2e8; background:#fff !important; }
+html[data-ui-theme="light"] body .orders-input-wrap,
+html[data-ui-theme="light"] body .orders-select-wrap { border-color:#d6dde6; background:#f8fafc; }
+html[data-ui-theme="light"] body .order-service-card.is-delivered { border-color:#22a861 !important; background:#f2fcf6 !important; }
+html[data-ui-theme="light"] body .order-service-card.is-rejected { border-color:#dc4555 !important; background:#fff6f6 !important; }
+html[data-ui-theme="light"] body .order-service-card.is-warranty { border-color:#b0003a !important; background:#fff6fa !important; }
+
+/* Respuesta de Órdenes: conserva botones y textos completos en tabletas y teléfonos. */
+@media (max-width:1380px) {
+    body .orders-stats { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    body .order-service-content { grid-template-columns:1fr; }
+    body .order-service-summary { max-width:none; }
+    body .order-service-actions { justify-content:flex-start; }
+}
+@media (max-width:900px) {
+    body .orders-page-header { flex-direction:column; }
+    body .orders-page-actions { justify-content:flex-start; }
+    body .orders-filter-panel { grid-template-columns:1fr 1fr; }
+    body .orders-filter-actions { grid-column:1 / -1; }
+}
+@media (max-width:620px) {
+    body .orders-page-actions { display:grid; width:100%; grid-template-columns:1fr 1fr; }
+    body .orders-page-actions .btn { width:100%; }
+    body .orders-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    body .orders-stat-card { min-height:112px; padding:1rem; }
+    body .orders-filter-panel { grid-template-columns:1fr; padding:.85rem; }
+    body .orders-filter-actions { grid-column:auto; }
+    body .orders-filter-actions .btn { flex:1 1 auto; }
+    body .order-service-content { min-height:0; padding:1rem; }
+    body .order-service-actions { display:grid; grid-template-columns:1fr 1fr; }
+    body .order-service-actions .btn,
+    body .order-service-actions form,
+    body .order-status-form { width:100%; min-width:0; }
+    body .order-service-actions form .btn { width:100%; }
+    body .order-status-select { width:100%; }
+}
+
 /* Impresion: restaura papel blanco aunque la aplicacion use el tema oscuro. */
 @media print {
     body, body .main, body .content { background:#fff !important; color:#111 !important; }

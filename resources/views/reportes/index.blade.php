@@ -2,10 +2,31 @@
 
 @section('content')
 <style>
-/* Alinea el calendario con los botones de periodo y mantiene los controles adaptables. */
-.reporte-filtros { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; margin-bottom:1.5rem; }
-.reporte-calendario { display:flex; align-items:center; gap:.5rem; margin:0; }
-.reporte-calendario input { min-height:38px; padding:.45rem .7rem; border:1px solid #dbe2ea; border-radius:6px; background:#fff; font:inherit; font-size:13.5px; }
+/* Agrupa accesos rápidos y el rango personalizado que alimentan ReporteController por GET. */
+.reporte-filtros { display:grid; gap:1rem; margin-bottom:1.5rem; }
+.reporte-accesos { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; }
+.reporte-rango {
+    display:grid; gap:1rem; padding:1rem; border:1px solid var(--ui-border,#dfe6ef);
+    border-radius:8px; background:var(--ui-surface,#fff); box-shadow:var(--ui-shadow-sm,0 8px 24px rgba(15,31,61,.06));
+}
+.reporte-rango-cabecera { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.reporte-rango-titulo { display:flex; align-items:center; gap:.7rem; min-width:0; }
+.reporte-rango-icono { display:grid; place-items:center; width:36px; height:36px; border-radius:7px; color:#6d4bf2; background:rgba(109,75,242,.11); }
+.reporte-rango-icono svg { width:18px; height:18px; }
+.reporte-rango-titulo strong { display:block; color:var(--ui-text,#0f1f3d); font-size:13px; }
+.reporte-rango-titulo span { display:block; margin-top:2px; color:var(--ui-muted,#64748b); font-size:11px; }
+.reporte-rango-modos { display:grid; grid-template-columns:repeat(3,minmax(94px,1fr)); gap:4px; padding:4px; border:1px solid var(--ui-border,#dfe6ef); border-radius:7px; background:var(--ui-surface-soft,#f8fafc); }
+.reporte-rango-modo { min-height:36px; padding:.45rem .75rem; border:0; border-radius:5px; background:transparent; color:var(--ui-muted,#64748b); font:inherit; font-size:12px; font-weight:750; cursor:pointer; transition:background .18s ease,color .18s ease,box-shadow .18s ease; }
+.reporte-rango-modo:hover { color:var(--ui-text,#0f1f3d); }
+.reporte-rango-modo.is-active { color:#fff; background:#6d4bf2; box-shadow:0 6px 16px rgba(109,75,242,.22); }
+.reporte-rango-panel { display:grid; grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto; align-items:end; gap:.75rem; }
+.reporte-rango-panel[hidden] { display:none; }
+.reporte-rango-campo { display:grid; gap:5px; }
+.reporte-rango-campo label { color:var(--ui-muted,#64748b); font-size:10px; font-weight:800; text-transform:uppercase; }
+.reporte-rango-campo input { width:100%; min-height:42px; padding:.55rem .75rem; border:1px solid var(--ui-border-strong,#cbd7e6); border-radius:6px; background:var(--ui-surface,#fff); color:var(--ui-text,#0f1f3d); font:inherit; font-size:13px; }
+.reporte-rango-campo input:focus { outline:2px solid rgba(109,75,242,.18); border-color:#6d4bf2; }
+.reporte-rango-submit { min-height:42px; white-space:nowrap; }
+.reporte-rango-error { margin:0; color:#dc2626; font-size:11px; font-weight:700; }
 .reporte-sucursal { margin-top:4px; font-size:12px; color:#2563eb; font-weight:700; }
 /*
  * Panel analítico de Reportes.
@@ -74,8 +95,9 @@
     .reporte-tablas-dobles { grid-template-columns:1fr; }
 }
 @media (max-width:700px) {
-    .reporte-calendario { width:100%; }
-    .reporte-calendario input { flex:1; min-width:0; }
+    .reporte-rango-cabecera { align-items:stretch; flex-direction:column; }
+    .reporte-rango-panel { grid-template-columns:1fr; }
+    .reporte-rango-submit { width:100%; }
     .reporte-grafica-cabecera { padding:1rem; }
     .reporte-grafica-cuerpo { padding:.85rem 1rem 1rem; }
     .reporte-grafica-resumen strong { font-size:14px; }
@@ -117,27 +139,82 @@
     <button type="button" class="btn btn-primary no-print" onclick="window.print()">Imprimir / Guardar PDF</button>
 </div>
 
-{{-- Botones de periodo: cambian el rango usado por todas las consultas del ReporteController. --}}
+{{-- Filtros: los accesos rápidos y el rango personalizado controlan todas las consultas del ReporteController. --}}
 <div class="reporte-filtros no-print">
-    <a href="{{ route('reportes.index', ['periodo' => 'dia']) }}" class="btn {{ $periodo === 'dia' ? 'btn-primary' : '' }}">Por dia</a>
-    <a href="{{ route('reportes.index', ['periodo' => 'semana']) }}" class="btn {{ $periodo === 'semana' ? 'btn-primary' : '' }}">Por semana</a>
-    <a href="{{ route('reportes.index', ['periodo' => 'mes']) }}" class="btn {{ $periodo === 'mes' ? 'btn-primary' : '' }}">Por mes</a>
-    <a href="{{ route('reportes.index', ['periodo' => 'acumulado']) }}" class="btn {{ $periodo === 'acumulado' ? 'btn-primary' : '' }}">Acumulado</a>
+    <div class="reporte-accesos" aria-label="Periodos rápidos">
+        <a href="{{ route('reportes.index', ['periodo' => 'dia']) }}" class="btn {{ $periodo === 'dia' ? 'btn-primary' : '' }}">Hoy</a>
+        <a href="{{ route('reportes.index', ['periodo' => 'semana']) }}" class="btn {{ $periodo === 'semana' ? 'btn-primary' : '' }}">Últimos 7 días</a>
+        <a href="{{ route('reportes.index', ['periodo' => 'mes']) }}" class="btn {{ $periodo === 'mes' ? 'btn-primary' : '' }}">Mes actual</a>
+        <a href="{{ route('reportes.index', ['periodo' => 'acumulado']) }}" class="btn {{ $periodo === 'acumulado' ? 'btn-primary' : '' }}">Acumulado</a>
+    </div>
 
-    {{-- Calendario: envía la fecha seleccionada y consulta los datos guardados durante ese día completo. --}}
-    <form method="GET" action="{{ route('reportes.index') }}" class="reporte-calendario">
-        <input type="hidden" name="periodo" value="fecha">
-        <input
-            type="date"
-            name="fecha"
-            value="{{ $fechaSeleccionada }}"
-            aria-label="Fecha del reporte"
-            {{-- Al cambiar la fecha envía el formulario y activa inmediatamente el periodo calendario. --}}
-            onchange="this.form.requestSubmit()"
-            required
-        >
-        {{-- El botón permite repetir la consulta y sirve como respaldo para navegadores sin envío automático. --}}
-        <button type="submit" class="btn {{ $periodo === 'fecha' ? 'btn-primary' : '' }}">📅 Consultar fecha</button>
+    {{-- El formulario envía dos límites y su unidad; ReporteController los convierte en fechas completas. --}}
+    <form method="GET" action="{{ route('reportes.index') }}" class="reporte-rango" id="form-rango-reportes">
+        <input type="hidden" name="periodo" value="rango">
+        <input type="hidden" name="tipo_rango" id="tipo-rango-reportes" value="{{ $tipoRango }}">
+
+        <div class="reporte-rango-cabecera">
+            <div class="reporte-rango-titulo">
+                <span class="reporte-rango-icono" aria-hidden="true"><i data-lucide="calendar-range"></i></span>
+                <span>
+                    <strong>Periodo personalizado</strong>
+                    <span>Consulta un intervalo completo de días, semanas o meses.</span>
+                </span>
+            </div>
+            {{-- El control segmentado cambia el formato de los dos campos sin enviar todavía el formulario. --}}
+            <div class="reporte-rango-modos" role="tablist" aria-label="Tipo de periodo">
+                @foreach(['dia' => 'Días', 'semana' => 'Semanas', 'mes' => 'Meses'] as $tipo => $etiqueta)
+                    <button
+                        type="button"
+                        class="reporte-rango-modo {{ $tipoRango === $tipo ? 'is-active' : '' }}"
+                        data-tipo-rango="{{ $tipo }}"
+                        role="tab"
+                        aria-selected="{{ $tipoRango === $tipo ? 'true' : 'false' }}"
+                    >{{ $etiqueta }}</button>
+                @endforeach
+            </div>
+        </div>
+
+        @foreach([
+            'dia' => ['type' => 'date', 'inicio' => 'Día inicial', 'fin' => 'Día final'],
+            'semana' => ['type' => 'week', 'inicio' => 'Semana inicial', 'fin' => 'Semana final'],
+            'mes' => ['type' => 'month', 'inicio' => 'Mes inicial', 'fin' => 'Mes final'],
+        ] as $tipo => $configuracion)
+            {{-- Cada panel se conecta con el mismo par desde/hasta; solo el panel visible queda habilitado. --}}
+            <div class="reporte-rango-panel" data-panel-rango="{{ $tipo }}" @if($tipoRango !== $tipo) hidden @endif>
+                <div class="reporte-rango-campo">
+                    <label for="rango-{{ $tipo }}-desde">{{ $configuracion['inicio'] }}</label>
+                    <input
+                        id="rango-{{ $tipo }}-desde"
+                        type="{{ $configuracion['type'] }}"
+                        value="{{ $valoresRango[$tipo]['desde'] }}"
+                        data-limite-rango="desde"
+                        @if($tipoRango === $tipo) name="desde" @endif
+                        @disabled($tipoRango !== $tipo)
+                        required
+                    >
+                </div>
+                <div class="reporte-rango-campo">
+                    <label for="rango-{{ $tipo }}-hasta">{{ $configuracion['fin'] }}</label>
+                    <input
+                        id="rango-{{ $tipo }}-hasta"
+                        type="{{ $configuracion['type'] }}"
+                        value="{{ $valoresRango[$tipo]['hasta'] }}"
+                        data-limite-rango="hasta"
+                        @if($tipoRango === $tipo) name="hasta" @endif
+                        @disabled($tipoRango !== $tipo)
+                        required
+                    >
+                </div>
+                <button type="submit" class="btn btn-primary reporte-rango-submit">
+                    <i data-lucide="search"></i>
+                    Aplicar rango
+                </button>
+            </div>
+        @endforeach
+
+        @error('desde') <p class="reporte-rango-error">{{ $message }}</p> @enderror
+        @error('hasta') <p class="reporte-rango-error">{{ $message }}</p> @enderror
     </form>
 </div>
 
@@ -462,6 +539,45 @@
 </div>
 
 <script>
+/*
+ * Sincroniza el control Días/Semanas/Meses con los parámetros tipo_rango, desde y hasta.
+ * Se conecta con rangoPersonalizado() de ReporteController y evita enviar campos ocultos.
+ */
+const formularioRangoReportes = document.getElementById('form-rango-reportes');
+if (formularioRangoReportes) {
+    const campoTipoRango = document.getElementById('tipo-rango-reportes');
+    const botonesTipoRango = formularioRangoReportes.querySelectorAll('[data-tipo-rango]');
+    const panelesRango = formularioRangoReportes.querySelectorAll('[data-panel-rango]');
+
+    function activarTipoRango(tipo) {
+        campoTipoRango.value = tipo;
+
+        botonesTipoRango.forEach(function(boton) {
+            const activo = boton.dataset.tipoRango === tipo;
+            boton.classList.toggle('is-active', activo);
+            boton.setAttribute('aria-selected', activo ? 'true' : 'false');
+        });
+
+        panelesRango.forEach(function(panel) {
+            const activo = panel.dataset.panelRango === tipo;
+            panel.hidden = !activo;
+
+            panel.querySelectorAll('[data-limite-rango]').forEach(function(campo) {
+                campo.disabled = !activo;
+                campo.name = activo ? campo.dataset.limiteRango : '';
+            });
+        });
+    }
+
+    botonesTipoRango.forEach(function(boton) {
+        boton.addEventListener('click', function() {
+            activarTipoRango(boton.dataset.tipoRango);
+        });
+    });
+
+    activarTipoRango(campoTipoRango.value);
+}
+
 /*
  * Datos preparados por ReporteController.
  * Se conectan con la sucursal activa y el periodo seleccionado.

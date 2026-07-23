@@ -12,6 +12,8 @@ use App\Models\VentaDetalle;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ReporteController extends Controller
 {
@@ -21,7 +23,7 @@ class ReporteController extends Controller
      */
     public function index(Request $request)
     {
-        $periodosPermitidos = ['dia', 'semana', 'mes', 'fecha', 'acumulado'];
+        $periodosPermitidos = ['dia', 'semana', 'mes', 'fecha', 'rango', 'acumulado'];
         $periodoSolicitado = $request->get('periodo', 'dia');
         $periodo = in_array($periodoSolicitado, $periodosPermitidos, true)
             ? $periodoSolicitado
@@ -36,18 +38,50 @@ class ReporteController extends Controller
         // El calendario acepta cualquier fecha válida y conserva el valor en la URL del reporte.
         $request->validate([
             'fecha' => 'nullable|date_format:Y-m-d',
+            // El modo determina si los límites recibidos representan días, semanas ISO o meses.
+            'tipo_rango' => 'nullable|in:dia,semana,mes',
+            'desde' => 'nullable|string|max:10',
+            'hasta' => 'nullable|string|max:10',
         ]);
         $fechaSeleccionada = $request->get('fecha', now()->toDateString());
+        $tipoRango = $request->get('tipo_rango', 'dia');
+        $rangoDesde = $request->get('desde', $this->valorActualRango($tipoRango));
+        $rangoHasta = $request->get('hasta', $this->valorActualRango($tipoRango));
+
+        // Conserva los tres selectores al cambiar entre días, semanas y meses en la misma pantalla.
+        $valoresRango = [
+            'dia' => [
+                'desde' => $tipoRango === 'dia' ? $rangoDesde : now()->toDateString(),
+                'hasta' => $tipoRango === 'dia' ? $rangoHasta : now()->toDateString(),
+            ],
+            'semana' => [
+                'desde' => $tipoRango === 'semana' ? $rangoDesde : now()->format('o-\WW'),
+                'hasta' => $tipoRango === 'semana' ? $rangoHasta : now()->format('o-\WW'),
+            ],
+            'mes' => [
+                'desde' => $tipoRango === 'mes' ? $rangoDesde : now()->format('Y-m'),
+                'hasta' => $tipoRango === 'mes' ? $rangoHasta : now()->format('Y-m'),
+            ],
+        ];
 
         // Usa primero la sucursal elegida en el módulo Sucursales y después la asignada al usuario.
         $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
         $sucursalActiva = $sucursalActivaId ? Sucursal::find($sucursalActivaId) : null;
 
-        [$inicio, $fin] = $this->rangoPeriodo(
-            $periodo,
-            $fechaSeleccionada,
-            $sucursalActiva?->id
-        );
+        /*
+         * El rango personalizado usa los límites elegidos por el administrador.
+         * Los demás accesos rápidos conservan el cálculo histórico de rangoPeriodo().
+         */
+        [$inicio, $fin] = $periodo === 'rango'
+            ? $this->rangoPersonalizado($tipoRango, $rangoDesde, $rangoHasta)
+            : $this->rangoPeriodo(
+                $periodo,
+                $fechaSeleccionada,
+                $sucursalActiva?->id
+            );
+
+        // Fecha y rango personalizados son consultas estrictas: nunca muestran acumulados ajenos al intervalo.
+        $permiteRespaldoAcumulado = ! in_array($periodo, ['fecha', 'rango'], true);
 
         // Ventas del periodo: alimentan tarjetas, tabla de ventas y reporte por cliente.
         $ventasQuery = Venta::with(['cliente', 'sucursal', 'usuario', 'detalles'])
@@ -67,7 +101,11 @@ class ReporteController extends Controller
         $productosGraficas = $productosMasVendidos;
         $productosGraficasAcumuladas = false;
 
-        if ($productosGraficas->sum('total_vendido') <= 0 && $sucursalActiva) {
+        if (
+            $permiteRespaldoAcumulado
+            && $productosGraficas->sum('total_vendido') <= 0
+            && $sucursalActiva
+        ) {
             $productosAcumulados = $this->consultarProductosVendidos($sucursalActiva->id);
 
             if ($productosAcumulados->sum('total_vendido') > 0) {
@@ -147,7 +185,11 @@ class ReporteController extends Controller
         $ordenesGraficasAcumuladas = false;
 
         // Sin órdenes en el rango, la gráfica consulta todo el historial de la sucursal activa.
-        if ($ordenesGraficas->sum('total') <= 0 && $sucursalActiva) {
+        if (
+            $permiteRespaldoAcumulado
+            && $ordenesGraficas->sum('total') <= 0
+            && $sucursalActiva
+        ) {
             $conteosOrdenesAcumuladas = OrdenServicio::where('sucursal_id', $sucursalActiva->id)
                 ->select('estado')
                 ->selectRaw('COUNT(*) as total')
@@ -185,7 +227,7 @@ class ReporteController extends Controller
         // Solo usa el acumulado cuando el periodo está vacío y existen clientes anteriores.
         $clientesMostrados = $general['clientes'];
         $clientesEsAcumulado = false;
-        if ($clientesMostrados === 0 && $sucursalActiva) {
+        if ($permiteRespaldoAcumulado && $clientesMostrados === 0 && $sucursalActiva) {
             $clientesAcumuladosQuery = Cliente::query();
             $this->filtrarSucursal(
                 $clientesAcumuladosQuery,
@@ -257,6 +299,11 @@ class ReporteController extends Controller
             'semana' => 'Semana',
             'mes' => 'Mes',
             'fecha' => 'Fecha seleccionada',
+            'rango' => match ($tipoRango) {
+                'semana' => 'Rango de semanas',
+                'mes' => 'Rango de meses',
+                default => 'Rango de días',
+            },
             'acumulado' => 'Acumulado',
             default => 'Día',
         };
@@ -265,6 +312,8 @@ class ReporteController extends Controller
             'periodo',
             'periodoEtiqueta',
             'fechaSeleccionada',
+            'tipoRango',
+            'valoresRango',
             'inicio',
             'fin',
             'sucursalActiva',
@@ -277,6 +326,92 @@ class ReporteController extends Controller
             'ordenesPorEstado',
             'graficas'
         ));
+    }
+
+    /**
+     * Devuelve el valor actual con el formato que necesita cada control HTML.
+     * Se conecta con input date, week y month de la vista de Reportes.
+     */
+    private function valorActualRango(string $tipoRango): string
+    {
+        return match ($tipoRango) {
+            'semana' => now()->format('o-\WW'),
+            'mes' => now()->format('Y-m'),
+            default => now()->toDateString(),
+        };
+    }
+
+    /**
+     * Convierte los límites escritos por el usuario en fechas completas para la base de datos.
+     * Se conecta con created_at de Ventas, Caja, Órdenes y Clientes y evita rangos invertidos.
+     */
+    private function rangoPersonalizado(string $tipoRango, string $desde, string $hasta): array
+    {
+        try {
+            $inicio = $this->convertirLimiteRango($tipoRango, $desde, true);
+            $fin = $this->convertirLimiteRango($tipoRango, $hasta, false);
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'desde' => 'El periodo seleccionado no tiene un formato válido.',
+            ]);
+        }
+
+        if ($inicio->gt($fin)) {
+            throw ValidationException::withMessages([
+                'hasta' => 'El periodo final no puede ser anterior al periodo inicial.',
+            ]);
+        }
+
+        return [$inicio, $fin];
+    }
+
+    /**
+     * Interpreta un día, semana ISO o mes y devuelve su inicio o final natural.
+     * Se conecta con rangoPersonalizado() para incluir completos los periodos seleccionados.
+     */
+    private function convertirLimiteRango(
+        string $tipoRango,
+        string $valor,
+        bool $esInicio
+    ): Carbon {
+        if ($tipoRango === 'semana') {
+            if (! preg_match('/^(\d{4})-W(\d{2})$/', $valor, $partes)) {
+                throw new \InvalidArgumentException('Semana inválida.');
+            }
+
+            $fecha = Carbon::now()->setISODate((int) $partes[1], (int) $partes[2]);
+            if ($fecha->format('o-\WW') !== $valor) {
+                throw new \InvalidArgumentException('Semana fuera de rango.');
+            }
+
+            return $esInicio
+                ? $fecha->startOfWeek()->startOfDay()
+                : $fecha->endOfWeek()->endOfDay();
+        }
+
+        if ($tipoRango === 'mes') {
+            if (! preg_match('/^(\d{4})-(\d{2})$/', $valor, $partes)) {
+                throw new \InvalidArgumentException('Mes inválido.');
+            }
+
+            $mes = (int) $partes[2];
+            if ($mes < 1 || $mes > 12) {
+                throw new \InvalidArgumentException('Mes fuera de rango.');
+            }
+
+            $fecha = Carbon::create((int) $partes[1], $mes, 1);
+
+            return $esInicio
+                ? $fecha->startOfMonth()->startOfDay()
+                : $fecha->endOfMonth()->endOfDay();
+        }
+
+        $fecha = Carbon::createFromFormat('!Y-m-d', $valor);
+        if ($fecha->format('Y-m-d') !== $valor) {
+            throw new \InvalidArgumentException('Día fuera de rango.');
+        }
+
+        return $esInicio ? $fecha->startOfDay() : $fecha->endOfDay();
     }
 
     /**
@@ -326,11 +461,13 @@ class ReporteController extends Controller
     {
         if ($periodo === 'fecha') {
             $fecha = Carbon::createFromFormat('Y-m-d', $fechaSeleccionada);
+
             return [$fecha->copy()->startOfDay(), $fecha->copy()->endOfDay()];
         }
 
         if ($periodo === 'acumulado') {
             $primerRegistro = $this->fechaPrimerRegistro($sucursalId);
+
             return [
                 $primerRegistro ? Carbon::parse($primerRegistro)->startOfDay() : now()->startOfDay(),
                 now()->endOfDay(),
@@ -350,7 +487,7 @@ class ReporteController extends Controller
      */
     private function fechaPrimerRegistro(?int $sucursalId): ?string
     {
-        if (!$sucursalId) {
+        if (! $sucursalId) {
             return null;
         }
 

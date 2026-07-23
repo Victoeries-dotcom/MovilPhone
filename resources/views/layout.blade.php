@@ -189,7 +189,11 @@
             <span class="icon"><i data-lucide="layout-dashboard"></i></span> Panel principal
         </a>
         @php
-            $rolMenu = request()->is('sucursales*') ? 'superusuario' : auth()->user()->rol;
+            /*
+             * Permisos del menú: usa siempre users.rol de la cuenta autenticada.
+             * La sucursal activa filtra los registros, pero nunca eleva permisos a superusuario.
+             */
+            $rolMenu = auth()->user()->rol;
         @endphp
         @if($rolMenu === 'superusuario')
             <a href="{{ route('ordenes.index') }}" class="nav-link {{ request()->is('ordenes*') ? 'active' : '' }}">
@@ -271,7 +275,8 @@
             <div class="user-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
             <div>
                 <div class="user-name">{{ auth()->user()->name }}</div>
-                <div class="user-rol">{{ request()->is('sucursales*') ? 'superusuario' : auth()->user()->rol }}</div>
+                {{-- Identidad lateral: muestra el rol real guardado en users.rol para evitar permisos aparentes. --}}
+                <div class="user-rol">{{ auth()->user()->rol }}</div>
             </div>
         </div>
         <form method="POST" action="{{ route('logout') }}">
@@ -311,7 +316,13 @@
             </div>
         </div>
         @auth
-        @php $rol = request()->is('sucursales*') ? 'superusuario' : auth()->user()->rol; @endphp
+        @php
+            /*
+             * Rol de cabecera: se conecta con users.rol y controla notificaciones, distintivo y accesos visuales.
+             * Cambiar la sucursal solo actualiza el contexto de datos y conserva estas autorizaciones.
+             */
+            $rol = auth()->user()->rol;
+        @endphp
         {{-- Busqueda global: consulta registros autorizados y abre resultados sin abandonar la pantalla. --}}
         <div class="global-search" data-search-url="{{ route('buscar.global') }}" data-detail-template="{{ route('buscar.detalle', ['tipo' => '__TYPE__', 'id' => '__ID__']) }}">
             <i data-lucide="search" aria-hidden="true"></i>
@@ -344,6 +355,8 @@
                     <i data-lucide="clipboard-list"></i> Capturista
                 @elseif($rol === 'vendedor')
                     <i data-lucide="shopping-cart"></i> Vendedor
+                @elseif($rol === 'tecnico')
+                    <i data-lucide="wrench"></i> Técnico
                 @else
                     <i data-lucide="user"></i> Usuario
                 @endif

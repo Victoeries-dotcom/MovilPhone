@@ -13,7 +13,7 @@ class RoleMenuTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Comprueba que una ruta de sucursales no convierta visualmente a Usuario en Super Usuario.
+     * Comprueba que Usuario conserve su menú limitado y pueda elegir el tema visual.
      * Se conecta con layout.blade.php, users.rol y las rutas administrativas protegidas.
      */
     public function test_usuario_conserva_su_menu_limitado_en_el_contexto_de_sucursales(): void
@@ -37,9 +37,10 @@ class RoleMenuTest extends TestCase
 
         $respuesta
             ->assertOk()
-            // El atributo conecta el rol con el modo claro fijo de la experiencia Usuario.
+            // El atributo identifica el rol y el botón conecta su preferencia con movilphone-ui.js.
             ->assertSee('data-user-role="usuario"', false)
-            ->assertDontSee('id="themeToggle"', false)
+            ->assertSee('id="themeToggle"', false)
+            ->assertSee('images/movilphone-logo-final.png', false)
             ->assertSee(route('home'), false)
             ->assertSee(route('ordenes.index'), false)
             ->assertSee(route('clientes.index'), false)
@@ -56,7 +57,7 @@ class RoleMenuTest extends TestCase
 
     /**
      * Comprueba que Super Usuario conserve el control de tema claro/oscuro.
-     * Se conecta con layout.blade.php y movilphone-ui.js sin exponerlo al rol Usuario.
+     * Se conecta con layout.blade.php y movilphone-ui.js mediante la misma preferencia local.
      */
     public function test_superusuario_conserva_el_selector_de_tema(): void
     {

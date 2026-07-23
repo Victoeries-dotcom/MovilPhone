@@ -8,16 +8,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="{{ $configuracionGlobal['color_primario'] ?? '#1650c5' }}">
     {{--
-        Tema inicial: conecta el rol autenticado con la experiencia visual.
-        Usuario usa la identidad clara del archivo Hector; Super Usuario conserva su selector claro/oscuro.
+        Tema inicial: recupera la preferencia local antes de pintar la interfaz.
+        Se conecta con #themeToggle y movilphone-ui.js para evitar destellos al cambiar de pagina.
     --}}
     <script>
         (function () {
-            const rolActual = @js(auth()->user()?->rol);
             const temaGuardado = window.localStorage.getItem('movilphone.ui.theme');
-            document.documentElement.dataset.uiTheme = rolActual === 'usuario'
-                ? 'light'
-                : (temaGuardado === 'light' ? 'light' : 'dark');
+            document.documentElement.dataset.uiTheme = temaGuardado === 'light' ? 'light' : 'dark';
         })();
     </script>
     <link rel="manifest" href="/manifest.webmanifest?v=20260720">
@@ -129,7 +126,7 @@
     </style>
     {{-- Capa visual global: conecta todas las vistas con colores, sombras y animaciones profesionales. --}}
 {{-- Estilos globales: la ruta relativa evita depender de APP_URL al trabajar con Laragon o artisan serve. --}}
-<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260723-hector-user-light">
+<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260723-company-brand-theme">
 </head>
 {{-- El rol expuesto en data-user-role conecta el CSS con la vista autorizada, sin alterar permisos del backend. --}}
 <body
@@ -150,11 +147,17 @@
 @endauth
 <div class="sidebar">
     <div class="brand">
-        {{-- Marca principal: usa el icono Smartphone de Lucide y se conecta con el menú lateral. --}}
-        <div class="brand-name">
-            <span class="brand-mark" aria-hidden="true"><i data-lucide="smartphone"></i></span>
-            <span>{{ $configuracionGlobal['negocio_nombre'] ?? 'MovilPhone' }}</span>
-        </div>
+        {{--
+            Logotipo lateral: usa la identidad oficial almacenada en public/images.
+            El enlace se conecta con el panel principal y conserva una marca consistente en ambos temas.
+        --}}
+        <a href="{{ route('home') }}" class="brand-logo-link" aria-label="Ir al panel principal de MovilPhone">
+            <img
+                src="{{ asset('images/movilphone-logo-final.png') }}"
+                class="brand-company-logo"
+                alt="The Movil Phone Company"
+            >
+        </a>
         <div class="brand-sub">{{ $configuracionGlobal['negocio_subtitulo'] ?? 'Sistema de Taller' }}</div>
         @auth
             {{-- Muestra la sucursal activa y permite al Super Usuario cambiarla sin salir de la pantalla actual. --}}
@@ -365,9 +368,8 @@
                     </div>
                 </div>
             @endif
-            {{-- Selector visual: cambia entre temas y se conecta con la preferencia local del navegador. --}}
-            @if($rol === 'superusuario')
-                {{-- El selector se reserva al Super Usuario y conecta su modo claro con la identidad visual de Usuario. --}}
+            {{-- Selector visual: Usuario y Super Usuario comparten temas sin modificar sus permisos del backend. --}}
+            @if(in_array($rol, ['superusuario', 'usuario'], true))
                 <button type="button" class="topbar-icon-button theme-toggle" id="themeToggle" aria-label="Cambiar a modo claro" aria-pressed="false" title="Cambiar a modo claro">
                     <i data-lucide="sun" aria-hidden="true"></i>
                 </button>
@@ -526,6 +528,6 @@
 </script>
 {{-- Interacciones globales: conectan Lucide y la UI al mismo servidor que entrega la vista actual. --}}
 <script src="/js/lucide.min.js?v=1.25.0" defer></script>
-<script src="/js/movilphone-ui.js?v=20260723-hector-user-light" defer></script>
+<script src="/js/movilphone-ui.js?v=20260723-company-brand-theme" defer></script>
 </body>
 </html>

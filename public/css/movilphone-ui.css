@@ -878,7 +878,7 @@ body .dashboard-branch-empty::after {
 body .dashboard-branch-empty-visual {
     position:absolute;
     z-index:-2;
-    inset:-4%;
+    inset:0;
     overflow:hidden;
 }
 body .dashboard-branch-empty-visual::after {
@@ -897,11 +897,11 @@ body .dashboard-branch-empty-visual::after {
 body .dashboard-branch-empty-visual img {
     width:100%;
     height:100%;
-    object-fit:cover;
-    object-position:center 58%;
+    object-fit:contain;
+    object-position:center;
     filter:grayscale(.12) brightness(.58) contrast(.88);
     opacity:.5;
-    transform:scale(1.04);
+    transform:translate3d(0,4px,0);
     animation:dashboard-heron-drift 12s ease-in-out infinite alternate;
     will-change:transform;
 }
@@ -1587,8 +1587,8 @@ html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
 @keyframes ui-loading-dot { to { transform:translateY(-7px); opacity:.45; } }
 /* Animaciones ambientales: producen movimiento sereno sin modificar datos ni interacción del panel. */
 @keyframes dashboard-heron-drift {
-    from { transform:scale(1.04) translate3d(-.7%,.5%,0); }
-    to { transform:scale(1.085) translate3d(.7%,-.7%,0); }
+    from { transform:translate3d(-.35%,5px,0); }
+    to { transform:translate3d(.35%,-5px,0); }
 }
 @keyframes dashboard-water-glint {
     0%,100% { background-position:125% 0; opacity:.18; }
@@ -1634,7 +1634,7 @@ html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
         min-height:430px;
     }
     body .dashboard-branch-empty-visual img {
-        object-position:64% center;
+        object-position:center;
     }
     body .dashboard-branch-empty-content {
         width:calc(100% - 24px);

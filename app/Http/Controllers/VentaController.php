@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Venta;
-use App\Models\VentaDetalle;
-use App\Models\Inventario;
 use App\Models\Cliente;
-use App\Models\Sucursal;
+use App\Models\Inventario;
 use App\Models\MovimientoCaja;
+use App\Models\Sucursal;
+use App\Models\Venta;
 use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,34 +36,38 @@ class VentaController extends Controller
         return view('ventas.index', compact('ventas', 'sucursalActiva'));
     }
 
-    // ✅ CAMBIO 1: ahora pasa el inventario a la vista
+    /**
+     * Abre la venta con piezas disponibles de la sucursal activa.
+     * Se conecta con inventario.sucursal_id y evita usar otra sucursal como respaldo silencioso.
+     */
     public function create()
-{
-    // Misma lógica que ya usas en store(): toma la sucursal activa de la sesión,
-    // y si por alguna razón no hay ninguna guardada, usa la primera sucursal existente como respaldo.
-    $sucursalId = session('sucursal_id') ?: Sucursal::query()->value('id');
+    {
+        $sucursalId = $this->sucursalActivaId();
+        abort_unless($sucursalId, 422, 'Selecciona una sucursal antes de registrar una venta.');
 
-    $inventario = Inventario::where('cantidad_disponible', '>', 0)
-                    ->where('sucursal_id', $sucursalId) // NUEVO: solo trae piezas de esa sucursal
-                    ->orderBy('nombre')
-                    ->get();
+        $inventario = Inventario::where('cantidad_disponible', '>', 0)
+            ->where('sucursal_id', $sucursalId)
+            ->orderBy('nombre')
+            ->get();
 
-    return view('ventas.create', compact('inventario'));
-}
+        return view('ventas.create', compact('inventario'));
+    }
 
     public function store(Request $request)
     {
         $request->validate([
-            'cliente_nombre'              => 'required|string|max:255',
-            'productos'                   => 'required|array|min:1',
-            'productos.*.nombre'          => 'required|string|max:255',
-            'productos.*.otro_nombre'     => 'nullable|string|max:255',
-            'productos.*.cantidad'        => 'required|integer|min:1',
+            'cliente_nombre' => 'required|string|max:255',
+            'productos' => 'required|array|min:1',
+            'productos.*.nombre' => 'required|string|max:255',
+            'productos.*.otro_nombre' => 'nullable|string|max:255',
+            'productos.*.cantidad' => 'required|integer|min:1',
             'productos.*.precio_unitario' => 'required|numeric|min:0',
-            'productos.*.inventario_id'   => 'nullable|integer|exists:inventario,id', // ✅ CAMBIO 2
+            'productos.*.inventario_id' => 'nullable|integer|exists:inventario,id', // ✅ CAMBIO 2
         ]);
 
-        $sucursalId = session('sucursal_id') ?: Sucursal::query()->value('id');
+        // La venta, sus detalles y el ingreso de Caja comparten la sucursal autenticada.
+        $sucursalId = $this->sucursalActivaId();
+        abort_unless($sucursalId, 422, 'Selecciona una sucursal antes de registrar una venta.');
 
         foreach ($request->productos as $index => $prod) {
             $inventarioId = $prod['inventario_id'] ?? null;
@@ -76,7 +79,7 @@ class VentaController extends Controller
                     ->where('sucursal_id', $sucursalId)
                     ->first();
 
-                if (!$pieza) {
+                if (! $pieza) {
                     throw ValidationException::withMessages([
                         "productos.$index.inventario_id" => 'La pieza seleccionada no pertenece a esta sucursal.',
                     ]);
@@ -99,7 +102,7 @@ class VentaController extends Controller
                     'sucursal_habitual_id' => $sucursalId,
                 ],
                 [
-                    'telefono_principal' => 'VENTA-' . now()->format('YmdHis'),
+                    'telefono_principal' => 'VENTA-'.now()->format('YmdHis'),
                 ]
             );
 
@@ -125,7 +128,7 @@ class VentaController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    if (!$pieza || (int) $prod['cantidad'] > (int) $pieza->cantidad_disponible) {
+                    if (! $pieza || (int) $prod['cantidad'] > (int) $pieza->cantidad_disponible) {
                         throw ValidationException::withMessages([
                             'productos' => 'El stock cambió antes de guardar la venta. Revisa la cantidad disponible e inténtalo de nuevo.',
                         ]);
@@ -135,21 +138,21 @@ class VentaController extends Controller
                 }
 
                 $detalles[] = [
-                    'inventario_id'   => $inventarioId,
+                    'inventario_id' => $inventarioId,
                     'nombre_producto' => $nombreProducto,
-                    'cantidad'        => $prod['cantidad'],
+                    'cantidad' => $prod['cantidad'],
                     'precio_unitario' => $prod['precio_unitario'],
-                    'subtotal'        => $subtotal,
+                    'subtotal' => $subtotal,
                 ];
             }
 
             $venta = Venta::create([
-                'cliente_id'  => $cliente->id,
-                'usuario_id'  => Auth::id(),
+                'cliente_id' => $cliente->id,
+                'usuario_id' => Auth::id(),
                 'sucursal_id' => $sucursalId,
-                'total'       => $total,
-                'estado'      => 'completada',
-                'notas'       => $request->notas,
+                'total' => $total,
+                'estado' => 'completada',
+                'notas' => $request->notas,
             ]);
 
             foreach ($detalles as $detalle) {
@@ -157,15 +160,15 @@ class VentaController extends Controller
             }
 
             MovimientoCaja::create([
-                'tipo'        => 'INGRESO',
-                'categoria'   => 'Venta',
-                'monto'       => $total,
+                'tipo' => 'INGRESO',
+                'categoria' => 'Venta',
+                'monto' => $total,
                 // Las ventas se registran inicialmente como efectivo y se conectan con el filtro de Caja.
                 'metodo_pago' => 'efectivo',
                 'sucursal_id' => $sucursalId,
-                'descripcion' => 'Venta #' . $venta->id,
-                'os_id'       => null,
-                'user_id'     => Auth::id(),
+                'descripcion' => 'Venta #'.$venta->id,
+                'os_id' => null,
+                'user_id' => Auth::id(),
             ]);
 
             return $venta;
@@ -188,6 +191,7 @@ class VentaController extends Controller
         $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
         abort_unless((int) $venta->sucursal_id === (int) $sucursalActivaId, 404);
         $venta->load(['cliente', 'sucursal', 'usuario', 'detalles.inventario']);
+
         return view('ventas.show', compact('venta'));
     }
 
@@ -199,6 +203,18 @@ class VentaController extends Controller
         $sucursalId = $venta->sucursal_id;
         AdminActivityLogger::registrar('VENTAS', 'ELIMINAR', $descripcion, $sucursalId, $venta);
         $venta->delete();
+
         return redirect()->route('ventas.index')->with('success', 'Venta eliminada.');
+    }
+
+    /**
+     * Centraliza la sucursal de Ventas para index, create, store, show y destroy.
+     * Se conecta con el selector administrativo y con users.sucursal_id para Buctzotz e Izamal.
+     */
+    private function sucursalActivaId(): ?int
+    {
+        $id = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+
+        return $id ? (int) $id : null;
     }
 }

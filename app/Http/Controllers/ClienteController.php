@@ -12,27 +12,36 @@ class ClienteController extends Controller
 {
     public function index(Request $request)
     {
-        // Separa el total de órdenes de los servicios ya cerrados.
-        // La columna Servicios anteriores usa únicamente ENTREGADO o RECHAZADO.
+        // Separa servicios activos, cerrados y valor registrado para alimentar el directorio visual de la sucursal.
         $query = Cliente::withCount('ordenes')
             ->withCount([
+                'ordenes as servicios_activos_count' => function ($ordenes) {
+                    // Activos se conecta con cualquier OS que aún no terminó en entrega o rechazo.
+                    $ordenes->whereNotIn('estado', ['ENTREGADO', 'RECHAZADO']);
+                },
                 'ordenes as servicios_anteriores_count' => function ($ordenes) {
                     $ordenes->whereIn('estado', ['ENTREGADO', 'RECHAZADO']);
                 },
-            ]);
+            ])
+            ->withSum('ordenes as ordenes_sum_presupuesto_total', 'presupuesto_total');
 
-        if (session('sucursal_id')) {
-            $query->where('sucursal_habitual_id', session('sucursal_id'));
-        }
+        // La sesión del Super Usuario o la asignación de Usuario impiden mezclar clientes entre sucursales.
+        $sucursalId = $this->sucursalActivaId();
+        $query->when(
+            $sucursalId,
+            fn ($clientes) => $clientes->where('sucursal_habitual_id', $sucursalId),
+            fn ($clientes) => $clientes->whereRaw('1 = 0')
+        );
 
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('nombre', 'like', '%'.$request->search.'%')
-                  ->orWhere('telefono_principal', 'like', '%'.$request->search.'%');
+                    ->orWhere('telefono_principal', 'like', '%'.$request->search.'%');
             });
         }
 
         $clientes = $query->latest()->get();
+
         return view('clientes.index', compact('clientes'));
     }
 
@@ -50,10 +59,14 @@ class ClienteController extends Controller
         ]);
 
         $request->validate([
-            'nombre'             => 'required|string',
+            'nombre' => 'required|string',
             'telefono_principal' => 'required|string|max:50',
             'telefono_normalizado' => 'required|string|max:80|unique:clientes,telefono_normalizado',
         ]);
+
+        // Obliga el alta a la sucursal activa; el formulario no puede enviar otra sede manualmente.
+        $sucursalId = $this->sucursalActivaId();
+        abort_unless($sucursalId, 422, 'Selecciona una sucursal antes de registrar al cliente.');
 
         // Normaliza el registro antes de guardar: conecta el formulario con la tabla clientes.
         $cliente = Cliente::create([
@@ -62,7 +75,7 @@ class ClienteController extends Controller
             'telefono_normalizado' => $request->telefono_normalizado,
             'telefono_alternativo' => $request->telefono_alternativo,
             'direccion' => $request->direccion,
-            'sucursal_habitual_id' => $request->sucursal_habitual_id ?: session('sucursal_id'),
+            'sucursal_habitual_id' => $sucursalId,
         ]);
 
         // Registra la captura para que el admin la vea en el panel de actividad.
@@ -87,6 +100,7 @@ class ClienteController extends Controller
             'sucursal',
             'ordenes' => fn ($ordenes) => $ordenes->with('sucursal')->latest(),
         ]);
+
         return view('clientes.show', compact('cliente'));
     }
 
@@ -110,7 +124,7 @@ class ClienteController extends Controller
         ]);
 
         $request->validate([
-            'nombre'             => 'required|string',
+            'nombre' => 'required|string',
             'telefono_principal' => 'required|string|max:50',
             'telefono_normalizado' => [
                 'required',
@@ -182,17 +196,26 @@ class ClienteController extends Controller
     }
 
     /**
-     * Verifica que el cliente pertenezca a la sucursal guardada en la sesión.
-     * Se conecta con el selector global de sucursal para aislar los datos de cada taller.
+     * Verifica que el cliente pertenezca a la sucursal activa.
+     * Se conecta con el selector global y con users.sucursal_id para aislar cada taller.
      */
     private function asegurarSucursalActiva(Cliente $cliente): void
     {
-        $sucursalActiva = session('sucursal_id');
+        $sucursalActiva = $this->sucursalActivaId();
 
-        if ($sucursalActiva && (int) $cliente->sucursal_habitual_id !== (int) $sucursalActiva) {
+        if (! $sucursalActiva || (int) $cliente->sucursal_habitual_id !== $sucursalActiva) {
             abort(403, 'El cliente no pertenece a la sucursal seleccionada.');
         }
     }
+
+    /**
+     * Devuelve la sucursal seleccionada o la asignada a la cuenta.
+     * Se conecta con users.sucursal_id y con la sesión usada por el selector del Super Usuario.
+     */
+    private function sucursalActivaId(): ?int
+    {
+        $id = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+
+        return $id ? (int) $id : null;
+    }
 }
-
-

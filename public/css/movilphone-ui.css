@@ -1093,6 +1093,346 @@ html[data-ui-theme="light"] body .alert-error { border-color:#fac0c8; background
 /* Sucursal destacada: evita textos claros sobre fondo blanco y sigue el tema seleccionado. */
 body .branch-focus-card { border:1px solid var(--ui-border); border-radius:8px; padding:1.5rem; margin-bottom:1.5rem; background:var(--ui-surface); box-shadow:var(--ui-shadow-md); }
 body .branch-focus-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; margin-bottom:1rem; }
+
+/*
+ * Experiencia clara Hector: reproduce la identidad blanca, negra, roja y verde del archivo de referencia.
+ * Se conecta con el rol Usuario de Buctzotz/Izamal y con el modo claro seleccionable del Super Usuario.
+ */
+html[data-ui-theme="light"] {
+    --ui-ink:#18181b;
+    --ui-muted:#71717a;
+    --ui-canvas:#f0f2f5;
+    --ui-surface:#ffffff;
+    --ui-surface-soft:#fafafa;
+    --ui-border:#e4e4e7;
+    --ui-border-strong:#d4d4d8;
+    --ui-shadow-sm:0 3px 12px rgba(24,24,27,.055);
+    --ui-shadow-md:0 14px 34px rgba(24,24,27,.09);
+    --ui-shadow-lg:0 28px 64px rgba(24,24,27,.16);
+    --ui-focus:0 0 0 4px rgba(24,24,27,.11);
+}
+
+/* Menú claro: mantiene las rutas y permisos de layout.blade.php, cambiando solamente su presentación. */
+html[data-ui-theme="light"] body .sidebar {
+    overflow-x:hidden;
+    border-right:1px solid #e4e4e7;
+    background:#fff !important;
+    box-shadow:8px 0 30px rgba(24,24,27,.07) !important;
+}
+html[data-ui-theme="light"] body .sidebar::after {
+    content:"";
+    position:fixed;
+    z-index:3;
+    top:0;
+    bottom:0;
+    left:227px;
+    width:3px;
+    background:linear-gradient(180deg,#c9151e 0%,#18181b 50%,#129326 100%);
+    pointer-events:none;
+}
+html[data-ui-theme="light"] body .brand {
+    position:relative;
+    border-color:#e4e4e7;
+    background:#fff;
+}
+html[data-ui-theme="light"] body .brand::after {
+    content:"";
+    position:absolute;
+    right:18px;
+    bottom:-1px;
+    left:18px;
+    height:2px;
+    background:linear-gradient(90deg,#c9151e 0 32%,#18181b 32% 68%,#129326 68%);
+}
+html[data-ui-theme="light"] body .brand-name,
+html[data-ui-theme="light"] body .user-name { color:#18181b; }
+html[data-ui-theme="light"] body .brand-mark {
+    border-color:#27272a;
+    background:#18181b;
+    color:#fff;
+    box-shadow:none;
+}
+html[data-ui-theme="light"] body .brand-sub,
+html[data-ui-theme="light"] body .user-rol { color:#71717a; }
+html[data-ui-theme="light"] body .branch-current { color:#18181b; }
+html[data-ui-theme="light"] body .branch-switch-button {
+    border-color:#d4d4d8;
+    background:#fafafa;
+    color:#27272a;
+}
+html[data-ui-theme="light"] body .branch-switch-button:hover {
+    border-color:#18181b;
+    background:#f4f4f5;
+}
+html[data-ui-theme="light"] body .nav-section { color:#a1a1aa; }
+html[data-ui-theme="light"] body .nav-link {
+    border-left-color:transparent;
+    color:#52525b;
+}
+html[data-ui-theme="light"] body .nav-link:hover {
+    background:#f4f4f5;
+    color:#18181b;
+    transform:translateX(2px);
+}
+html[data-ui-theme="light"] body .nav-link.active {
+    border-left-color:#c9151e;
+    background:#18181b;
+    color:#fff;
+    box-shadow:0 8px 20px rgba(24,24,27,.14);
+}
+html[data-ui-theme="light"] body .nav-divider,
+html[data-ui-theme="light"] body .sidebar-footer { border-color:#e4e4e7; }
+html[data-ui-theme="light"] body .sidebar-footer { background:#fafafa; }
+html[data-ui-theme="light"] body .user-avatar {
+    background:#18181b;
+    color:#fff;
+    box-shadow:inset 0 -2px 0 #129326;
+}
+html[data-ui-theme="light"] body .logout-btn {
+    border:1px solid #e4e4e7;
+    background:#fff;
+    color:#52525b;
+}
+html[data-ui-theme="light"] body .logout-btn:hover {
+    border-color:#c9151e;
+    background:#fff5f5;
+    color:#a71119;
+}
+
+/* Superficies claras: conectan formularios, tarjetas y tablas existentes con el mismo lenguaje visual. */
+html[data-ui-theme="light"] body,
+html[data-ui-theme="light"] body .main,
+html[data-ui-theme="light"] body .content { background:#f0f2f5 !important; color:#18181b !important; }
+html[data-ui-theme="light"] body .topbar {
+    border-color:#e4e4e7;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 6px 20px rgba(24,24,27,.055);
+}
+html[data-ui-theme="light"] body .topbar-section-icon {
+    border-color:#e4e4e7;
+    background:#18181b;
+    color:#fff;
+}
+html[data-ui-theme="light"] body .topbar-icon-button {
+    border-color:#d4d4d8;
+    background:#fff;
+    color:#52525b;
+}
+html[data-ui-theme="light"] body .topbar-icon-button:hover,
+html[data-ui-theme="light"] body .theme-toggle.is-light {
+    border-color:#18181b;
+    background:#f4f4f5;
+    color:#18181b;
+}
+html[data-ui-theme="light"] body .topbar-badge.super {
+    border-color:#d4d4d8;
+    background:#18181b;
+    color:#fff;
+}
+html[data-ui-theme="light"] body .topbar-badge.user {
+    border:1px solid #bbebc6;
+    background:#ecfdf3;
+    color:#117629;
+}
+html[data-ui-theme="light"] body .page-header h1,
+html[data-ui-theme="light"] body h1,
+html[data-ui-theme="light"] body h2,
+html[data-ui-theme="light"] body h3 { color:#18181b; letter-spacing:0; }
+html[data-ui-theme="light"] body .btn-primary {
+    border-color:#09090b !important;
+    background:#09090b !important;
+    color:#fff !important;
+    box-shadow:0 7px 16px rgba(9,9,11,.14);
+}
+html[data-ui-theme="light"] body .btn-primary:hover {
+    border-color:#27272a !important;
+    background:#27272a !important;
+    transform:translateY(-1px);
+}
+html[data-ui-theme="light"] body .btn-success {
+    border-color:#8dd49d;
+    background:#f0fdf4;
+    color:#117629;
+}
+html[data-ui-theme="light"] body .btn-danger {
+    border-color:#f0a4aa;
+    background:#fff7f7;
+    color:#c9151e;
+}
+html[data-ui-theme="light"] body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+html[data-ui-theme="light"] body select:focus,
+html[data-ui-theme="light"] body textarea:focus {
+    border-color:#18181b !important;
+    box-shadow:var(--ui-focus) !important;
+}
+html[data-ui-theme="light"] body .card,
+html[data-ui-theme="light"] body .stat-card,
+html[data-ui-theme="light"] body .dashboard-kpi,
+html[data-ui-theme="light"] body .dashboard-section,
+html[data-ui-theme="light"] body .ui-table-panel {
+    border-color:#e4e4e7 !important;
+    background:#fff !important;
+    box-shadow:var(--ui-shadow-sm) !important;
+}
+html[data-ui-theme="light"] body .ui-table-panel th,
+html[data-ui-theme="light"] body table th {
+    border-color:#e4e4e7 !important;
+    background:#fafafa !important;
+    color:#52525b !important;
+}
+html[data-ui-theme="light"] body .ui-table-panel td,
+html[data-ui-theme="light"] body table td {
+    border-color:#ededf0 !important;
+    background:#fff;
+    color:#27272a;
+}
+html[data-ui-theme="light"] body .ui-table-panel tbody tr:nth-child(even) td { background:#fcfcfc !important; }
+html[data-ui-theme="light"] body .ui-table-panel tbody tr:hover td,
+html[data-ui-theme="light"] body table tbody tr:hover td { background:#f4f4f5 !important; }
+
+/*
+ * Directorio de clientes: adapta la vista del archivo Hector a los conteos seguros de ClienteController.
+ * Las acciones siguen conectadas con las rutas show, edit y destroy del recurso clientes.
+ */
+body .client-directory-hero {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    margin-bottom:1rem;
+    padding:1.35rem 1.5rem;
+    border:1px solid var(--ui-border);
+    border-radius:10px;
+    background:#09090b;
+    color:#fff;
+    box-shadow:var(--ui-shadow-md);
+}
+body .client-directory-hero > div > span {
+    color:#a1a1aa;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+body .client-directory-hero h1 { margin:.18rem 0; color:#fff !important; font-size:25px; }
+body .client-directory-hero p { color:#a1a1aa; font-size:11px; }
+body .client-directory-hero .btn {
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    border-color:#fff !important;
+    background:#fff !important;
+    color:#111 !important;
+    box-shadow:none;
+}
+body .client-directory-stats {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:.8rem;
+    margin-bottom:1rem;
+}
+body .client-directory-stats article {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    padding:1rem;
+    border:1px solid var(--ui-border);
+    border-radius:8px;
+    background:var(--ui-surface);
+    box-shadow:var(--ui-shadow-sm);
+}
+body .client-directory-stats p { color:var(--ui-muted); font-size:10px; text-transform:uppercase; }
+body .client-directory-stats strong { display:block; margin-top:2px; color:var(--ui-ink); font-size:20px; }
+body .client-stat-icon {
+    display:inline-flex;
+    width:40px;
+    height:40px;
+    flex:0 0 40px;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px;
+    background:#f4f4f5;
+    color:#18181b;
+}
+body .client-stat-icon.is-success { background:#f0fdf4; color:#129326; }
+body .client-stat-icon.is-warning { background:#fff8e1; color:#b77905; }
+body .client-directory-search {
+    display:flex;
+    align-items:flex-end;
+    gap:.55rem;
+    margin-bottom:1rem;
+    padding:.85rem;
+    border:1px solid var(--ui-border);
+    border-radius:8px;
+    background:var(--ui-surface);
+}
+body .client-directory-search label { display:flex; flex:1; flex-direction:column; gap:.35rem; }
+body .client-directory-search label > span {
+    display:flex;
+    align-items:center;
+    gap:.35rem;
+    color:var(--ui-muted);
+    font-size:9px;
+    font-weight:800;
+    text-transform:uppercase;
+}
+body .client-directory-search input { width:100%; height:40px; }
+body .client-directory-search .btn { display:inline-flex; height:40px; align-items:center; gap:.35rem; }
+body .client-directory-table { overflow:auto; border-radius:8px; box-shadow:var(--ui-shadow-sm); }
+body .client-directory-table table { min-width:980px; }
+body .client-identity { display:flex; align-items:center; gap:.65rem; }
+body .client-identity > span {
+    display:flex;
+    width:34px;
+    height:34px;
+    flex:0 0 34px;
+    align-items:center;
+    justify-content:center;
+    border-radius:7px;
+    background:#18181b;
+    color:#fff;
+    font-weight:800;
+}
+body .client-identity strong,
+body .client-identity small,
+body .client-contact small,
+body .client-secondary { display:block; }
+body .client-identity small,
+body .client-contact small,
+body .client-secondary { margin-top:2px; color:var(--ui-muted); font-size:9px; }
+body .client-contact strong,
+body .client-service-chip,
+body .client-history-button,
+body .client-actions,
+body .client-actions .btn { display:inline-flex; align-items:center; gap:.35rem; }
+body .client-service-chip {
+    padding:.3rem .55rem;
+    border-radius:999px;
+    background:#f4f4f5;
+    color:#27272a;
+    font-size:10px;
+    font-weight:700;
+}
+body .client-actions { flex-wrap:wrap; }
+body .client-actions form { margin:0; }
+body .client-directory-empty {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:.35rem;
+    padding:2.5rem;
+    color:var(--ui-muted);
+    text-align:center;
+}
+body .client-directory-empty > svg { width:30px; height:30px; }
+body .client-directory-empty strong { color:var(--ui-ink); }
+body .client-directory-empty p { font-size:10px; }
+
+@media (max-width:800px) {
+    body .client-directory-hero,
+    body .client-directory-search { align-items:stretch; flex-direction:column; }
+    body .client-directory-stats { grid-template-columns:1fr; }
+}
 body .branch-focus-label { margin-bottom:.25rem; color:var(--ui-muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 body .branch-focus-title { margin:0; color:var(--ui-ink); font-size:22px; }
 body .branch-focus-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
@@ -1107,8 +1447,12 @@ body .branch-map-button { border-color:#4b86ea !important; background:#397de8 !i
 body .branch-actions { display:flex; align-items:center; gap:6px; }
 body .branch-empty-value { color:var(--ui-muted); }
 body .branch-empty-table { padding:2rem !important; color:var(--ui-muted) !important; text-align:center; }
-html[data-ui-theme="light"] body .branch-table-row.is-selected td { background:#eeebff !important; }
-html[data-ui-theme="light"] body .branch-table-link:hover { color:#4f3bd2; }
+/*
+ * La sucursal seleccionada usa el verde de la identidad Hector.
+ * Se conecta con la tabla de Sucursales y evita reintroducir morado en el modo claro.
+ */
+html[data-ui-theme="light"] body .branch-table-row.is-selected td { background:#ecfdf3 !important; }
+html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
 
 @keyframes ui-loading-dot { to { transform:translateY(-7px); opacity:.45; } }
 

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Categoria; // Sincroniza la categoría escrita en Inventario con el catálogo de Categorías.
 use App\Models\Inventario;
-use App\Models\Sucursal;
-use App\Models\Categoria; // Necesario para poder crear/buscar categorías desde aquí
+use App\Models\Sucursal; // Limita altas y ediciones a la sucursal activa del usuario.
 use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 
@@ -31,11 +31,11 @@ class InventarioController extends Controller
         }
         if ($request->filled('buscar')) {
             $buscar = $request->buscar;
-            $query->where(function($q) use ($buscar) {
-                $q->where('nombre', 'like', '%' . $buscar . '%')
-                  ->orWhere('dispositivo_compatible', 'like', '%' . $buscar . '%')
-                  ->orWhere('categoria', 'like', '%' . $buscar . '%')
-                  ->orWhere('proveedor', 'like', '%' . $buscar . '%');
+            $query->where(function ($q) use ($buscar) {
+                $q->where('nombre', 'like', '%'.$buscar.'%')
+                    ->orWhere('dispositivo_compatible', 'like', '%'.$buscar.'%')
+                    ->orWhere('categoria', 'like', '%'.$buscar.'%')
+                    ->orWhere('proveedor', 'like', '%'.$buscar.'%');
             });
         }
 
@@ -69,22 +69,29 @@ class InventarioController extends Controller
 
     public function create()
     {
-        $sucursales = Sucursal::all();
+        // El alta solo muestra la sucursal activa y se conecta con el usuario autenticado.
+        $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+        $sucursales = Sucursal::whereKey($sucursalActivaId)->get();
+
         return view('inventario.create', compact('sucursales'));
     }
 
     public function store(Request $request)
     {
-        // 1. Validamos los datos del formulario como ya lo hacías antes.
-        //    No se toca nada de esto.
+        // Fuerza la sucursal del servidor antes de validar para impedir altas en otra sede.
+        $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+        abort_unless($sucursalActivaId, 422, 'Selecciona una sucursal antes de agregar inventario.');
+        $request->merge(['sucursal_id' => (int) $sucursalActivaId]);
+
+        // Valida la información que se conectará con inventario.
         $request->validate([
-            'nombre'               => 'required|string',
-            'categoria'            => 'required|string|max:100',
-            'sucursal_id'          => 'required|exists:sucursales,id',
-            'cantidad_disponible'  => 'required|integer|min:0',
-            'stock_minimo'         => 'required|integer|min:0',
-            'precio_costo'         => 'required|numeric|min:0',
-            'precio_venta'         => 'required|numeric|min:0',
+            'nombre' => 'required|string',
+            'categoria' => 'required|string|max:100',
+            'sucursal_id' => 'required|exists:sucursales,id',
+            'cantidad_disponible' => 'required|integer|min:0',
+            'stock_minimo' => 'required|integer|min:0',
+            'precio_costo' => 'required|numeric|min:0',
+            'precio_venta' => 'required|numeric|min:0',
         ]);
 
         // Limpia espacios de la categoría manual antes de conectarla con Inventario y Categorías.
@@ -100,7 +107,7 @@ class InventarioController extends Controller
             'nombre', 'categoria', 'sucursal_id',
             'cantidad_disponible', 'stock_minimo',
             'precio_costo', 'precio_venta',
-            'proveedor', 'dispositivo_compatible', 'calidad'
+            'proveedor', 'dispositivo_compatible', 'calidad',
         ]));
 
         // Auditoria: conecta la pieza creada con Actividad y con la campana administrativa.
@@ -111,6 +118,10 @@ class InventarioController extends Controller
 
     public function show(Inventario $inventario)
     {
+        // La ficha usa la misma protección de edit y destroy para no cruzar sucursales por URL.
+        $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+        abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
+
         return view('inventario.show', compact('inventario'));
     }
 
@@ -118,20 +129,27 @@ class InventarioController extends Controller
     {
         $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
         abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
-        $sucursales = Sucursal::all();
+        // La edición conserva la sucursal original y no ofrece mover la pieza a otra sede.
+        $sucursales = Sucursal::whereKey($sucursalActivaId)->get();
+
         return view('inventario.edit', compact('inventario', 'sucursales'));
     }
 
     public function update(Request $request, Inventario $inventario)
     {
+        // Revalida la sede y sobrescribe cualquier sucursal manipulada desde el navegador.
+        $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+        abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
+        $request->merge(['sucursal_id' => (int) $sucursalActivaId]);
+
         $request->validate([
-            'nombre'               => 'required|string',
-            'categoria'            => 'required|string|max:100',
-            'sucursal_id'          => 'required|exists:sucursales,id',
-            'cantidad_disponible'  => 'required|integer|min:0',
-            'stock_minimo'         => 'required|integer|min:0',
-            'precio_costo'         => 'required|numeric|min:0',
-            'precio_venta'         => 'required|numeric|min:0',
+            'nombre' => 'required|string',
+            'categoria' => 'required|string|max:100',
+            'sucursal_id' => 'required|exists:sucursales,id',
+            'cantidad_disponible' => 'required|integer|min:0',
+            'stock_minimo' => 'required|integer|min:0',
+            'precio_costo' => 'required|numeric|min:0',
+            'precio_venta' => 'required|numeric|min:0',
         ]);
 
         // Aplica la misma limpieza al editar para conservar un solo nombre por categoría.
@@ -145,7 +163,7 @@ class InventarioController extends Controller
             'nombre', 'categoria', 'sucursal_id',
             'cantidad_disponible', 'stock_minimo',
             'precio_costo', 'precio_venta',
-            'proveedor', 'dispositivo_compatible', 'calidad'
+            'proveedor', 'dispositivo_compatible', 'calidad',
         ]));
 
         AdminActivityLogger::registrar('INVENTARIO', 'EDITAR', 'Pieza '.$inventario->nombre.' actualizada.', $inventario->sucursal_id, $inventario);
@@ -159,6 +177,7 @@ class InventarioController extends Controller
         abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
         AdminActivityLogger::registrar('INVENTARIO', 'ELIMINAR', 'Pieza '.$inventario->nombre.' eliminada.', $inventario->sucursal_id, $inventario);
         $inventario->delete();
+
         return redirect()->route('inventario.index')->with('success', 'Pieza eliminada.');
     }
 
@@ -185,9 +204,9 @@ class InventarioController extends Controller
         // Si no existe ninguna coincidencia, la creamos con una
         // descripción por defecto (recuerda que 'descripcion' es NOT NULL
         // en tu base de datos, así que no puede ir vacía)
-        if (!$categoria) {
+        if (! $categoria) {
             Categoria::create([
-                'nombre'      => $nombreCategoria,
+                'nombre' => $nombreCategoria,
                 'descripcion' => 'Categoría creada automáticamente desde Inventario',
             ]);
         }

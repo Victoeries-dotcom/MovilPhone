@@ -12,7 +12,8 @@
         @if(in_array(auth()->user()->rol, ['superusuario', 'usuario', 'tecnico']))
             <a href="{{ route('ordenes.create') }}" class="btn btn-primary"><i data-lucide="plus"></i><span>Nueva OS</span></a>
         @endif
-        @if(in_array(auth()->user()->rol, ['superusuario', 'vendedor']))
+        {{-- Nueva venta: conecta el panel con Ventas para los tres roles autorizados por routes/web.php. --}}
+        @if(in_array(auth()->user()->rol, ['superusuario', 'vendedor', 'usuario']))
             <a href="{{ route('ventas.create') }}" class="btn"><i data-lucide="shopping-cart"></i><span>Nueva venta</span></a>
         @endif
     </div>

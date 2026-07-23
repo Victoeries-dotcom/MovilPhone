@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrdenServicio;
 use App\Models\Cliente;
-use App\Models\Sucursal;
 use App\Models\HistorialEstado;
-use App\Models\User;
 use App\Models\MovimientoCaja;
+use App\Models\OrdenServicio;
+use App\Models\Sucursal;
+use App\Models\User;
 use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,6 +116,7 @@ class OrdenServicioController extends Controller
         ]);
 
         $telefonoNormalizado = Cliente::normalizarTelefono($request->telefono);
+        $sucursalId = $this->sucursalActivaId();
 
         if ($telefonoNormalizado === '') {
             return response()->json([
@@ -125,9 +126,11 @@ class OrdenServicioController extends Controller
 
         $cliente = Cliente::withCount('ordenes')
             ->where('telefono_normalizado', $telefonoNormalizado)
+            // El autocompletado solo consulta clientes visibles en la sucursal del usuario.
+            ->when($sucursalId, fn ($clientes) => $clientes->where('sucursal_habitual_id', $sucursalId))
             ->first();
 
-        if (!$cliente) {
+        if (! $cliente) {
             return response()->json([
                 'message' => 'No se encontró un cliente anterior con ese teléfono.',
             ], 404);
@@ -147,9 +150,12 @@ class OrdenServicioController extends Controller
     // Mostrar formulario de nueva OS
     public function create()
     {
-        $sucursales = Sucursal::all();
-        $tecnicos = User::all();
-        $clientes = Cliente::all();
+        // El formulario recibe únicamente datos de la sucursal activa para evitar opciones cruzadas.
+        $sucursalId = $this->sucursalActivaId();
+        $sucursales = Sucursal::whereKey($sucursalId)->get();
+        $tecnicos = User::where('rol', 'tecnico')->where('sucursal_id', $sucursalId)->orderBy('name')->get();
+        $clientes = Cliente::where('sucursal_habitual_id', $sucursalId)->orderBy('nombre')->get();
+
         return view('ordenes.create', compact('sucursales', 'tecnicos', 'clientes'));
     }
 
@@ -162,21 +168,41 @@ class OrdenServicioController extends Controller
             'cliente_telefono_normalizado' => $telefonoNormalizado,
         ]);
 
+        // Resuelve primero la sucursal para usarla también en las reglas de cliente y técnico.
+        $sucursalId = $this->sucursalActivaId();
+        abort_if(! $sucursalId || (int) $request->sucursal_id !== $sucursalId, 403);
+
         $request->validate([
-            'cliente_id'           => 'nullable|integer|exists:clientes,id',
-            'cliente_nombre'       => 'required|string',
-            'cliente_telefono'     => 'required|string|max:50',
+            'cliente_id' => [
+                'nullable',
+                'integer',
+                // El cliente anterior debe pertenecer a la misma sede que registra la nueva OS.
+                Rule::exists('clientes', 'id')->where(
+                    fn ($clientes) => $clientes->where('sucursal_habitual_id', $sucursalId)
+                ),
+            ],
+            'cliente_nombre' => 'required|string',
+            'cliente_telefono' => 'required|string|max:50',
             'cliente_telefono_normalizado' => 'required|string|max:80',
-            'cliente_telefono_extra'=> 'nullable|string',
-            'sucursal_id'          => 'required|exists:sucursales,id',
-            'tipo_dispositivo'     => 'required|string',
-            'marca'                => 'required|string',
-            'modelo'               => 'required|string',
-            'problema_reportado'   => 'required|string',
-            'accesorios_entregados'=> 'nullable|string',
-            'estado_fisico'        => 'required|string',
-            'contrasena_dispositivo'=> 'nullable|string|max:255',
-            'anticipo'             => 'nullable|numeric|min:0',
+            'cliente_telefono_extra' => 'nullable|string',
+            'sucursal_id' => 'required|exists:sucursales,id',
+            'tecnico_id' => [
+                'nullable',
+                // Evita asignar por petición manual un técnico de otra sucursal.
+                Rule::exists('users', 'id')->where(
+                    fn ($usuarios) => $usuarios
+                        ->where('rol', 'tecnico')
+                        ->where('sucursal_id', $sucursalId)
+                ),
+            ],
+            'tipo_dispositivo' => 'required|string',
+            'marca' => 'required|string',
+            'modelo' => 'required|string',
+            'problema_reportado' => 'required|string',
+            'accesorios_entregados' => 'nullable|string',
+            'estado_fisico' => 'required|string',
+            'contrasena_dispositivo' => 'nullable|string|max:255',
+            'anticipo' => 'nullable|numeric|min:0',
             'metodo_pago_anticipo' => 'nullable|string',
         ]);
 
@@ -187,7 +213,7 @@ class OrdenServicioController extends Controller
                 ->where('telefono_normalizado', $telefonoNormalizado)
                 ->first();
 
-            if (!$cliente) {
+            if (! $cliente) {
                 throw ValidationException::withMessages([
                     'cliente_telefono' => 'El teléfono fue modificado y ya no coincide con el cliente anterior seleccionado.',
                 ]);
@@ -221,32 +247,32 @@ class OrdenServicioController extends Controller
         $prefix = $sucursal->nombre === 'Izamal' ? 'IZA' : 'BUC';
         $year = date('Y');
         $ultimo = OrdenServicio::where('sucursal_id', $request->sucursal_id)->count() + 1;
-        $numero_os = $prefix . '-' . $year . '-' . str_pad($ultimo, 4, '0', STR_PAD_LEFT);
+        $numero_os = $prefix.'-'.$year.'-'.str_pad($ultimo, 4, '0', STR_PAD_LEFT);
 
         // Crea la orden con los datos solicitados en Nueva OS y los conecta con ordenes_servicio.
         $orden = OrdenServicio::create([
-            'numero_os'             => $numero_os,
-            'cliente_id'            => $cliente->id,
+            'numero_os' => $numero_os,
+            'cliente_id' => $cliente->id,
             'cliente_telefono_extra' => $request->cliente_telefono_extra,
-            'sucursal_id'           => $request->sucursal_id,
-            'tecnico_id'            => $request->tecnico_id,
-            'tipo_dispositivo'      => $request->tipo_dispositivo,
-            'marca'                 => $request->marca,
-            'modelo'                => $request->modelo,
-            'imei'                  => $request->imei,
-            'problema_reportado'    => $request->problema_reportado,
+            'sucursal_id' => $request->sucursal_id,
+            'tecnico_id' => $request->tecnico_id,
+            'tipo_dispositivo' => $request->tipo_dispositivo,
+            'marca' => $request->marca,
+            'modelo' => $request->modelo,
+            'imei' => $request->imei,
+            'problema_reportado' => $request->problema_reportado,
             'accesorios_entregados' => $request->accesorios_entregados ?: 'NINGUNO',
-            'estado_fisico'         => $request->estado_fisico,
+            'estado_fisico' => $request->estado_fisico,
             // Guarda el patrón, PIN o contraseña del equipo y se conecta con el detalle de la orden.
-            'contrasena_dispositivo'=> $request->contrasena_dispositivo,
-            'cobro_diagnostico'     => 0,
-            'anticipo'              => $request->anticipo ?? 0,
-            'metodo_pago_anticipo'  => $request->metodo_pago_anticipo ?? 'efectivo',
+            'contrasena_dispositivo' => $request->contrasena_dispositivo,
+            'cobro_diagnostico' => 0,
+            'anticipo' => $request->anticipo ?? 0,
+            'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
         ]);
 
         // Registrar en historial
         HistorialEstado::create([
-            'os_id'  => $orden->id,
+            'os_id' => $orden->id,
             'estado' => 'RECIBIDO',
         ]);
 
@@ -268,8 +294,10 @@ class OrdenServicioController extends Controller
     // Ver detalle de una OS
     public function show(OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         $ordenServicio->load(['cliente', 'sucursal', 'tecnico', 'historial']);
         $transiciones = OrdenServicio::TRANSICIONES[$ordenServicio->estado] ?? [];
+
         return view('ordenes.show', compact('ordenServicio', 'transiciones'));
     }
 
@@ -279,13 +307,16 @@ class OrdenServicioController extends Controller
      */
     public function sticker(OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         $ordenServicio->load(['cliente', 'sucursal']);
+
         return view('ordenes.sticker', compact('ordenServicio'));
     }
 
     // Mostrar formulario de edición
     public function edit(OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         // Carga cliente y sucursal para mostrar exactamente los datos capturados en Nueva OS.
         $ordenServicio->load(['cliente', 'sucursal']);
 
@@ -304,6 +335,7 @@ class OrdenServicioController extends Controller
     // Guardar edición
     public function update(Request $request, OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         // Normaliza el teléfono editado para conservar la identidad única del cliente.
         $telefonoNormalizado = Cliente::normalizarTelefono($request->cliente_telefono);
         $request->merge([
@@ -311,25 +343,25 @@ class OrdenServicioController extends Controller
         ]);
 
         $request->validate([
-            'cliente_nombre'          => 'required|string|max:255',
-            'cliente_telefono'        => 'required|string|max:30',
+            'cliente_nombre' => 'required|string|max:255',
+            'cliente_telefono' => 'required|string|max:30',
             'cliente_telefono_normalizado' => 'required|string|max:80',
-            'marca'                  => 'required|string',
-            'modelo'                 => 'required|string',
-            'tipo_dispositivo'       => 'required|string',
+            'marca' => 'required|string',
+            'modelo' => 'required|string',
+            'tipo_dispositivo' => 'required|string',
             'cliente_telefono_extra' => 'nullable|string|max:30',
-            'imei'                   => 'nullable|string|max:255',
-            'tecnico_id'             => 'nullable|exists:users,id',
-            'problema_reportado'     => 'required|string',
+            'imei' => 'nullable|string|max:255',
+            'tecnico_id' => 'nullable|exists:users,id',
+            'problema_reportado' => 'required|string',
             'problema_diagnosticado' => 'nullable|string',
-            'accesorios_entregados'  => 'nullable|string',
-            'estado_fisico'          => 'required|string',
+            'accesorios_entregados' => 'nullable|string',
+            'estado_fisico' => 'required|string',
             'contrasena_dispositivo' => 'nullable|string|max:255',
-            'cobro_diagnostico'      => 'nullable|numeric|min:0',
-            'mano_obra'              => 'nullable|numeric|min:0',
-            'presupuesto_total'      => 'nullable|numeric|min:0',
-            'anticipo'               => 'nullable|numeric|min:0',
-            'metodo_pago_anticipo'   => 'nullable|in:efectivo,transferencia,tarjeta',
+            'cobro_diagnostico' => 'nullable|numeric|min:0',
+            'mano_obra' => 'nullable|numeric|min:0',
+            'presupuesto_total' => 'nullable|numeric|min:0',
+            'anticipo' => 'nullable|numeric|min:0',
+            'metodo_pago_anticipo' => 'nullable|in:efectivo,transferencia,tarjeta',
             'fecha_entrega_estimada' => 'nullable|date',
         ]);
 
@@ -399,6 +431,7 @@ class OrdenServicioController extends Controller
     // Cambiar estado de una orden desde la lista o desde el detalle de la OS.
     public function avanzarEstado(Request $request, OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         // Estados permitidos: se conectan con ordenes_servicio.estado y evitan guardar textos no válidos.
         $estadosPermitidos = [
             'RECIBIDO',
@@ -416,7 +449,7 @@ class OrdenServicioController extends Controller
 
         $nuevoEstado = $request->estado;
 
-        if (!in_array($nuevoEstado, $estadosPermitidos, true)) {
+        if (! in_array($nuevoEstado, $estadosPermitidos, true)) {
             return back()->with('error', 'Estado no válido para la orden.');
         }
 
@@ -428,9 +461,9 @@ class OrdenServicioController extends Controller
 
         // HistorialEstado guarda la evidencia del cambio y se conecta con el detalle de la orden.
         HistorialEstado::create([
-            'os_id'  => $ordenServicio->id,
+            'os_id' => $ordenServicio->id,
             'estado' => $nuevoEstado,
-            'nota'   => $request->nota ?: 'Cambio manual desde el menú de órdenes.',
+            'nota' => $request->nota ?: 'Cambio manual desde el menú de órdenes.',
         ]);
 
         // Registra el cambio de estado para que el admin siga el avance del servicio en actividad.
@@ -451,6 +484,7 @@ class OrdenServicioController extends Controller
      */
     public function entregar(Request $request, OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         $request->validate([
             // Valida en MySQL que el usuario sea técnico y pertenezca a la sucursal de la OS.
             'tecnico_entrega_id' => [
@@ -508,6 +542,7 @@ class OrdenServicioController extends Controller
      */
     public function ticketEntrega(OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         $ordenServicio->load(['cliente', 'sucursal', 'tecnico']);
         $tecnicoEntrega = session('tecnico_entrega', $ordenServicio->tecnico->name ?? '—');
         $cobroFinal = session('cobro_final', $ordenServicio->cobro_diagnostico ?? 0);
@@ -539,7 +574,7 @@ class OrdenServicioController extends Controller
         ]);
 
         $sucursalId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
-        abort_if(!$sucursalId || (int) $ordenServicio->sucursal_id !== (int) $sucursalId, 403);
+        abort_if(! $sucursalId || (int) $ordenServicio->sucursal_id !== (int) $sucursalId, 403);
 
         if ($ordenServicio->estado === 'RECHAZADO') {
             return redirect()->route('ordenes.index')->with('error', 'La orden ya está marcada como RECHAZADA.');
@@ -571,6 +606,7 @@ class OrdenServicioController extends Controller
 
             if ($devolucion <= 0) {
                 $consultaDevolucion->delete();
+
                 return;
             }
 
@@ -626,6 +662,7 @@ class OrdenServicioController extends Controller
         if ($total <= 0) {
             // Si la orden ya no tiene cobros, elimina únicamente su fila financiera vacía.
             $movimiento?->delete();
+
             return;
         }
 
@@ -664,6 +701,7 @@ class OrdenServicioController extends Controller
     // Eliminar OS
     public function destroy(OrdenServicio $ordenServicio)
     {
+        $this->asegurarSucursalActiva($ordenServicio);
         $numeroOs = $ordenServicio->numero_os;
         $sucursalId = $ordenServicio->sucursal_id;
 
@@ -679,7 +717,25 @@ class OrdenServicioController extends Controller
 
         return redirect()->route('ordenes.index')->with('success', 'Orden eliminada.');
     }
+
+    /**
+     * Protege cada acción individual de Ordenes contra accesos manuales de otra sucursal.
+     * Se conecta con la sesión del Super Usuario y con users.sucursal_id para las cuentas de taller.
+     */
+    private function asegurarSucursalActiva(OrdenServicio $ordenServicio): void
+    {
+        $sucursalId = $this->sucursalActivaId();
+        abort_if(! $sucursalId || (int) $ordenServicio->sucursal_id !== $sucursalId, 403);
+    }
+
+    /**
+     * Centraliza la sucursal usada por listados, formularios y acciones de Ordenes.
+     * Se conecta con el selector lateral o con la sucursal fija de Buctzotz/Izamal del usuario.
+     */
+    private function sucursalActivaId(): ?int
+    {
+        $id = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+
+        return $id ? (int) $id : null;
+    }
 }
-
-
-

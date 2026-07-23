@@ -3,9 +3,11 @@
 @section('content')
 <div class="page-header">
     <h1>Órdenes de Servicio</h1>
-    {{-- Acciones superiores recuperadas del módulo original y conectadas con Garantía y Caja. --}}
+    {{-- Acciones superiores: Caja es operativa y Garantía permanece conectada exclusivamente con Configuración administrativa. --}}
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:flex-end;">
-        <a href="{{ route('configuracion.garantia') }}" class="btn">🛡️ Garantía</a>
+        @if(auth()->user()->rol === 'superusuario')
+            <a href="{{ route('configuracion.garantia') }}" class="btn">🛡️ Garantía</a>
+        @endif
         <button type="button" class="btn btn-danger" onclick="abrirModalEgreso()">🔴 Egreso</button>
         <button type="button" class="btn btn-success" onclick="abrirModalIngreso()">🟢 Ingreso</button>
         <a href="{{ route('ordenes.create') }}" class="btn btn-primary">+ Nueva OS</a>

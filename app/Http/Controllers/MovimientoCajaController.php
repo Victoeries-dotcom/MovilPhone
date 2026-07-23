@@ -103,7 +103,6 @@ class MovimientoCajaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'sucursal_id' => 'required|exists:sucursales,id',
             'tipo' => 'required|in:INGRESO,EGRESO',
             'categoria' => 'required|string|max:100',
             'monto' => 'required|numeric|min:0.01',
@@ -111,8 +110,19 @@ class MovimientoCajaController extends Controller
             'descripcion' => 'nullable|string|max:500',
         ]);
 
+        /*
+         * La sucursal se obtiene de la sesión o del usuario autenticado.
+         * Se conecta con el selector global y evita registrar dinero en otra sede
+         * aunque el navegador envíe manualmente un sucursal_id diferente.
+         */
+        $sucursalId = $this->sucursalActivaId();
+        if (! $sucursalId) {
+            return redirect()->route('caja.index')
+                ->with('error', 'Selecciona una sucursal antes de registrar el movimiento.');
+        }
+
         $movimiento = MovimientoCaja::create([
-            'sucursal_id' => $request->sucursal_id,
+            'sucursal_id' => $sucursalId,
             'tipo' => $request->tipo,
             // Normaliza textos capturados para mantener uniforme el registro de Caja.
             'categoria' => Str::upper($request->categoria),
@@ -159,7 +169,7 @@ class MovimientoCajaController extends Controller
     public function ticket(MovimientoCaja $movimientoCaja)
     {
         $sucursalId = $this->sucursalActivaId();
-        abort_if(!$sucursalId || (int) $movimientoCaja->sucursal_id !== $sucursalId, 403);
+        abort_if(! $sucursalId || (int) $movimientoCaja->sucursal_id !== $sucursalId, 403);
 
         $movimientoCaja->load(['orden.cliente', 'orden.sucursal', 'sucursal', 'usuario']);
         $pagosOrden = $movimientoCaja->os_id
@@ -181,7 +191,7 @@ class MovimientoCajaController extends Controller
         $fecha = $request->get('fecha', now()->toDateString());
         $sucursalId = $this->sucursalActivaId();
 
-        if (!$sucursalId) {
+        if (! $sucursalId) {
             return redirect()->route('caja.index')
                 ->with('error', 'Selecciona una sucursal antes de consultar el corte.');
         }
@@ -236,6 +246,10 @@ class MovimientoCajaController extends Controller
      */
     public function destroy(MovimientoCaja $movimientoCaja)
     {
+        // Protege la eliminación manual para que Caja solo opere sobre la sucursal activa.
+        $sucursalIdActivo = $this->sucursalActivaId();
+        abort_if(! $sucursalIdActivo || (int) $movimientoCaja->sucursal_id !== $sucursalIdActivo, 403);
+
         if ($movimientoCaja->os_id) {
             return redirect()->route('caja.index')
                 ->with('error', 'Los movimientos ligados a una orden se administran desde la orden de servicio.');
@@ -257,7 +271,9 @@ class MovimientoCajaController extends Controller
     }
 
     public function show(MovimientoCaja $movimientoCaja) {}
+
     public function edit(MovimientoCaja $movimientoCaja) {}
+
     public function update(Request $request, MovimientoCaja $movimientoCaja) {}
 
     /**
@@ -273,7 +289,7 @@ class MovimientoCajaController extends Controller
         ]);
 
         $sucursalId = $this->sucursalActivaId();
-        if (!$sucursalId) {
+        if (! $sucursalId) {
             return redirect()->route('ordenes.index')
                 ->with('error', 'Selecciona una sucursal antes de registrar el movimiento.');
         }
@@ -311,6 +327,7 @@ class MovimientoCajaController extends Controller
     private function sucursalActivaId(): ?int
     {
         $sucursalId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+
         return $sucursalId ? (int) $sucursalId : null;
     }
 }

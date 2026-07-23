@@ -7,11 +7,17 @@
     {{-- Metadatos globales: conectan peticiones AJAX y modo instalable con la misma sesion Laravel. --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="{{ $configuracionGlobal['color_primario'] ?? '#1650c5' }}">
-    {{-- Tema inicial: recupera la preferencia antes de pintar la pagina para evitar destellos de color. --}}
+    {{--
+        Tema inicial: conecta el rol autenticado con la experiencia visual.
+        Usuario usa la identidad clara del archivo Hector; Super Usuario conserva su selector claro/oscuro.
+    --}}
     <script>
         (function () {
+            const rolActual = @js(auth()->user()?->rol);
             const temaGuardado = window.localStorage.getItem('movilphone.ui.theme');
-            document.documentElement.dataset.uiTheme = temaGuardado === 'light' ? 'light' : 'dark';
+            document.documentElement.dataset.uiTheme = rolActual === 'usuario'
+                ? 'light'
+                : (temaGuardado === 'light' ? 'light' : 'dark');
         })();
     </script>
     <link rel="manifest" href="/manifest.webmanifest?v=20260720">
@@ -123,9 +129,13 @@
     </style>
     {{-- Capa visual global: conecta todas las vistas con colores, sombras y animaciones profesionales. --}}
 {{-- Estilos globales: la ruta relativa evita depender de APP_URL al trabajar con Laragon o artisan serve. --}}
-<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260720-theme-toggle-2">
+<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260723-hector-user-light">
 </head>
-<body data-demo-mode="{{ !empty($configuracionGlobal['modo_demo']) ? 'true' : 'false' }}">
+{{-- El rol expuesto en data-user-role conecta el CSS con la vista autorizada, sin alterar permisos del backend. --}}
+<body
+    data-demo-mode="{{ !empty($configuracionGlobal['modo_demo']) ? 'true' : 'false' }}"
+    data-user-role="{{ auth()->user()?->rol ?? 'invitado' }}"
+>
 @auth
     @php
         /*
@@ -356,9 +366,12 @@
                 </div>
             @endif
             {{-- Selector visual: cambia entre temas y se conecta con la preferencia local del navegador. --}}
-            <button type="button" class="topbar-icon-button theme-toggle" id="themeToggle" aria-label="Cambiar a modo claro" aria-pressed="false" title="Cambiar a modo claro">
-                <i data-lucide="sun" aria-hidden="true"></i>
-            </button>
+            @if($rol === 'superusuario')
+                {{-- El selector se reserva al Super Usuario y conecta su modo claro con la identidad visual de Usuario. --}}
+                <button type="button" class="topbar-icon-button theme-toggle" id="themeToggle" aria-label="Cambiar a modo claro" aria-pressed="false" title="Cambiar a modo claro">
+                    <i data-lucide="sun" aria-hidden="true"></i>
+                </button>
+            @endif
             <span class="topbar-branch"><i data-lucide="map-pin"></i>{{ $sucursalUiNombre }}</span>
             <span class="topbar-badge {{ $rol === 'superusuario' ? 'super' : ($rol === 'capturista' ? 'capturista' : ($rol === 'vendedor' ? 'vendedor' : 'user')) }}">
                 @if($rol === 'superusuario')
@@ -513,6 +526,6 @@
 </script>
 {{-- Interacciones globales: conectan Lucide y la UI al mismo servidor que entrega la vista actual. --}}
 <script src="/js/lucide.min.js?v=1.25.0" defer></script>
-<script src="/js/movilphone-ui.js?v=20260720-theme-toggle" defer></script>
+<script src="/js/movilphone-ui.js?v=20260723-hector-user-light" defer></script>
 </body>
 </html>

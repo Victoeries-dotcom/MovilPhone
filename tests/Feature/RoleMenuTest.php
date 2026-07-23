@@ -37,6 +37,9 @@ class RoleMenuTest extends TestCase
 
         $respuesta
             ->assertOk()
+            // El atributo conecta el rol con el modo claro fijo de la experiencia Usuario.
+            ->assertSee('data-user-role="usuario"', false)
+            ->assertDontSee('id="themeToggle"', false)
             ->assertSee(route('home'), false)
             ->assertSee(route('ordenes.index'), false)
             ->assertSee(route('clientes.index'), false)
@@ -49,6 +52,32 @@ class RoleMenuTest extends TestCase
             ->assertDontSee(route('actividad.index'), false)
             ->assertDontSee(route('reportes.index'), false)
             ->assertDontSee(route('configuracion.edit'), false);
+    }
+
+    /**
+     * Comprueba que Super Usuario conserve el control de tema claro/oscuro.
+     * Se conecta con layout.blade.php y movilphone-ui.js sin exponerlo al rol Usuario.
+     */
+    public function test_superusuario_conserva_el_selector_de_tema(): void
+    {
+        $sucursal = Sucursal::create(['nombre' => 'IZAMAL']);
+        $superusuario = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => $sucursal->id,
+        ]);
+
+        Route::middleware('web')->get('/prueba-tema-superusuario', fn () => view('layout'));
+
+        $this
+            ->actingAs($superusuario)
+            ->withSession([
+                'sucursal_id' => $sucursal->id,
+                'sucursal_nombre' => $sucursal->nombre,
+            ])
+            ->get('/prueba-tema-superusuario')
+            ->assertOk()
+            ->assertSee('data-user-role="superusuario"', false)
+            ->assertSee('id="themeToggle"', false);
     }
 
     /**

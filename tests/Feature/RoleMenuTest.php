@@ -63,4 +63,36 @@ class RoleMenuTest extends TestCase
         $this->actingAs($usuario)->get(route('actividad.index'))->assertForbidden();
         $this->actingAs($usuario)->get(route('configuracion.edit'))->assertForbidden();
     }
+
+    /**
+     * Comprueba que Técnico solo vea Órdenes, Clientes y Caja, que son sus rutas autorizadas.
+     * Se conecta con el menú lateral y evita accesos visuales que terminarían en un error 403.
+     */
+    public function test_tecnico_ve_unicamente_sus_modulos_autorizados(): void
+    {
+        $sucursal = Sucursal::create(['nombre' => 'IZAMAL']);
+        $tecnico = User::factory()->create([
+            'rol' => 'tecnico',
+            'sucursal_id' => $sucursal->id,
+        ]);
+
+        Route::middleware('web')->get('/sucursales/prueba-menu-tecnico', fn () => view('layout'));
+
+        $respuesta = $this
+            ->actingAs($tecnico)
+            ->withSession(['sucursal_id' => $sucursal->id])
+            ->get('/sucursales/prueba-menu-tecnico');
+
+        $respuesta
+            ->assertOk()
+            ->assertSee(route('ordenes.index'), false)
+            ->assertSee(route('clientes.index'), false)
+            ->assertSee(route('caja.index'), false)
+            ->assertDontSee(route('inventario.index'), false)
+            ->assertDontSee(route('categorias.index'), false)
+            ->assertDontSee(route('ventas.index'), false)
+            ->assertDontSee(route('reportes.index'), false)
+            ->assertDontSee(route('actividad.index'), false)
+            ->assertDontSee(route('configuracion.edit'), false);
+    }
 }

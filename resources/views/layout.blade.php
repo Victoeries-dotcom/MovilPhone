@@ -247,7 +247,19 @@
             <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->is('clientes*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="contact"></i></span> Clientes
             </a>
-        @else
+        @elseif($rolMenu === 'tecnico')
+            {{-- Técnico: se conecta con las rutas de taller y caja autorizadas por RoleMiddleware. --}}
+            <a href="{{ route('ordenes.index') }}" class="nav-link {{ request()->is('ordenes*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="wrench"></i></span> Órdenes de Servicio
+            </a>
+            <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->is('clientes*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="contact"></i></span> Clientes
+            </a>
+            <a href="{{ route('caja.index') }}" class="nav-link {{ request()->is('caja*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="wallet-cards"></i></span> Caja
+            </a>
+        @elseif($rolMenu === 'usuario')
+            {{-- Usuario de sucursal: conserva los siete módulos operativos definidos para su trabajo diario. --}}
             <a href="{{ route('ordenes.index') }}" class="nav-link {{ request()->is('ordenes*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="wrench"></i></span> Órdenes de Servicio
             </a>

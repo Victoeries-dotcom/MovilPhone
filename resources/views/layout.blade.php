@@ -126,7 +126,7 @@
     </style>
     {{-- Capa visual global: conecta todas las vistas con colores, sombras y animaciones profesionales. --}}
 {{-- Estilos globales: la ruta relativa evita depender de APP_URL al trabajar con Laragon o artisan serve. --}}
-<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260723-company-brand-theme">
+<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260724-company-brand-center">
 </head>
 {{-- El rol expuesto en data-user-role conecta el CSS con la vista autorizada, sin alterar permisos del backend. --}}
 <body

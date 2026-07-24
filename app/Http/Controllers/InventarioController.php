@@ -66,9 +66,11 @@ class InventarioController extends Controller
             'bajo' => (clone $statsQuery)
                 ->whereColumn('cantidad_disponible', '<=', 'stock_minimo')
                 ->count(),
-            // Las existencias negativas representan piezas agotadas y no restan valor al inventario disponible.
+            // Calcula el valor comercial disponible de la sucursal activa.
+            // Se conecta con cantidad_disponible y precio_venta para actualizarse automáticamente
+            // cuando se agregan productos, se editan existencias o una venta descuenta unidades.
             'valor' => (clone $statsQuery)
-                ->selectRaw('SUM(CASE WHEN cantidad_disponible > 0 THEN cantidad_disponible * precio_costo ELSE 0 END) as total')
+                ->selectRaw('SUM(CASE WHEN cantidad_disponible > 0 THEN cantidad_disponible * precio_venta ELSE 0 END) as total')
                 ->value('total') ?? 0,
         ];
 

@@ -82,6 +82,9 @@ class UserBranchIsolationTest extends TestCase
             // Comprueba que la nueva interfaz reciba los indicadores y controles conectados al inventario de la sede.
             ->assertSee('Control de productos')
             ->assertSee('Unidades en existencia')
+            // Dos productos de Buctzotz: 3 unidades x $150 cada uno = $900.
+            // Confirma que el valor use precio_venta y no incluya la pieza perteneciente a Izamal.
+            ->assertSee('$900.00')
             ->assertSee('Categorías')
             ->assertSee('inventory-filter-panel', false)
             ->assertSee('PIEZA SOLO BUCTZOTZ')

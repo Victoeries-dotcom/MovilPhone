@@ -126,7 +126,8 @@
     </style>
     {{-- Capa visual global: conecta todas las vistas con colores, sombras y animaciones profesionales. --}}
 {{-- Estilos globales: la ruta relativa evita depender de APP_URL al trabajar con Laragon o artisan serve. --}}
-<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260724-company-brand-center">
+{{-- Versión de contraste: obliga al navegador y a Laravel Cloud a cargar los tonos legibles más recientes. --}}
+<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260724-light-contrast">
 </head>
 {{-- El rol expuesto en data-user-role conecta el CSS con la vista autorizada, sin alterar permisos del backend. --}}
 <body

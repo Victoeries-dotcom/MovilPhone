@@ -2720,6 +2720,41 @@ html[data-ui-theme="light"] body .inventory-table tbody tr:not(.is-sold):hover t
 html[data-ui-theme="light"] body .inventory-product-row.is-sold td { background:#34434b !important; color:#fff !important; }
 html[data-ui-theme="light"] body .inventory-product-row.is-sold:hover td { background:#185a72 !important; }
 
+/*
+ * Seguridad de contraste del modo claro: impide que los estilos globales de títulos,
+ * botones y filtros oculten textos sobre superficies oscuras del sistema.
+ * Se conecta con el selector de tema de layout.blade.php y con los componentes de Inventario.
+ */
+html[data-ui-theme="light"] body .inventory-hero,
+html[data-ui-theme="light"] body .inventory-hero h1 {
+    color:#fff !important;
+}
+html[data-ui-theme="light"] body .inventory-hero .inventory-eyebrow {
+    color:#d7dee9 !important;
+}
+html[data-ui-theme="light"] body .inventory-hero p {
+    color:#e2e8f0 !important;
+}
+html[data-ui-theme="light"] body .inventory-category-chip.is-active {
+    border-color:#18181b !important;
+    background:#18181b !important;
+    color:#fff !important;
+}
+html[data-ui-theme="light"] body .inventory-category-chip.is-active span {
+    background:rgba(255,255,255,.18) !important;
+    color:#fff !important;
+}
+html[data-ui-theme="light"] body .inventory-search-button,
+html[data-ui-theme="light"] body .cash-search-button,
+html[data-ui-theme="light"] body .orders-action-primary {
+    color:#fff !important;
+}
+html[data-ui-theme="light"] body .inventory-product-row.is-sold td,
+html[data-ui-theme="light"] body .inventory-product-row.is-sold td *,
+html[data-ui-theme="light"] body .inventory-product-row.is-sold .inventory-product-category {
+    color:#fff !important;
+}
+
 /* Respuesta móvil: apila indicadores y filtros sin recortar acciones ni textos. */
 @media (max-width:1100px) {
     body .inventory-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }

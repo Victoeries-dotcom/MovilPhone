@@ -87,8 +87,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:superusuario')->group(function () {
         Route::resource('usuarios', UsuarioController::class);
         Route::post('sucursales/cambiar', [SucursalController::class, 'cambiar'])->name('sucursales.cambiar');
+        // Habilita la edición de sucursales y conecta el formulario con SucursalController.
         Route::resource('sucursales', SucursalController::class)
-            ->only(['index', 'create', 'store', 'destroy'])
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
             ->parameters(['sucursales' => 'sucursal']);
 
         Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');

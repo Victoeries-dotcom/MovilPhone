@@ -83,6 +83,16 @@
                 <div class="branch-actions">
                     <a href="{{ route('sucursales.index', ['sucursal_id' => $sucursal->id]) }}" class="btn btn-sm" onclick="event.stopPropagation();">Ver datos</a>
 
+                    {{-- Abre el formulario conectado a sucursales.edit con los datos de esta fila. --}}
+                    <a href="{{ route('sucursales.edit', $sucursal) }}"
+                       class="btn btn-sm"
+                       title="Editar sucursal"
+                       aria-label="Editar sucursal {{ $sucursal->nombre }}"
+                       onclick="event.stopPropagation();">
+                        <i data-lucide="pencil" aria-hidden="true"></i>
+                        <span>Editar</span>
+                    </a>
+
                     @if(!$sucursalSeleccionada || $sucursalSeleccionada->id !== $sucursal->id)
                     <form method="POST" action="{{ route('sucursales.destroy', $sucursal) }}"
                         onsubmit="return confirmarEliminacionSistema(event, 'la sucursal', '{{ addslashes($sucursal->nombre) }}', 'se eliminaran todos sus datos en el sistema');"

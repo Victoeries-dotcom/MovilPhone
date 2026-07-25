@@ -86,6 +86,21 @@
 .inv-item.selected { border-color: #0f1f3d; background: #0f1f3d; color: white; }
 .inv-item.selected .inv-price { color: #86efac; }
 .inv-price { font-weight: 700; color: #16a34a; font-size: 15px; white-space: nowrap; margin-left: 1rem; }
+.previous-client-btn {
+    width: 100%; padding: 12px; margin-top: .75rem; border: 1px solid #bfdbfe;
+    border-radius: 10px; background: #eff6ff; color: #1d4ed8; font: inherit;
+    font-weight: 700; cursor: pointer;
+}
+.previous-client-panel {
+    display: none; margin-top: 1rem; padding: 1rem; border: 1px solid #dbeafe;
+    border-radius: 10px; background: #f8fbff;
+}
+.previous-client-actions { display: grid; grid-template-columns: 1fr auto; gap: .5rem; }
+.previous-client-search {
+    border: 0; border-radius: 10px; padding: 0 1rem; background: #0f1f3d;
+    color: white; font: inherit; font-weight: 700; cursor: pointer;
+}
+.previous-client-status { min-height: 20px; margin-top: .65rem; color: #64748b; font-size: 13px; }
 </style>
 
 <div class="page-header">
@@ -123,9 +138,27 @@
             <div class="wizard-step active" id="step-1">
                 <div class="wizard-label">Paso 1 de 4</div>
                 <div class="wizard-title">¿Nombre del cliente?</div>
+                {{-- cliente_id conecta la búsqueda por teléfono con ventas.cliente_id sin duplicar al cliente. --}}
+                <input type="hidden" name="cliente_id" id="f_cliente_id" value="{{ old('cliente_id') }}"/>
                 <input class="wizard-input" type="text" name="cliente_nombre" id="f_cliente"
-                    placeholder="Nombre completo" autocomplete="off" required/>
+                    value="{{ old('cliente_nombre') }}" placeholder="Nombre completo" autocomplete="off" required/>
                 <button type="button" class="wizard-btn" onclick="nextStep(1)">Continuar →</button>
+                <button type="button" class="previous-client-btn" id="previous-client-toggle">
+                    Cliente anterior
+                </button>
+
+                {{-- Busca el teléfono único en Cliente y autocompleta el nombre para esta venta. --}}
+                <div class="previous-client-panel" id="previous-client-panel">
+                    <label class="wizard-label" for="previous-client-phone">Teléfono del cliente</label>
+                    <div class="previous-client-actions">
+                        <input class="wizard-input" type="tel" id="previous-client-phone"
+                            placeholder="999-000-0000" autocomplete="off"/>
+                        <button type="button" class="previous-client-search" id="previous-client-search">
+                            Buscar
+                        </button>
+                    </div>
+                    <div class="previous-client-status" id="previous-client-status"></div>
+                </div>
             </div>
 
             {{-- PASO 2: Tipo de producto --}}
@@ -235,6 +268,11 @@
 const totalSteps = 4;
 let tipoSeleccionado = '';
 let stockSeleccionado = null;
+// Conserva la relación con el cliente anterior cuando Laravel devuelve el formulario por validación.
+let clienteAnteriorCargado = document.getElementById('f_cliente_id').value
+    ? document.getElementById('f_cliente').value
+    : '';
+const buscarClienteAnteriorUrl = @json(route('ventas.buscarClientePorTelefono'));
 
 function buildProgress(current) {
     const p = document.getElementById('progress');
@@ -264,6 +302,82 @@ function nextStep(current) {
     const firstInput = next.querySelector('input:not([type=hidden]), select, textarea');
     if (firstInput) setTimeout(() => firstInput.focus(), 100);
 }
+
+/**
+ * Abre la búsqueda de Cliente anterior y se conecta con VentaController.
+ */
+document.getElementById('previous-client-toggle').addEventListener('click', function() {
+    const panel = document.getElementById('previous-client-panel');
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+
+    if (panel.style.display === 'block') {
+        setTimeout(() => document.getElementById('previous-client-phone').focus(), 100);
+    }
+});
+
+/**
+ * Consulta clientes.telefono_normalizado, carga su ID y completa el nombre.
+ */
+async function buscarClienteAnterior() {
+    const telefono = document.getElementById('previous-client-phone').value.trim();
+    const estado = document.getElementById('previous-client-status');
+    const boton = document.getElementById('previous-client-search');
+
+    if (!telefono) {
+        estado.textContent = 'Escribe el teléfono utilizado anteriormente.';
+        estado.style.color = '#dc2626';
+        return;
+    }
+
+    boton.disabled = true;
+    estado.textContent = 'Buscando cliente...';
+    estado.style.color = '#64748b';
+
+    try {
+        const respuesta = await fetch(buscarClienteAnteriorUrl + '?' + new URLSearchParams({ telefono }), {
+            headers: { Accept: 'application/json' },
+        });
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok) {
+            throw new Error(datos.message || 'No fue posible buscar al cliente.');
+        }
+
+        const cliente = datos.cliente;
+        document.getElementById('f_cliente_id').value = cliente.id;
+        document.getElementById('f_cliente').value = cliente.nombre;
+        clienteAnteriorCargado = cliente.nombre;
+        estado.textContent = 'Cliente encontrado: ' + cliente.nombre
+            + ' · ' + cliente.servicios_anteriores + ' servicio(s)'
+            + ' · ' + cliente.ventas_anteriores + ' venta(s)';
+        estado.style.color = '#15803d';
+    } catch (error) {
+        document.getElementById('f_cliente_id').value = '';
+        clienteAnteriorCargado = '';
+        estado.textContent = error.message;
+        estado.style.color = '#dc2626';
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+document.getElementById('previous-client-search').addEventListener('click', buscarClienteAnterior);
+document.getElementById('previous-client-phone').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        buscarClienteAnterior();
+    }
+});
+
+// Si se cambia manualmente el nombre, deja de reutilizar el cliente recuperado.
+document.getElementById('f_cliente').addEventListener('input', function() {
+    if (clienteAnteriorCargado && this.value !== clienteAnteriorCargado) {
+        document.getElementById('f_cliente_id').value = '';
+        clienteAnteriorCargado = '';
+        document.getElementById('previous-client-status').textContent =
+            'El nombre cambió; la venta se registrará como un cliente nuevo.';
+    }
+});
 
 function prevStep(current) {
     document.getElementById('step-' + current).classList.remove('active');

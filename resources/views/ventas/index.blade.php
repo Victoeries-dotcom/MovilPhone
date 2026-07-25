@@ -44,7 +44,8 @@
             <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">#</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Cliente</th>
-                <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Sucursal</th>
+                {{-- Sustituye Sucursal por el contenido comercial proveniente de venta_detalles. --}}
+                <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Producto / servicio vendido</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Vendedor</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Total</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Estado</th>
@@ -59,7 +60,16 @@
                 onmouseout="this.style.background=''">
                 <td style="padding:12px 16px;font-weight:700;color:#0f1f3d;">#{{ $venta->id }}</td>
                 <td style="padding:12px 16px;">{{ $venta->cliente->nombre ?? 'Sin cliente' }}</td>
-                <td style="padding:12px 16px;">{{ $venta->sucursal->nombre ?? '—' }}</td>
+                <td style="padding:12px 16px;">
+                    @forelse($venta->detalles as $detalle)
+                        <div style="font-weight:600;color:#0f1f3d;">
+                            {{ $detalle->nombre_producto }}
+                            <span style="color:#64748b;font-weight:500;">× {{ $detalle->cantidad }}</span>
+                        </div>
+                    @empty
+                        <span style="color:#94a3b8;">Sin detalle registrado</span>
+                    @endforelse
+                </td>
                 <td style="padding:12px 16px;">{{ $venta->usuario->name ?? '—' }}</td>
                 <td style="padding:12px 16px;font-weight:600;">${{ number_format($venta->total, 2) }}</td>
                 <td style="padding:12px 16px;">

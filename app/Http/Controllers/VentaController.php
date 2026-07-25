@@ -24,7 +24,7 @@ class VentaController extends Controller
 
         // Filtra desde la base de datos por ventas.sucursal_id para impedir que el
         // listado y sus estadísticas mezclen ventas de Buctzotz con las de Izamal.
-        $ventas = Venta::with(['cliente', 'sucursal', 'usuario'])
+        $ventas = Venta::with(['cliente', 'sucursal', 'usuario', 'detalles'])
             ->when(
                 $sucursalActiva,
                 fn ($query) => $query->where('sucursal_id', $sucursalActiva->id),
@@ -53,9 +53,53 @@ class VentaController extends Controller
         return view('ventas.create', compact('inventario'));
     }
 
+    /**
+     * Recupera un cliente anterior por su teléfono único para autocompletar Nueva venta.
+     * Se conecta con clientes.telefono_normalizado y limita la búsqueda a la sucursal activa.
+     */
+    public function buscarClientePorTelefono(Request $request)
+    {
+        $request->validate([
+            'telefono' => 'required|string|max:50',
+        ]);
+
+        $telefonoNormalizado = Cliente::normalizarTelefono($request->telefono);
+        $sucursalId = $this->sucursalActivaId();
+        abort_unless($sucursalId, 422, 'Selecciona una sucursal antes de buscar clientes.');
+
+        if ($telefonoNormalizado === '') {
+            return response()->json([
+                'message' => 'Ingresa un número telefónico válido.',
+            ], 422);
+        }
+
+        $cliente = Cliente::withCount(['ordenes', 'ventas'])
+            ->where('telefono_normalizado', $telefonoNormalizado)
+            ->where('sucursal_habitual_id', $sucursalId)
+            ->first();
+
+        if (! $cliente) {
+            return response()->json([
+                'message' => 'No se encontró un cliente anterior con ese teléfono en esta sucursal.',
+            ], 404);
+        }
+
+        return response()->json([
+            'cliente' => [
+                'id' => $cliente->id,
+                'nombre' => $cliente->nombre,
+                'telefono_principal' => $cliente->telefono_principal,
+                'telefono_alternativo' => $cliente->telefono_alternativo,
+                'servicios_anteriores' => $cliente->ordenes_count,
+                'ventas_anteriores' => $cliente->ventas_count,
+            ],
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
+            'cliente_id' => 'nullable|integer|exists:clientes,id',
             'cliente_nombre' => 'required|string|max:255',
             'productos' => 'required|array|min:1',
             'productos.*.nombre' => 'required|string|max:255',
@@ -96,15 +140,29 @@ class VentaController extends Controller
         // La transaccion devuelve la venta para conectarla con auditoria al terminar correctamente.
         $venta = DB::transaction(function () use ($request, $sucursalId) {
 
-            $cliente = Cliente::firstOrCreate(
-                [
-                    'nombre' => $request->cliente_nombre,
-                    'sucursal_habitual_id' => $sucursalId,
-                ],
-                [
-                    'telefono_principal' => 'VENTA-'.now()->format('YmdHis'),
-                ]
-            );
+            // Reutiliza el cliente encontrado por teléfono; si es nuevo conserva el flujo actual.
+            // La condición por sucursal evita asociar una venta con un cliente de otra sede.
+            if ($request->filled('cliente_id')) {
+                $cliente = Cliente::whereKey($request->integer('cliente_id'))
+                    ->where('sucursal_habitual_id', $sucursalId)
+                    ->first();
+
+                if (! $cliente) {
+                    throw ValidationException::withMessages([
+                        'cliente_id' => 'El cliente anterior no pertenece a la sucursal activa.',
+                    ]);
+                }
+            } else {
+                $cliente = Cliente::firstOrCreate(
+                    [
+                        'nombre' => $request->cliente_nombre,
+                        'sucursal_habitual_id' => $sucursalId,
+                    ],
+                    [
+                        'telefono_principal' => 'VENTA-'.now()->format('YmdHis'),
+                    ]
+                );
+            }
 
             $total = 0;
             $detalles = [];

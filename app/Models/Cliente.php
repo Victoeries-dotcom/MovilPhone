@@ -15,7 +15,7 @@ class Cliente extends Model
         'telefono_normalizado',
         'telefono_alternativo',
         'direccion',
-        'sucursal_habitual_id'
+        'sucursal_habitual_id',
     ];
 
     /**
@@ -47,5 +47,14 @@ class Cliente extends Model
     public function ordenes()
     {
         return $this->hasMany(OrdenServicio::class, 'cliente_id');
+    }
+
+    /**
+     * Relaciona el historial comercial del cliente con ventas.cliente_id.
+     * Se utiliza para confirmar sus compras anteriores al registrar una nueva venta.
+     */
+    public function ventas()
+    {
+        return $this->hasMany(Venta::class, 'cliente_id');
     }
 }

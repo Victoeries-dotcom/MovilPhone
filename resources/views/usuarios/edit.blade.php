@@ -112,7 +112,14 @@
                 <input type="text" name="name" required value="{{ old('name', $usuario->name) }}"/>
             </div>
             <div class="form-group">
-                <label>Email *</label>
+                {{-- Correo informativo conectado con users.correo_contacto; no autentica al usuario. --}}
+                <label>Correo electrónico de contacto *</label>
+                <input type="email" name="correo_contacto" required
+                       value="{{ old('correo_contacto', $usuario->correo_contacto ?: $usuario->email) }}"/>
+            </div>
+            <div class="form-group">
+                {{-- Credencial única conectada con LoginRequest, recuperación y users.email. --}}
+                <label>Correo electrónico para ingresar como usuario *</label>
                 <input type="email" name="email" required value="{{ old('email', $usuario->email) }}"/>
             </div>
             <div class="form-group">

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Sucursal;
+use App\Models\User;
+use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use App\Support\AdminActivityLogger;
 
 class UsuarioController extends Controller
 {
@@ -19,7 +19,7 @@ class UsuarioController extends Controller
         $usuarios = User::with('sucursal')
             // La lista se conecta estrictamente con users.sucursal_id para no mezclar personal.
             ->when($sucursalId, fn ($query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn ($query) => $query->whereRaw('1 = 0'))
             ->latest()
             ->get();
 
@@ -40,31 +40,36 @@ class UsuarioController extends Controller
 
     public function store(Request $request)
     {
-        // Normaliza el correo antes de validarlo para conectarlo de forma consistente con el login.
+        // Normaliza por separado el contacto y la credencial que usa el login.
         $request->merge([
             'email' => Str::lower(trim((string) $request->email)),
+            'correo_contacto' => Str::lower(trim((string) $request->correo_contacto)),
         ]);
 
         $request->validate([
-            'name'     => 'required|string',
+            'name' => 'required|string',
             'telefono' => 'nullable|string|max:20',
-            'email'    => 'required|email|unique:users,email',
-            'rol'      => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
+            // Este correo es únicamente informativo y puede repetirse entre registros.
+            'correo_contacto' => 'required|email|max:255',
+            // users.email permanece único porque se conecta con el inicio de sesión.
+            'email' => 'required|email|unique:users,email',
+            'rol' => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
             'sucursal_id' => 'required|exists:sucursales,id',
             // Solo el rol "usuario" tiene login real, por eso la contraseña se exige nada más en ese caso.
             'password' => 'required_if:rol,usuario|nullable|string|min:6|confirmed',
         ]);
 
         $usuario = User::create([
-            'name'     => $request->name,
+            'name' => $request->name,
             'telefono' => $request->telefono,
-            'email'    => $request->email,
+            'correo_contacto' => $request->correo_contacto,
+            'email' => $request->email,
             // Si el rol es "usuario" se guarda la contraseña que definió el admin en el wizard.
             // Para los demás roles (sin acceso al sistema) se genera una aleatoria como antes.
             'password' => $request->rol === 'usuario'
                 ? Hash::make($request->password)
                 : Hash::make(Str::random(32)),
-            'rol'      => $request->rol,
+            'rol' => $request->rol,
             'sucursal_id' => $request->sucursal_id,
         ]);
 
@@ -84,9 +89,10 @@ class UsuarioController extends Controller
 
     public function update(Request $request, User $usuario)
     {
-        // Elimina espacios accidentales del correo y usa la misma forma que LoginRequest.
+        // Elimina espacios accidentales y conserva separados contacto y acceso.
         $request->merge([
             'email' => Str::lower(trim((string) $request->email)),
+            'correo_contacto' => Str::lower(trim((string) $request->correo_contacto)),
         ]);
 
         // Al convertir otro rol en Usuario exige una contraseña inicial; se conecta con el acceso de inicio de sesión.
@@ -95,20 +101,22 @@ class UsuarioController extends Controller
             : 'nullable|string|min:6|confirmed';
 
         $request->validate([
-            'name'     => 'required|string',
+            'name' => 'required|string',
             'telefono' => 'nullable|string|max:20',
-            'email'    => 'required|email|unique:users,email,'.$usuario->id,
-            'rol'      => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
+            'correo_contacto' => 'required|email|max:255',
+            'email' => 'required|email|unique:users,email,'.$usuario->id,
+            'rol' => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
             'sucursal_id' => 'required|exists:sucursales,id',
             // Para un Usuario existente es opcional; si queda en blanco conserva su contraseña actual.
             'password' => $reglaPassword,
         ]);
 
         $data = [
-            'name'     => $request->name,
+            'name' => $request->name,
             'telefono' => $request->telefono,
-            'email'    => $request->email,
-            'rol'      => $request->rol,
+            'correo_contacto' => $request->correo_contacto,
+            'email' => $request->email,
+            'rol' => $request->rol,
             'sucursal_id' => $request->sucursal_id,
         ];
 
@@ -135,6 +143,7 @@ class UsuarioController extends Controller
         abort_if($usuario->is(auth()->user()), 422, 'No puedes eliminar tu propia sesion administrativa.');
         AdminActivityLogger::registrar('USUARIOS', 'ELIMINAR', 'Usuario '.$usuario->name.' eliminado.', $usuario->sucursal_id, $usuario);
         $usuario->delete();
+
         return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado.');
     }
 

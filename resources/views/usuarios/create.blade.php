@@ -208,30 +208,42 @@
 
             {{-- PASO 1: Nombre del usuario; se guarda en users.name. --}}
             <div class="usuario-step active" id="usuario-step-1">
-                <div class="usuario-label">Paso 1 de 4</div>
+                <div class="usuario-label">Paso 1 de 5</div>
                 <div class="usuario-title">¿Nombre del usuario?</div>
                 <input class="usuario-input" type="text" name="name" id="u_name"
                     value="{{ old('name') }}" placeholder="Nombre completo" autocomplete="off" required>
                 <button type="button" class="usuario-btn" onclick="usuarioNext(1)">Continuar →</button>
             </div>
 
-            {{-- PASO 2: Contacto; email se conecta con users.email y telefono con users.telefono. --}}
+            {{-- PASO 2: Contacto informativo; no se utiliza para iniciar sesión. --}}
             <div class="usuario-step" id="usuario-step-2">
-                <div class="usuario-label">Paso 2 de 4</div>
+                <div class="usuario-label">Paso 2 de 5</div>
                 <div class="usuario-title">Datos de contacto</div>
-                <input class="usuario-input" type="email" name="email" id="u_email"
-                    value="{{ old('email') }}" placeholder="correo@movilphone.com" autocomplete="off" required>
+                <input class="usuario-input" type="email" name="correo_contacto" id="u_correo_contacto"
+                    value="{{ old('correo_contacto') }}" placeholder="Correo electrónico de contacto" autocomplete="off" required>
                 <input class="usuario-input" type="text" name="telefono" id="u_telefono"
                     value="{{ old('telefono') }}" placeholder="Número telefónico">
                 <button type="button" class="usuario-btn" onclick="usuarioNext(2)">Continuar →</button>
                 <button type="button" class="usuario-back" onclick="usuarioPrev(2)">← Atrás</button>
             </div>
 
-            {{-- PASO 3: Rol y sucursal; se conectan con users.rol y users.sucursal_id. --}}
+            {{-- PASO 3: Credencial única; users.email se conecta con LoginRequest y recuperación de contraseña. --}}
             <div class="usuario-step" id="usuario-step-3">
-                <div class="usuario-label">Paso 3 de 4</div>
+                <div class="usuario-label">Paso 3 de 5</div>
+                <div class="usuario-title">Correo electrónico para ingresar como usuario</div>
+                <div class="usuario-hint">Este será el correo que deberá escribir en la pantalla de inicio de sesión.</div>
+                <input class="usuario-input" type="email" name="email" id="u_email"
+                    value="{{ old('email') }}" placeholder="usuario@movilphone.com"
+                    autocomplete="username" required>
+                <button type="button" class="usuario-btn" onclick="usuarioNext(3)">Continuar →</button>
+                <button type="button" class="usuario-back" onclick="usuarioPrev(3)">← Atrás</button>
+            </div>
+
+            {{-- PASO 4: Rol y sucursal; se conectan con users.rol y users.sucursal_id. --}}
+            <div class="usuario-step" id="usuario-step-4">
+                <div class="usuario-label">Paso 4 de 5</div>
                 <div class="usuario-title">Rol y sucursal</div>
-                <select class="usuario-input" name="rol" id="u_rol" required onchange="usuarioBuildProgress(3); usuarioToggleRolInfo();">
+                <select class="usuario-input" name="rol" id="u_rol" required onchange="usuarioBuildProgress(4); usuarioToggleRolInfo();">
                     <option value="usuario" {{ old('rol') == 'usuario' ? 'selected' : '' }}>Usuario</option>
                     <option value="superusuario" {{ old('rol') == 'superusuario' ? 'selected' : '' }}>Super Usuario</option>
                     <option value="capturista" {{ old('rol') == 'capturista' ? 'selected' : '' }}>Capturista</option>
@@ -262,14 +274,14 @@
                     @endforeach
                 </select>
                 <button type="button" class="usuario-btn" onclick="usuarioAfterRol()">Continuar →</button>
-                <button type="button" class="usuario-back" onclick="usuarioPrev(3)">← Atrás</button>
+                <button type="button" class="usuario-back" onclick="usuarioPrev(4)">← Atrás</button>
             </div>
 
-            {{-- PASO 4 (condicional): Contraseña; solo se muestra y se exige cuando rol = "usuario". --}}
-            <div class="usuario-step" id="usuario-step-4">
-                <div class="usuario-label">Paso 4 de 5</div>
+            {{-- PASO 5 (condicional): Contraseña conectada con el correo de acceso del paso 3. --}}
+            <div class="usuario-step" id="usuario-step-5">
+                <div class="usuario-label">Paso 5 de 6</div>
                 <div class="usuario-title">Contraseña de acceso</div>
-                <div class="usuario-hint">Este usuario tendrá acceso al sistema, define su contraseña.</div>
+                <div class="usuario-hint">Junto con el correo de acceso, esta contraseña permitirá iniciar sesión.</div>
                 <input class="usuario-input" type="password" name="password" id="u_password"
                     placeholder="Contraseña" autocomplete="new-password" minlength="6">
                 <input class="usuario-input" type="password" name="password_confirmation" id="u_password_confirmation"
@@ -278,43 +290,44 @@
                     <input type="checkbox" onclick="usuarioTogglePassword()"> Mostrar contraseña
                 </label>
                 <button type="button" class="usuario-btn" onclick="usuarioPasswordNext()">Continuar →</button>
-                <button type="button" class="usuario-back" onclick="usuarioPrev(4)">← Atrás</button>
+                <button type="button" class="usuario-back" onclick="usuarioPrev(5)">← Atrás</button>
             </div>
 
-            {{-- PASO 5: Confirmación final antes de guardar en UsuarioController@store. --}}
-            <div class="usuario-step" id="usuario-step-5">
-                <div class="usuario-label">Paso 5 de 5</div>
+            {{-- PASO 6: Confirmación final antes de guardar ambos correos en UsuarioController@store. --}}
+            <div class="usuario-step" id="usuario-step-6">
+                <div class="usuario-label">Paso 6 de 6</div>
                 <div class="usuario-title">Confirmar registro</div>
                 <div class="usuario-resumen">
                     <div><strong>Nombre:</strong> <span id="r_name"></span></div>
-                    <div><strong>Email:</strong> <span id="r_email"></span></div>
+                    <div><strong>Correo de contacto:</strong> <span id="r_correo_contacto"></span></div>
+                    <div><strong>Correo para ingresar:</strong> <span id="r_email"></span></div>
                     <div><strong>Teléfono:</strong> <span id="r_telefono"></span></div>
                     <div><strong>Rol:</strong> <span id="r_rol"></span></div>
                     <div><strong>Sucursal:</strong> <span id="r_sucursal"></span></div>
                     <div><strong>Contraseña:</strong> <span id="r_password"></span></div>
                 </div>
                 <button type="submit" class="usuario-btn">Guardar usuario</button>
-                <button type="button" class="usuario-back" onclick="usuarioPrev(5)">← Atrás</button>
+                <button type="button" class="usuario-back" onclick="usuarioPrev(6)">← Atrás</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-/* El paso de contraseña (4) solo cuenta dentro del total cuando el rol es "usuario". */
+/* El paso de contraseña (5) solo cuenta dentro del total cuando el rol es "usuario". */
 let usuarioIncludesPassword = false;
 
 /* Calcula en qué "posición visible" cae un paso, según si hay o no paso de contraseña. */
 function usuarioStepPosition(stepId, includesPassword) {
-    if (stepId <= 3) return stepId;
-    if (stepId === 4) return 4;
-    return includesPassword ? 5 : 4; // stepId === 5
+    if (stepId <= 4) return stepId;
+    if (stepId === 5) return 5;
+    return includesPassword ? 6 : 5; // stepId === 6
 }
 
 /* Dibuja la barra de avance y actualiza el texto "Paso X de Y" del paso visible. */
 function usuarioBuildProgress(currentId) {
     usuarioIncludesPassword = document.getElementById('u_rol').value === 'usuario';
-    const total = usuarioIncludesPassword ? 5 : 4;
+    const total = usuarioIncludesPassword ? 6 : 5;
     const position = usuarioStepPosition(currentId, usuarioIncludesPassword);
 
     const progress = document.getElementById('usuarioProgress');
@@ -335,8 +348,9 @@ function usuarioValidarPaso(stepNumber) {
     const fields = step.querySelectorAll('input[required], select[required]');
 
     for (const field of fields) {
-        if (!field.value.trim()) {
+        if (!field.value.trim() || !field.checkValidity()) {
             field.focus();
+            field.reportValidity();
             field.style.borderColor = '#dc2626';
             setTimeout(() => field.style.borderColor = '', 1500);
             return false;
@@ -346,7 +360,7 @@ function usuarioValidarPaso(stepNumber) {
     return true;
 }
 
-/* Avanza al siguiente paso (usado en pasos 1 y 2, que no tienen ramificación). */
+/* Avanza al siguiente paso para nombre, contacto y correo de acceso. */
 function usuarioNext(current) {
     if (!usuarioValidarPaso(current)) return;
 
@@ -364,8 +378,8 @@ function usuarioPrev(current) {
     document.getElementById('usuario-step-' + current).classList.remove('active');
 
     let target = current - 1;
-    if (current === 5) {
-        target = usuarioIncludesPassword ? 4 : 3;
+    if (current === 6) {
+        target = usuarioIncludesPassword ? 5 : 4;
     }
 
     document.getElementById('usuario-step-' + target).classList.add('active');
@@ -379,21 +393,21 @@ function usuarioToggleRolInfo() {
     info.classList.toggle('visible', rol === 'usuario');
 }
 
-/* Al salir del paso 3 (rol/sucursal): si el rol es "usuario" pide contraseña, si no, va directo al resumen. */
+/* Al salir del paso 4: enlaza el rol Usuario con su contraseña o avanza al resumen. */
 function usuarioAfterRol() {
-    if (!usuarioValidarPaso(3)) return;
+    if (!usuarioValidarPaso(4)) return;
 
     const rol = document.getElementById('u_rol').value;
     const passwordField = document.getElementById('u_password');
     const confirmField = document.getElementById('u_password_confirmation');
 
-    document.getElementById('usuario-step-3').classList.remove('active');
+    document.getElementById('usuario-step-4').classList.remove('active');
 
     if (rol === 'usuario') {
         passwordField.setAttribute('required', 'required');
         confirmField.setAttribute('required', 'required');
-        document.getElementById('usuario-step-4').classList.add('active');
-        usuarioBuildProgress(4);
+        document.getElementById('usuario-step-5').classList.add('active');
+        usuarioBuildProgress(5);
         setTimeout(() => passwordField.focus(), 100);
     } else {
         passwordField.removeAttribute('required');
@@ -406,7 +420,7 @@ function usuarioAfterRol() {
 
 /* Valida longitud mínima y coincidencia de contraseña/confirmación. */
 function usuarioValidarPassword() {
-    if (!usuarioValidarPaso(4)) return false;
+    if (!usuarioValidarPaso(5)) return false;
 
     const pass = document.getElementById('u_password').value;
     const confirm = document.getElementById('u_password_confirmation').value;
@@ -428,7 +442,7 @@ function usuarioValidarPassword() {
 function usuarioPasswordNext() {
     if (!usuarioValidarPassword()) return;
 
-    document.getElementById('usuario-step-4').classList.remove('active');
+    document.getElementById('usuario-step-5').classList.remove('active');
     usuarioPrepararResumen();
 }
 
@@ -445,14 +459,15 @@ function usuarioPrepararResumen() {
     const sucursal = document.getElementById('u_sucursal');
 
     document.getElementById('r_name').textContent = document.getElementById('u_name').value || '-';
+    document.getElementById('r_correo_contacto').textContent = document.getElementById('u_correo_contacto').value || '-';
     document.getElementById('r_email').textContent = document.getElementById('u_email').value || '-';
     document.getElementById('r_telefono').textContent = document.getElementById('u_telefono').value || '-';
     document.getElementById('r_rol').textContent = rol.options[rol.selectedIndex].text;
     document.getElementById('r_sucursal').textContent = sucursal.options[sucursal.selectedIndex].text;
     document.getElementById('r_password').textContent = rol.value === 'usuario' ? 'Definida' : 'No aplica (sin acceso al sistema)';
 
-    document.getElementById('usuario-step-5').classList.add('active');
-    usuarioBuildProgress(5);
+    document.getElementById('usuario-step-6').classList.add('active');
+    usuarioBuildProgress(6);
 }
 
 document.addEventListener('keydown', function(event) {
@@ -462,11 +477,11 @@ document.addEventListener('keydown', function(event) {
     if (!active) return;
 
     const stepNumber = parseInt(active.id.replace('usuario-step-', ''), 10);
-    if (stepNumber === 5) return; // último paso: se envía normalmente con el submit del form
+    if (stepNumber === 6) return; // último paso: se envía normalmente con el submit del form
 
     event.preventDefault();
-    if (stepNumber === 3) usuarioAfterRol();
-    else if (stepNumber === 4) usuarioPasswordNext();
+    if (stepNumber === 4) usuarioAfterRol();
+    else if (stepNumber === 5) usuarioPasswordNext();
     else usuarioNext(stepNumber);
 });
 

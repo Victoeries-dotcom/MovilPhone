@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Inventario;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Models\Venta;
@@ -110,6 +111,47 @@ class ReporteRangeTest extends TestCase
             ]))
             ->assertRedirect(route('reportes.index'))
             ->assertSessionHasErrors('hasta');
+    }
+
+    /**
+     * Comprueba que Valor costo se calcule desde el inventario de la sucursal activa.
+     * Se conecta con cantidad_disponible, precio_costo y el resumen por proveedor.
+     */
+    public function test_reporte_calcula_valor_costo_desde_inventario_sin_mezclar_sucursales(): void
+    {
+        [$usuario, $sucursal] = $this->crearSuperusuarioConSucursal();
+        $otraSucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
+
+        Inventario::create([
+            'nombre' => 'CARGADOR PRUEBA',
+            'categoria' => 'CARGADORES',
+            'sucursal_id' => $sucursal->id,
+            'cantidad_disponible' => 4,
+            'stock_minimo' => 1,
+            'precio_costo' => 75,
+            'precio_venta' => 120,
+            'proveedor' => 'PROVEEDOR UNO',
+        ]);
+
+        Inventario::create([
+            'nombre' => 'PRODUCTO OTRA SUCURSAL',
+            'categoria' => 'ACCESORIO',
+            'sucursal_id' => $otraSucursal->id,
+            'cantidad_disponible' => 10,
+            'stock_minimo' => 1,
+            'precio_costo' => 900,
+            'precio_venta' => 1000,
+            'proveedor' => 'PROVEEDOR AJENO',
+        ]);
+
+        $this
+            ->actingAs($usuario)
+            ->withSession(['sucursal_id' => $sucursal->id])
+            ->get(route('reportes.index', ['periodo' => 'acumulado']))
+            ->assertOk()
+            ->assertSee('PROVEEDOR UNO')
+            ->assertSee('$300.00')
+            ->assertDontSee('PROVEEDOR AJENO');
     }
 
     /**

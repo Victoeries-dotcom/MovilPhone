@@ -510,7 +510,11 @@
     </div>
 
     <div>
-        <h2 style="font-size:16px;color:#0f1f3d;margin-bottom:.75rem;">Reporte por proveedor</h2>
+        {{-- Este resumen se conecta con Inventario y recalcula existencia por precio de costo. --}}
+        <div style="margin-bottom:.75rem;">
+            <h2 style="font-size:16px;color:var(--ui-ink);margin:0;">Reporte por proveedor</h2>
+            <small style="color:var(--ui-muted);">Valor costo = existencia disponible × precio de costo registrado en Inventario.</small>
+        </div>
         <table>
             <thead>
                 <tr>

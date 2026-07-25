@@ -134,14 +134,11 @@ class ReporteController extends Controller
             })
             ->sortByDesc('total');
 
-        // Proveedores: resume solamente las piezas registradas en la sucursal activa.
-        $reporteProveedoresQuery = Inventario::select('proveedor')
-            ->selectRaw('COUNT(*) as productos')
-            ->selectRaw('SUM(cantidad_disponible) as existencia')
-            ->selectRaw('SUM(CASE WHEN cantidad_disponible > 0 THEN cantidad_disponible * precio_costo ELSE 0 END) as valor_costo');
+        // Proveedores: obtiene el costo directamente del inventario actual de la sucursal.
+        // El scope multiplica existencia por precio_costo y se actualiza con cada movimiento.
+        $reporteProveedoresQuery = Inventario::query()->resumenPorProveedor();
         $this->filtrarSucursal($reporteProveedoresQuery, $sucursalActiva?->id);
         $reporteProveedores = $reporteProveedoresQuery
-            ->groupBy('proveedor')
             ->orderByDesc('productos')
             ->get();
 

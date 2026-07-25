@@ -139,8 +139,9 @@
             <div class="form-group">
                 <label>Sucursal *</label>
                 {{-- Se conecta con users.sucursal_id para cambiar la sucursal asignada al usuario. --}}
-                <select name="sucursal_id" required>
-                    <option value="">Selecciona una sucursal</option>
+                <select name="sucursal_id" id="u_sucursal">
+                    {{-- Una cuenta Super Usuario puede ser global; los demás roles deben pertenecer a una sucursal. --}}
+                    <option value="">Sin sucursal (cuenta global)</option>
                     @foreach($sucursales as $sucursal)
                         <option value="{{ $sucursal->id }}" {{ old('sucursal_id', $usuario->sucursal_id) == $sucursal->id ? 'selected' : '' }}>
                             {{ $sucursal->nombre }}
@@ -163,7 +164,7 @@
                 </ul>
             </div>
 
-            {{-- La contraseña actual no se puede recuperar; esta sección se conecta con el hash seguro de users.password. --}}
+            {{-- La contraseña actual no se puede recuperar; esta sección permite reemplazar el hash de usuarios y superusuarios. --}}
             <div class="usuario-password-section" id="usuario-password-section">
                 <label>Contraseña actual</label>
                 <div class="usuario-password-status" role="status">
@@ -211,6 +212,11 @@
     </form>
 </div>
 
+{{-- Calcula una sola vez si la cuenta ya tiene acceso; JavaScript usa este dato sin interpretar lógica PHP compleja. --}}
+@php
+    $rolAnteriorTieneAcceso = in_array($usuario->rol, ['usuario', 'superusuario'], true);
+@endphp
+
 <script>
     /* Muestra u oculta el panel de accesos permitidos según el rol elegido. */
     function usuarioToggleRolInfo() {
@@ -218,13 +224,19 @@
         const info = document.getElementById('usuario-rol-info');
         info.classList.toggle('visible', rol === 'usuario');
 
-        // Muestra el estado de la credencial únicamente para Usuario y obliga a definirla durante una conversión.
-        const convirtiendoAUsuario = rol === 'usuario' && @json($usuario->rol !== 'usuario');
-        document.getElementById('usuario-password-section').classList.toggle('visible', rol === 'usuario');
+        // Usuario y Super Usuario autentican en LoginRequest; por eso ambos pueden reemplazar su contraseña.
+        const rolesConAcceso = ['usuario', 'superusuario'];
+        const rolAnteriorTieneAcceso = @json($rolAnteriorTieneAcceso);
+        const convirtiendoARolConAcceso = rolesConAcceso.includes(rol) && !rolAnteriorTieneAcceso;
+        document.getElementById('usuario-password-section').classList.toggle('visible', rolesConAcceso.includes(rol));
 
-        if (convirtiendoAUsuario) {
+        // users.sucursal_id puede quedar vacío solamente para un Super Usuario global.
+        const sucursal = document.getElementById('u_sucursal');
+        sucursal.required = rol !== 'superusuario';
+
+        if (convirtiendoARolConAcceso) {
             usuarioSetPasswordUpdate(true);
-        } else if (rol !== 'usuario') {
+        } else if (!rolesConAcceso.includes(rol)) {
             usuarioSetPasswordUpdate(false);
         }
     }
@@ -253,13 +265,15 @@
         window.lucide?.createIcons();
     }
 
-    /* Controla el botón Actualizar y evita cancelar cuando el rol se está convirtiendo por primera vez. */
+    /* Controla el botón Actualizar y evita cancelar si el nuevo rol todavía no tiene una credencial definida. */
     function usuarioTogglePasswordUpdate() {
-        const convirtiendoAUsuario = document.getElementById('u_rol').value === 'usuario'
-            && @json($usuario->rol !== 'usuario');
+        const rolesConAcceso = ['usuario', 'superusuario'];
+        const rolAnteriorTieneAcceso = @json($rolAnteriorTieneAcceso);
+        const convirtiendoARolConAcceso = rolesConAcceso.includes(document.getElementById('u_rol').value)
+            && !rolAnteriorTieneAcceso;
         const panel = document.getElementById('usuario-password-update');
 
-        if (convirtiendoAUsuario && panel.classList.contains('visible')) {
+        if (convirtiendoARolConAcceso && panel.classList.contains('visible')) {
             document.getElementById('u_password').focus();
             return;
         }

@@ -104,4 +104,51 @@ class UsuarioPasswordTest extends TestCase
         ])->assertRedirect(route('dashboard', absolute: false));
         $this->assertAuthenticated();
     }
+
+    /**
+     * Verifica que el administrador global vea el control de contraseña,
+     * pueda actualizarla sin elegir sucursal y utilice la nueva clave en LoginRequest.
+     */
+    public function test_global_superuser_can_update_its_password_without_a_branch(): void
+    {
+        // La migración de recuperación puede haber creado esta cuenta; updateOrCreate evita duplicarla en pruebas.
+        $admin = User::updateOrCreate(['email' => 'admin@movilphone.com'], [
+            'name' => 'ADMIN GLOBAL',
+            'correo_contacto' => 'admin@movilphone.com',
+            'rol' => 'superusuario',
+            'sucursal_id' => null,
+            'password' => Hash::make('ClaveAnterior2026'),
+        ]);
+
+        // La vista conecta el botón Actualizar contraseña con los campos enviados al controlador.
+        $this->actingAs($admin)
+            ->get(route('usuarios.edit', $admin))
+            ->assertOk()
+            ->assertSee('Actualizar contraseña')
+            ->assertSee('Sin sucursal (cuenta global)');
+
+        $respuesta = $this->actingAs($admin)->put(route('usuarios.update', $admin), [
+            'name' => 'ADMIN GLOBAL',
+            'telefono' => '',
+            'correo_contacto' => 'admin@movilphone.com',
+            'email' => 'admin@movilphone.com',
+            'rol' => 'superusuario',
+            'sucursal_id' => '',
+            'password' => 'NuevaClaveAdmin2026',
+            'password_confirmation' => 'NuevaClaveAdmin2026',
+        ]);
+
+        $respuesta->assertRedirect(route('usuarios.index'));
+        $respuesta->assertSessionHas('success', 'Usuario y contraseña actualizados correctamente.');
+        $this->assertNull($admin->refresh()->sucursal_id);
+        $this->assertTrue(Hash::check('NuevaClaveAdmin2026', $admin->password));
+
+        // Confirma que la credencial nueva abre la sesión administrativa real.
+        auth()->logout();
+        $this->post('/login', [
+            'email' => 'admin@movilphone.com',
+            'password' => 'NuevaClaveAdmin2026',
+        ])->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticatedAs($admin);
+    }
 }

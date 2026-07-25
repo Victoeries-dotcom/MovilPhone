@@ -102,8 +102,13 @@ class UsuarioController extends Controller
             'correo_contacto' => Str::lower(trim((string) $request->correo_contacto)),
         ]);
 
-        // Al convertir otro rol en Usuario exige una contraseña inicial; se conecta con el acceso de inicio de sesión.
-        $reglaPassword = $request->rol === 'usuario' && $usuario->rol !== 'usuario'
+        /*
+         * Usuario y Super Usuario se conectan con LoginRequest. Si otro perfil se convierte
+         * en uno de ellos, exige una contraseña inicial; al editar uno existente es opcional.
+         */
+        $rolesConAcceso = ['usuario', 'superusuario'];
+        $reglaPassword = in_array($request->rol, $rolesConAcceso, true)
+            && ! in_array($usuario->rol, $rolesConAcceso, true)
             ? 'required|string|min:6|confirmed'
             : 'nullable|string|min:6|confirmed';
 
@@ -113,8 +118,9 @@ class UsuarioController extends Controller
             'correo_contacto' => 'required|email|max:255',
             'email' => 'required|email|unique:users,email,'.$usuario->id,
             'rol' => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
-            'sucursal_id' => 'required|exists:sucursales,id',
-            // Para un Usuario existente es opcional; si queda en blanco conserva su contraseña actual.
+            // Una cuenta Super Usuario global se conecta con todas las sedes y puede permanecer sin sucursal.
+            'sucursal_id' => 'nullable|required_unless:rol,superusuario|exists:sucursales,id',
+            // Para una cuenta con acceso existente es opcional; vacía conserva la contraseña actual.
             'password' => $reglaPassword,
         ]);
 

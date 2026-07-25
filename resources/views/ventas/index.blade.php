@@ -46,6 +46,8 @@
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Cliente</th>
                 {{-- Sustituye Sucursal por el contenido comercial proveniente de venta_detalles. --}}
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Producto / servicio vendido</th>
+                {{-- Muestra por separado venta_detalles.cantidad y conserva el orden de cada producto. --}}
+                <th style="padding:12px 16px;text-align:center;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Cantidad vendida</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Vendedor</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Total</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Estado</th>
@@ -62,12 +64,16 @@
                 <td style="padding:12px 16px;">{{ $venta->cliente->nombre ?? 'Sin cliente' }}</td>
                 <td style="padding:12px 16px;">
                     @forelse($venta->detalles as $detalle)
-                        <div style="font-weight:600;color:#0f1f3d;">
-                            {{ $detalle->nombre_producto }}
-                            <span style="color:#64748b;font-weight:500;">× {{ $detalle->cantidad }}</span>
-                        </div>
+                        <div class="sales-detail-line sales-product-name">{{ $detalle->nombre_producto }}</div>
                     @empty
-                        <span style="color:#94a3b8;">Sin detalle registrado</span>
+                        <span class="sales-detail-empty">Sin detalle registrado</span>
+                    @endforelse
+                </td>
+                <td class="sales-quantity-cell" style="padding:12px 16px;">
+                    @forelse($venta->detalles as $detalle)
+                        <div class="sales-detail-line sales-quantity-value">{{ $detalle->cantidad }}</div>
+                    @empty
+                        <span class="sales-detail-empty">—</span>
                     @endforelse
                 </td>
                 <td style="padding:12px 16px;">{{ $venta->usuario->name ?? '—' }}</td>
@@ -89,7 +95,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:14px;">
+                <td colspan="9" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:14px;">
                     No hay ventas registradas para {{ $sucursalActiva?->nombre ?? 'la sucursal seleccionada' }}.
                 </td>
             </tr>

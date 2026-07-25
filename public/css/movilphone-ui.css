@@ -777,6 +777,20 @@ body .ui-status-warning { background:rgba(245,183,59,.13); color:#fbd274; border
 body .ui-status-danger { background:rgba(240,82,100,.13); color:#ff96a3; border-color:rgba(240,82,100,.28); }
 body .ui-status-neutral { background:rgba(151,162,186,.13); color:#bbc4d6; border-color:rgba(151,162,186,.24); }
 
+/*
+ * Detalle de Ventas: usa los colores del tema para que producto y cantidad sean
+ * legibles en modo oscuro y claro. Se conecta con ventas.index y venta_detalles.
+ */
+body .sales-detail-line {
+    min-height:20px;
+    display:flex;
+    align-items:center;
+}
+body .sales-product-name { color:var(--ui-ink); font-weight:700; }
+body .sales-quantity-cell { text-align:center; }
+body .sales-quantity-value { justify-content:center; color:#8fb4ff; font-weight:800; }
+body .sales-detail-empty { color:var(--ui-muted); }
+
 /* Herramientas de tabla: filtran, exportan y paginan el conjunto visible sin escribir en la base de datos. */
 body .ui-table-workspace {
     display:flex; align-items:center; gap:8px; min-height:52px; padding:8px 12px;
@@ -1154,6 +1168,8 @@ html[data-ui-theme="light"] body .ui-table-export:hover,
 html[data-ui-theme="light"] body .ui-density-control button:hover,
 html[data-ui-theme="light"] body .ui-density-control button.is-active,
 html[data-ui-theme="light"] body .ui-client-pagination button:hover:not(:disabled) { border-color:#8b78ef; background:#f0edff; color:#4f3bd2; }
+/* En modo claro la cantidad conserva contraste sin competir con el nombre del producto. */
+html[data-ui-theme="light"] body .sales-quantity-value { color:#1d4ed8; }
 html[data-ui-theme="light"] body .ui-column-menu { border-color:#dbe3ef; background:#fff; }
 html[data-ui-theme="light"] body .ui-column-menu-title { color:#17213d; }
 html[data-ui-theme="light"] body .ui-column-option { color:#52627a; }

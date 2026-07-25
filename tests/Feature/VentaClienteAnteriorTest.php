@@ -93,6 +93,7 @@ class VentaClienteAnteriorTest extends TestCase
             ->get(route('ventas.index'))
             ->assertOk()
             ->assertSee('Producto / servicio vendido')
+            ->assertSee('Cantidad vendida')
             ->assertSee('CAMBIO DE CENTRO DE CARGA');
     }
 

@@ -8,7 +8,8 @@
     </div>
 </div>
 
-<table>
+{{-- Identifica esta tabla para que el panel profesional muestre su propósito junto al contador. --}}
+<table data-table-summary-note="Usuarios con actividad registrada">
     <thead>
         <tr>
             <th>Fecha</th>

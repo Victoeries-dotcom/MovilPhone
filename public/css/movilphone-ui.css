@@ -324,6 +324,15 @@ body .ui-table-meta {
     background:linear-gradient(180deg,#fff,#fbfcfe);
 }
 body .ui-table-summary { display:flex; align-items:center; gap:9px; color:#64748b; font-size:11px; font-weight:650; }
+/* Aclara el propósito de una tabla cuando la vista proporciona una nota contextual. */
+body .ui-table-summary-note {
+    margin-left:4px;
+    padding-left:12px;
+    border-left:1px solid currentColor;
+    color:inherit;
+    opacity:.78;
+    font-weight:600;
+}
 body .ui-table-summary-icon {
     display:grid; width:27px; height:27px; place-items:center; border:1px solid #dbeafe;
     border-radius:6px; background:#eff6ff; color:var(--ui-blue-700);

@@ -338,9 +338,17 @@ document.addEventListener('DOMContentLoaded', function () {
             meta.className = 'ui-table-meta';
             const summary = document.createElement('div');
             summary.className = 'ui-table-summary';
+            /*
+             * Lee la descripción opcional declarada en la vista.
+             * Se conecta con data-table-summary-note sin afectar las demás tablas del sistema.
+             */
+            const summaryNote = table.dataset.tableSummaryNote
+                ? '<span class="ui-table-summary-note">' + escapeHtml(table.dataset.tableSummaryNote) + '</span>'
+                : '';
             summary.innerHTML = '<span class="ui-table-summary-icon"><i data-lucide="table-2"></i></span>'
                 + '<span><strong class="ui-table-count">' + dataRows.length + '</strong> '
-                + (dataRows.length === 1 ? 'registro' : 'registros') + '</span>';
+                + (dataRows.length === 1 ? 'registro' : 'registros') + '</span>'
+                + summaryNote;
             const hint = document.createElement('span');
             hint.className = 'ui-table-hint';
             hint.innerHTML = '<i data-lucide="move-horizontal"></i><span>Desliza para ver más</span>';

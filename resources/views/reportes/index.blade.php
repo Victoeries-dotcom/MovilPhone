@@ -118,6 +118,21 @@
 }
 </style>
 
+@php
+    /*
+     * Conserva el alcance global al cambiar de periodo o aplicar un rango.
+     * Estos parámetros se conectan con todas_sucursales de ReporteController.
+     */
+    $parametrosAlcance = $todasSucursales ? ['todas_sucursales' => 1] : [];
+    $parametrosCambioAlcance = request()->query();
+
+    if ($todasSucursales) {
+        unset($parametrosCambioAlcance['todas_sucursales']);
+    } else {
+        $parametrosCambioAlcance['todas_sucursales'] = 1;
+    }
+@endphp
+
 <div class="page-header">
     <div>
         <h1>Reportes</h1>
@@ -131,9 +146,9 @@
                 Actividad del {{ $inicio->format('d/m/Y') }} al {{ $fin->format('d/m/Y') }}
             @endif
         </div>
-        {{-- Confirma visualmente que todas las tablas y tarjetas pertenecen a la sucursal activa. --}}
+        {{-- Confirma si las tarjetas consultan una sucursal o la suma completa del sistema. --}}
         <div class="reporte-sucursal">
-            {{ $sucursalActiva ? 'Sucursal: '.$sucursalActiva->nombre : 'Selecciona una sucursal para consultar reportes' }}
+            {{ $hayAlcanceReporte ? 'Alcance: '.$alcanceReporte : 'Selecciona una sucursal para consultar reportes' }}
         </div>
     </div>
     <button type="button" class="btn btn-primary no-print" onclick="window.print()">Imprimir / Guardar PDF</button>
@@ -142,16 +157,26 @@
 {{-- Filtros: los accesos rápidos y el rango personalizado controlan todas las consultas del ReporteController. --}}
 <div class="reporte-filtros no-print">
     <div class="reporte-accesos" aria-label="Periodos rápidos">
-        <a href="{{ route('reportes.index', ['periodo' => 'dia']) }}" class="btn {{ $periodo === 'dia' ? 'btn-primary' : '' }}">Hoy</a>
-        <a href="{{ route('reportes.index', ['periodo' => 'semana']) }}" class="btn {{ $periodo === 'semana' ? 'btn-primary' : '' }}">Últimos 7 días</a>
-        <a href="{{ route('reportes.index', ['periodo' => 'mes']) }}" class="btn {{ $periodo === 'mes' ? 'btn-primary' : '' }}">Mes actual</a>
-        <a href="{{ route('reportes.index', ['periodo' => 'acumulado']) }}" class="btn {{ $periodo === 'acumulado' ? 'btn-primary' : '' }}">Acumulado</a>
+        <a href="{{ route('reportes.index', array_merge(['periodo' => 'dia'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'dia' ? 'btn-primary' : '' }}">Hoy</a>
+        <a href="{{ route('reportes.index', array_merge(['periodo' => 'semana'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'semana' ? 'btn-primary' : '' }}">Últimos 7 días</a>
+        <a href="{{ route('reportes.index', array_merge(['periodo' => 'mes'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'mes' ? 'btn-primary' : '' }}">Mes actual</a>
+        <a href="{{ route('reportes.index', array_merge(['periodo' => 'acumulado'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'acumulado' ? 'btn-primary' : '' }}">Acumulado</a>
+        {{-- Activa la suma de todas las sucursales y, al pulsarlo otra vez, regresa a la sede seleccionada. --}}
+        <a
+            href="{{ route('reportes.index', $parametrosCambioAlcance) }}"
+            class="btn {{ $todasSucursales ? 'btn-primary' : '' }}"
+            aria-pressed="{{ $todasSucursales ? 'true' : 'false' }}"
+        >Todas las sucursales</a>
     </div>
 
     {{-- El formulario envía dos límites y su unidad; ReporteController los convierte en fechas completas. --}}
     <form method="GET" action="{{ route('reportes.index') }}" class="reporte-rango" id="form-rango-reportes">
         <input type="hidden" name="periodo" value="rango">
         <input type="hidden" name="tipo_rango" id="tipo-rango-reportes" value="{{ $tipoRango }}">
+        {{-- Mantiene la suma global al consultar días, semanas o meses personalizados. --}}
+        @if($todasSucursales)
+            <input type="hidden" name="todas_sucursales" value="1">
+        @endif
 
         <div class="reporte-rango-cabecera">
             <div class="reporte-rango-titulo">
@@ -218,8 +243,8 @@
     </form>
 </div>
 
-{{-- Sin sucursal activa se evita mezclar información de diferentes sedes. --}}
-@if(!$sucursalActiva)
+{{-- Sin sucursal ni alcance global se evita mostrar información sin contexto. --}}
+@if(!$hayAlcanceReporte)
     <div class="alert alert-error no-print" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
         <span>Selecciona una sucursal para consultar sus reportes.</span>
         <a href="{{ route('sucursales.index') }}" class="btn">Ir a Sucursales</a>
@@ -231,45 +256,45 @@
         <div class="stat-label">Ventas</div>
         {{-- Cuenta operaciones de venta y usa el acumulado cuando las gráficas también son acumuladas. --}}
         <div class="stat-num blue">{{ $general['ventas_mostradas'] }}</div>
-        @if($general['ventas_es_acumulado'] && $sucursalActiva)
-            <span class="stat-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+        @if($general['ventas_es_acumulado'] && $hayAlcanceReporte)
+            <span class="stat-alcance">Acumulado de {{ $alcanceReporte }}</span>
         @endif
     </div>
     <div class="stat-card">
         <div class="stat-label">Total vendido</div>
         {{-- Esta cifra usa exactamente el mismo periodo o acumulado que la gráfica de ingresos. --}}
         <div class="stat-num green">${{ number_format($general['total_ventas_mostrado'], 2) }}</div>
-        @if($general['total_ventas_es_acumulado'] && $sucursalActiva)
-            <span class="stat-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+        @if($general['total_ventas_es_acumulado'] && $hayAlcanceReporte)
+            <span class="stat-alcance">Acumulado de {{ $alcanceReporte }}</span>
         @endif
     </div>
     <div class="stat-card">
         <div class="stat-label">Ordenes</div>
         {{-- Usa el mismo periodo o acumulado que la gráfica de Órdenes por estado. --}}
         <div class="stat-num amber">{{ $general['ordenes_mostradas'] }}</div>
-        @if($general['ordenes_es_acumulado'] && $sucursalActiva)
-            <span class="stat-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+        @if($general['ordenes_es_acumulado'] && $hayAlcanceReporte)
+            <span class="stat-alcance">Acumulado de {{ $alcanceReporte }}</span>
         @endif
     </div>
     <div class="stat-card">
         <div class="stat-label">Clientes nuevos</div>
-        {{-- Si el periodo está vacío, muestra los clientes registrados en la sucursal activa. --}}
+        {{-- Si el periodo está vacío, muestra los clientes acumulados del alcance seleccionado. --}}
         <div class="stat-num blue">{{ $general['clientes_mostrados'] }}</div>
-        @if($general['clientes_es_acumulado'] && $sucursalActiva)
-            <span class="stat-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+        @if($general['clientes_es_acumulado'] && $hayAlcanceReporte)
+            <span class="stat-alcance">Acumulado de {{ $alcanceReporte }}</span>
         @endif
     </div>
     <div class="stat-card">
         <div class="stat-label">Bajo stock</div>
         {{-- Bajo stock siempre representa la existencia actual, no un periodo histórico. --}}
         <div class="stat-num red">{{ $general['productos_bajo_stock'] }}</div>
-        @if($sucursalActiva)
-            <span class="stat-alcance stat-alcance-actual">Actual de {{ $sucursalActiva->nombre }}</span>
+        @if($hayAlcanceReporte)
+            <span class="stat-alcance stat-alcance-actual">Actual de {{ $alcanceReporte }}</span>
         @endif
     </div>
 </div>
 
-{{-- Las gráficas usan la fecha y sucursal activas; si no hay ventas, muestran su acumulado identificado. --}}
+{{-- Las gráficas usan el periodo y alcance elegidos; si no hay datos, muestran el acumulado identificado. --}}
 <section class="reporte-graficas" aria-label="Gráficas de resultados">
     {{-- Dona de unidades: consume productos.cantidades generado por ReporteController. --}}
     <article class="reporte-grafica reporte-grafica-ventas">
@@ -281,7 +306,7 @@
                     <div class="reporte-grafica-subtitulo">
                         Distribución de piezas vendidas
                         @if($graficas['productos']['es_acumulado'])
-                            <span class="grafica-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+                            <span class="grafica-alcance">Acumulado de {{ $alcanceReporte }}</span>
                         @endif
                     </div>
                 </div>
@@ -317,7 +342,7 @@
                     <div class="reporte-grafica-subtitulo">
                         Participación en los ingresos
                         @if($graficas['productos']['es_acumulado'])
-                            <span class="grafica-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+                            <span class="grafica-alcance">Acumulado de {{ $alcanceReporte }}</span>
                         @endif
                     </div>
                 </div>
@@ -353,7 +378,7 @@
                     <div class="reporte-grafica-subtitulo">
                         Flujo operativo por etapa
                         @if($graficas['ordenes']['es_acumulado'])
-                            <span class="grafica-alcance">Acumulado de {{ $sucursalActiva->nombre }}</span>
+                            <span class="grafica-alcance">Acumulado de {{ $alcanceReporte }}</span>
                         @endif
                     </div>
                 </div>
@@ -387,7 +412,7 @@
             <div>
                 <h2>Reporte general por periodo</h2>
                 <div class="reporte-grafica-subtitulo">
-                    Resumen de {{ strtolower($periodoEtiqueta) }} para {{ $sucursalActiva?->nombre ?? 'la sucursal seleccionada' }}
+                    Resumen de {{ strtolower($periodoEtiqueta) }} para {{ $alcanceReporte }}
                 </div>
             </div>
         </div>
@@ -584,7 +609,7 @@ if (formularioRangoReportes) {
 
 /*
  * Datos preparados por ReporteController.
- * Se conectan con la sucursal activa y el periodo seleccionado.
+ * Se conectan con el alcance de sucursales y el periodo seleccionado.
  */
 const datosGraficasReporte = @json($graficas);
 /*

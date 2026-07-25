@@ -18,8 +18,8 @@ use Throwable;
 class ReporteController extends Controller
 {
     /**
-     * Genera todos los reportes del periodo solicitado para la sucursal activa.
-     * Se conecta con Ventas, Caja, Órdenes, Clientes e Inventario sin mezclar sucursales.
+     * Genera todos los reportes del periodo y alcance solicitados.
+     * Se conecta con Ventas, Caja, Órdenes, Clientes e Inventario por sucursal o de forma global.
      */
     public function index(Request $request)
     {
@@ -42,6 +42,8 @@ class ReporteController extends Controller
             'tipo_rango' => 'nullable|in:dia,semana,mes',
             'desde' => 'nullable|string|max:10',
             'hasta' => 'nullable|string|max:10',
+            // Activa la suma de todas las sucursales sin depender de una lista fija de sedes.
+            'todas_sucursales' => 'nullable|boolean',
         ]);
         $fechaSeleccionada = $request->get('fecha', now()->toDateString());
         $tipoRango = $request->get('tipo_rango', 'dia');
@@ -69,6 +71,16 @@ class ReporteController extends Controller
         $sucursalActiva = $sucursalActivaId ? Sucursal::find($sucursalActivaId) : null;
 
         /*
+         * El alcance global omite únicamente el filtro de sucursal.
+         * Se conecta con todas las consultas del reporte e incluye automáticamente sucursales futuras.
+         */
+        $todasSucursales = $request->boolean('todas_sucursales');
+        $hayAlcanceReporte = $todasSucursales || $sucursalActiva !== null;
+        $alcanceReporte = $todasSucursales
+            ? 'Todas las sucursales'
+            : ($sucursalActiva?->nombre ?? 'Sin sucursal');
+
+        /*
          * El rango personalizado usa los límites elegidos por el administrador.
          * Los demás accesos rápidos conservan el cálculo histórico de rangoPeriodo().
          */
@@ -77,7 +89,8 @@ class ReporteController extends Controller
             : $this->rangoPeriodo(
                 $periodo,
                 $fechaSeleccionada,
-                $sucursalActiva?->id
+                $sucursalActiva?->id,
+                $todasSucursales
             );
 
         // Fecha y rango personalizados son consultas estrictas: nunca muestran acumulados ajenos al intervalo.
@@ -86,14 +99,15 @@ class ReporteController extends Controller
         // Ventas del periodo: alimentan tarjetas, tabla de ventas y reporte por cliente.
         $ventasQuery = Venta::with(['cliente', 'sucursal', 'usuario', 'detalles'])
             ->whereBetween('created_at', [$inicio, $fin]);
-        $this->filtrarSucursal($ventasQuery, $sucursalActiva?->id);
+        $this->filtrarSucursal($ventasQuery, $sucursalActiva?->id, 'sucursal_id', $todasSucursales);
         $ventas = $ventasQuery->latest()->get();
 
         // Productos del periodo: alimentan tablas y gráficas cuando existen resultados.
         $productosMasVendidos = $this->consultarProductosVendidos(
             $sucursalActiva?->id,
             $inicio,
-            $fin
+            $fin,
+            $todasSucursales
         );
 
         // Si el periodo no tuvo ventas, las gráficas usan el historial completo de la sucursal.
@@ -104,9 +118,14 @@ class ReporteController extends Controller
         if (
             $permiteRespaldoAcumulado
             && $productosGraficas->sum('total_vendido') <= 0
-            && $sucursalActiva
+            && $hayAlcanceReporte
         ) {
-            $productosAcumulados = $this->consultarProductosVendidos($sucursalActiva->id);
+            $productosAcumulados = $this->consultarProductosVendidos(
+                $sucursalActiva?->id,
+                null,
+                null,
+                $todasSucursales
+            );
 
             if ($productosAcumulados->sum('total_vendido') > 0) {
                 $productosGraficas = $productosAcumulados;
@@ -114,10 +133,15 @@ class ReporteController extends Controller
             }
         }
 
-        // Existencias actuales: muestra únicamente el inventario perteneciente a la sucursal activa.
+        // Existencias actuales: usa la sucursal activa o todas las sucursales, según el alcance solicitado.
         $productosExistenciaQuery = Inventario::with('sucursal')
             ->orderBy('cantidad_disponible');
-        $this->filtrarSucursal($productosExistenciaQuery, $sucursalActiva?->id);
+        $this->filtrarSucursal(
+            $productosExistenciaQuery,
+            $sucursalActiva?->id,
+            'sucursal_id',
+            $todasSucursales
+        );
         $productosExistencia = $productosExistenciaQuery->get();
 
         // Agrupa las ventas ya filtradas para mostrar compras y total por cliente.
@@ -137,14 +161,19 @@ class ReporteController extends Controller
         // Proveedores: obtiene el costo directamente del inventario actual de la sucursal.
         // El scope multiplica existencia por precio_costo y se actualiza con cada movimiento.
         $reporteProveedoresQuery = Inventario::query()->resumenPorProveedor();
-        $this->filtrarSucursal($reporteProveedoresQuery, $sucursalActiva?->id);
+        $this->filtrarSucursal(
+            $reporteProveedoresQuery,
+            $sucursalActiva?->id,
+            'sucursal_id',
+            $todasSucursales
+        );
         $reporteProveedores = $reporteProveedoresQuery
             ->orderByDesc('productos')
             ->get();
 
-        // Consultas generales: todas comparten el mismo periodo y la misma sucursal activa.
+        // Consultas generales: todas comparten el mismo periodo y alcance para mantener cifras consistentes.
         $ordenesQuery = OrdenServicio::whereBetween('created_at', [$inicio, $fin]);
-        $this->filtrarSucursal($ordenesQuery, $sucursalActiva?->id);
+        $this->filtrarSucursal($ordenesQuery, $sucursalActiva?->id, 'sucursal_id', $todasSucursales);
 
         // Agrupa los estados de las OS para alimentar la gráfica vertical de Órdenes.
         // Los grupos coinciden con las tarjetas utilizadas en el módulo Órdenes de Servicio.
@@ -181,13 +210,20 @@ class ReporteController extends Controller
         $ordenesGraficas = $ordenesPorEstado;
         $ordenesGraficasAcumuladas = false;
 
-        // Sin órdenes en el rango, la gráfica consulta todo el historial de la sucursal activa.
+        // Sin órdenes en el rango, la gráfica consulta el historial completo del alcance seleccionado.
         if (
             $permiteRespaldoAcumulado
             && $ordenesGraficas->sum('total') <= 0
-            && $sucursalActiva
+            && $hayAlcanceReporte
         ) {
-            $conteosOrdenesAcumuladas = OrdenServicio::where('sucursal_id', $sucursalActiva->id)
+            $ordenesAcumuladasQuery = OrdenServicio::query();
+            $this->filtrarSucursal(
+                $ordenesAcumuladasQuery,
+                $sucursalActiva?->id,
+                'sucursal_id',
+                $todasSucursales
+            );
+            $conteosOrdenesAcumuladas = $ordenesAcumuladasQuery
                 ->select('estado')
                 ->selectRaw('COUNT(*) as total')
                 ->groupBy('estado')
@@ -201,13 +237,23 @@ class ReporteController extends Controller
         }
 
         $clientesQuery = Cliente::whereBetween('created_at', [$inicio, $fin]);
-        $this->filtrarSucursal($clientesQuery, $sucursalActiva?->id, 'sucursal_habitual_id');
+        $this->filtrarSucursal(
+            $clientesQuery,
+            $sucursalActiva?->id,
+            'sucursal_habitual_id',
+            $todasSucursales
+        );
 
         $cajaQuery = MovimientoCaja::whereBetween('created_at', [$inicio, $fin]);
-        $this->filtrarSucursal($cajaQuery, $sucursalActiva?->id);
+        $this->filtrarSucursal($cajaQuery, $sucursalActiva?->id, 'sucursal_id', $todasSucursales);
 
         $stockBajoQuery = Inventario::whereColumn('cantidad_disponible', '<=', 'stock_minimo');
-        $this->filtrarSucursal($stockBajoQuery, $sucursalActiva?->id);
+        $this->filtrarSucursal(
+            $stockBajoQuery,
+            $sucursalActiva?->id,
+            'sucursal_id',
+            $todasSucursales
+        );
 
         $general = [
             'ordenes' => $ordenesQuery->count(),
@@ -224,12 +270,13 @@ class ReporteController extends Controller
         // Solo usa el acumulado cuando el periodo está vacío y existen clientes anteriores.
         $clientesMostrados = $general['clientes'];
         $clientesEsAcumulado = false;
-        if ($permiteRespaldoAcumulado && $clientesMostrados === 0 && $sucursalActiva) {
+        if ($permiteRespaldoAcumulado && $clientesMostrados === 0 && $hayAlcanceReporte) {
             $clientesAcumuladosQuery = Cliente::query();
             $this->filtrarSucursal(
                 $clientesAcumuladosQuery,
-                $sucursalActiva->id,
-                'sucursal_habitual_id'
+                $sucursalActiva?->id,
+                'sucursal_habitual_id',
+                $todasSucursales
             );
             $clientesAcumulados = $clientesAcumuladosQuery->count();
 
@@ -242,29 +289,39 @@ class ReporteController extends Controller
         $general['clientes_es_acumulado'] = $clientesEsAcumulado;
 
         // Sincroniza la tarjeta "Órdenes" con la gráfica de estados.
-        // Cuando el periodo está vacío, cuenta todas las OS de la sucursal activa.
+        // Cuando el periodo está vacío, cuenta todas las OS del alcance seleccionado.
         $ordenesMostradas = $general['ordenes'];
-        if ($ordenesGraficasAcumuladas && $sucursalActiva) {
+        if ($ordenesGraficasAcumuladas && $hayAlcanceReporte) {
             $ordenesAcumuladasQuery = OrdenServicio::query();
-            $this->filtrarSucursal($ordenesAcumuladasQuery, $sucursalActiva->id);
+            $this->filtrarSucursal(
+                $ordenesAcumuladasQuery,
+                $sucursalActiva?->id,
+                'sucursal_id',
+                $todasSucursales
+            );
             $ordenesMostradas = $ordenesAcumuladasQuery->count();
         }
         $general['ordenes_mostradas'] = $ordenesMostradas;
         $general['ordenes_es_acumulado'] = $ordenesGraficasAcumuladas;
 
         // Sincroniza el conteo de la tarjeta "Ventas" con las gráficas acumuladas.
-        // Consulta la tabla ventas de la sucursal activa para contar operaciones, no piezas.
+        // Consulta la tabla ventas del alcance seleccionado para contar operaciones, no piezas.
         $ventasMostradas = $general['ventas'];
-        if ($productosGraficasAcumuladas && $sucursalActiva) {
+        if ($productosGraficasAcumuladas && $hayAlcanceReporte) {
             $ventasAcumuladasQuery = Venta::query();
-            $this->filtrarSucursal($ventasAcumuladasQuery, $sucursalActiva->id);
+            $this->filtrarSucursal(
+                $ventasAcumuladasQuery,
+                $sucursalActiva?->id,
+                'sucursal_id',
+                $todasSucursales
+            );
             $ventasMostradas = $ventasAcumuladasQuery->count();
         }
         $general['ventas_mostradas'] = $ventasMostradas;
         $general['ventas_es_acumulado'] = $productosGraficasAcumuladas;
 
         // Sincroniza la tarjeta "Total vendido" con la gráfica de ingresos.
-        // Si el periodo está vacío, ambas muestran el acumulado de la sucursal activa.
+        // Si el periodo está vacío, ambas muestran el acumulado del alcance seleccionado.
         $general['total_ventas_mostrado'] = $productosGraficasAcumuladas
             ? $productosGraficas->sum('total_ingresos')
             : $general['total_ventas'];
@@ -314,6 +371,9 @@ class ReporteController extends Controller
             'inicio',
             'fin',
             'sucursalActiva',
+            'todasSucursales',
+            'hayAlcanceReporte',
+            'alcanceReporte',
             'ventas',
             'productosMasVendidos',
             'productosExistencia',
@@ -418,17 +478,23 @@ class ReporteController extends Controller
     private function consultarProductosVendidos(
         ?int $sucursalId,
         ?Carbon $inicio = null,
-        ?Carbon $fin = null
+        ?Carbon $fin = null,
+        bool $todasSucursales = false
     ) {
         $query = VentaDetalle::select('nombre_producto')
             ->selectRaw('SUM(cantidad) as total_vendido')
             ->selectRaw('SUM(subtotal) as total_ingresos')
-            ->whereHas('venta', function (Builder $venta) use ($sucursalId, $inicio, $fin) {
+            ->whereHas('venta', function (Builder $venta) use (
+                $sucursalId,
+                $inicio,
+                $fin,
+                $todasSucursales
+            ) {
                 if ($inicio && $fin) {
                     $venta->whereBetween('created_at', [$inicio, $fin]);
                 }
 
-                $this->filtrarSucursal($venta, $sucursalId);
+                $this->filtrarSucursal($venta, $sucursalId, 'sucursal_id', $todasSucursales);
             });
 
         return $query
@@ -438,11 +504,19 @@ class ReporteController extends Controller
     }
 
     /**
-     * Aplica la sucursal a una consulta; sin selección devuelve cero filas para evitar mezclar sedes.
-     * El nombre de columna permite conectar Clientes mediante sucursal_habitual_id.
+     * Aplica el alcance solicitado: una sucursal, todas las sucursales o cero filas sin selección.
+     * El nombre de columna conecta Clientes mediante sucursal_habitual_id y los demás módulos por sucursal_id.
      */
-    private function filtrarSucursal(Builder $query, ?int $sucursalId, string $columna = 'sucursal_id'): void
-    {
+    private function filtrarSucursal(
+        Builder $query,
+        ?int $sucursalId,
+        string $columna = 'sucursal_id',
+        bool $todasSucursales = false
+    ): void {
+        if ($todasSucursales) {
+            return;
+        }
+
         if ($sucursalId) {
             $query->where($columna, $sucursalId);
         } else {
@@ -452,10 +526,14 @@ class ReporteController extends Controller
 
     /**
      * Convierte el botón elegido en un rango de fechas para consultar los registros guardados.
-     * Acumulado inicia en el primer dato real localizado para la sucursal activa.
+     * Acumulado inicia en el primer dato real localizado dentro del alcance seleccionado.
      */
-    private function rangoPeriodo(string $periodo, string $fechaSeleccionada, ?int $sucursalId): array
-    {
+    private function rangoPeriodo(
+        string $periodo,
+        string $fechaSeleccionada,
+        ?int $sucursalId,
+        bool $todasSucursales = false
+    ): array {
         if ($periodo === 'fecha') {
             $fecha = Carbon::createFromFormat('Y-m-d', $fechaSeleccionada);
 
@@ -463,7 +541,7 @@ class ReporteController extends Controller
         }
 
         if ($periodo === 'acumulado') {
-            $primerRegistro = $this->fechaPrimerRegistro($sucursalId);
+            $primerRegistro = $this->fechaPrimerRegistro($sucursalId, $todasSucursales);
 
             return [
                 $primerRegistro ? Carbon::parse($primerRegistro)->startOfDay() : now()->startOfDay(),
@@ -479,21 +557,34 @@ class ReporteController extends Controller
     }
 
     /**
-     * Busca la fecha más antigua registrada para que Acumulado abarque toda la historia de la sucursal.
-     * Se conecta con las cinco fuentes principales del reporte.
+     * Busca la fecha más antigua para que Acumulado cubra la sucursal o todo el sistema.
+     * Se conecta con las cinco fuentes principales y respeta el alcance seleccionado.
      */
-    private function fechaPrimerRegistro(?int $sucursalId): ?string
+    private function fechaPrimerRegistro(?int $sucursalId, bool $todasSucursales = false): ?string
     {
-        if (! $sucursalId) {
+        if (! $sucursalId && ! $todasSucursales) {
             return null;
         }
 
+        /*
+         * Cada consulta usa filtrarSucursal(); en modo global no se agrega WHERE,
+         * por lo que las nuevas sucursales quedan incluidas automáticamente.
+         */
+        $fechaMinima = function (Builder $query, string $columna = 'sucursal_id') use (
+            $sucursalId,
+            $todasSucursales
+        ) {
+            $this->filtrarSucursal($query, $sucursalId, $columna, $todasSucursales);
+
+            return $query->min('created_at');
+        };
+
         return collect([
-            Venta::where('sucursal_id', $sucursalId)->min('created_at'),
-            MovimientoCaja::where('sucursal_id', $sucursalId)->min('created_at'),
-            OrdenServicio::where('sucursal_id', $sucursalId)->min('created_at'),
-            Cliente::where('sucursal_habitual_id', $sucursalId)->min('created_at'),
-            Inventario::where('sucursal_id', $sucursalId)->min('created_at'),
+            $fechaMinima(Venta::query()),
+            $fechaMinima(MovimientoCaja::query()),
+            $fechaMinima(OrdenServicio::query()),
+            $fechaMinima(Cliente::query(), 'sucursal_habitual_id'),
+            $fechaMinima(Inventario::query()),
         ])->filter()->min();
     }
 }

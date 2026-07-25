@@ -13,21 +13,28 @@ class UsuarioController extends Controller
 {
     public function index()
     {
-        // Usa la sucursal activa del menú lateral para mostrar solo usuarios de esa sucursal.
+        /*
+         * Usa la sucursal activa del menú lateral para separar el personal por sede.
+         * Sin sucursal, se conecta con users.rol y muestra únicamente las cuentas
+         * administrativas globales para que el acceso principal siga localizable.
+         */
         $sucursalId = session('sucursal_id');
 
         $usuarios = User::with('sucursal')
-            // La lista se conecta estrictamente con users.sucursal_id para no mezclar personal.
-            ->when($sucursalId, fn ($query) => $query->where('sucursal_id', $sucursalId))
-            ->when(! $sucursalId, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when(
+                $sucursalId,
+                fn ($query) => $query->where('sucursal_id', $sucursalId),
+                fn ($query) => $query->where('rol', 'superusuario')
+            )
             ->latest()
             ->get();
 
         $rolesSistema = $usuarios->whereIn('rol', ['superusuario', 'capturista', 'vendedor']);
         $tecnicos = $usuarios->where('rol', 'tecnico');
         $usuariosGenerales = $usuarios->whereNotIn('rol', ['superusuario', 'capturista', 'vendedor', 'tecnico']);
+        $sinSucursal = ! $sucursalId;
 
-        return view('usuarios.index', compact('usuariosGenerales', 'rolesSistema', 'tecnicos'));
+        return view('usuarios.index', compact('usuariosGenerales', 'rolesSistema', 'tecnicos', 'sinSucursal'));
     }
 
     public function create()

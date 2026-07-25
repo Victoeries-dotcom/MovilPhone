@@ -9,6 +9,18 @@
     <a href="{{ route('usuarios.create') }}" class="btn btn-primary">+ Nuevo usuario</a>
 </div>
 
+@if($sinSucursal)
+    {{--
+        Informa cómo administrar el acceso global sin revelar contraseñas.
+        El botón Editar se conecta con UsuarioController::update para reemplazarlas de forma segura.
+    --}}
+    <div class="alert alert-info" style="margin-bottom:1.5rem;">
+        <strong>Cuentas administrativas globales.</strong>
+        Las contraseñas están cifradas y no pueden visualizarse. Para cambiar una, abre
+        <strong>Editar</strong> y usa la opción <strong>Actualizar contraseña</strong>.
+    </div>
+@endif
+
 @php
     $rolLabels = [
         'superusuario' => 'Super Usuario',
@@ -46,6 +58,7 @@
                     <th>Nombre</th>
                     <th>Telefono</th>
                     <th>Correo de contacto</th>
+                    <th>Correo para ingresar</th>
                     <th>Rol</th>
                     <th>Sucursal</th>
                     <th>Registrado</th>
@@ -59,6 +72,8 @@
                     <td>{{ $usuario->telefono ?? '-' }}</td>
                     {{-- Muestra el correo informativo; los registros antiguos usan su email previo como respaldo. --}}
                     <td>{{ $usuario->correo_contacto ?: $usuario->email }}</td>
+                    {{-- users.email es la credencial conectada directamente con el formulario de inicio de sesión. --}}
+                    <td><strong>{{ $usuario->email }}</strong></td>
                     <td>
                         <span style="background:{{ $rolColors[$usuario->rol] ?? $rolColors['usuario'] }};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">
                             {{ $rolLabels[$usuario->rol] ?? 'Usuario' }}
@@ -82,8 +97,8 @@
                 </tr>
                 @empty
                 <tr>
-                    {{-- colspan="7" cubre Nombre, Telefono, Contacto, Rol, Sucursal, Registrado y Acciones. --}}
-                    <td colspan="7" style="text-align:center;color:#888;padding:2rem">No hay registros en esta seccion</td>
+                    {{-- colspan="8" cubre los dos correos, datos del usuario y sus acciones. --}}
+                    <td colspan="8" style="text-align:center;color:#888;padding:2rem">No hay registros en esta seccion</td>
                 </tr>
                 @endforelse
             </tbody>

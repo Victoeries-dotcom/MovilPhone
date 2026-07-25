@@ -19,9 +19,17 @@ class MovimientoCajaController extends Controller
     {
         $sucursalId = $this->sucursalActivaId();
 
-        // Esta consulta base limita la información a la sucursal elegida en el menú lateral.
+        /*
+         * Esta consulta base se conecta con movimientos_caja.sucursal_id.
+         * Si no existe una sucursal activa, la condición imposible mantiene
+         * indicadores y tabla vacíos para no mostrar dinero de otra sede.
+         */
         $consultaBase = MovimientoCaja::query()
-            ->when($sucursalId, fn ($query) => $query->where('sucursal_id', $sucursalId));
+            ->when(
+                $sucursalId,
+                fn ($query) => $query->where('sucursal_id', $sucursalId),
+                fn ($query) => $query->whereRaw('1 = 0')
+            );
 
         // Los indicadores usan todos los movimientos de la sucursal, aunque la tabla tenga filtros activos.
         $ingresos = (clone $consultaBase)->where('tipo', 'INGRESO')->sum('monto');

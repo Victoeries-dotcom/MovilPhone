@@ -324,21 +324,60 @@ body .ui-table-meta {
     background:linear-gradient(180deg,#fff,#fbfcfe);
 }
 body .ui-table-summary { display:flex; align-items:center; gap:9px; color:#64748b; font-size:11px; font-weight:650; }
-/* Aclara el propósito de una tabla cuando la vista proporciona una nota contextual. */
-body .ui-table-summary-note {
-    margin-left:4px;
-    padding-left:12px;
-    border-left:1px solid currentColor;
-    color:inherit;
-    opacity:.78;
-    font-weight:600;
-}
 body .ui-table-summary-icon {
     display:grid; width:27px; height:27px; place-items:center; border:1px solid #dbeafe;
     border-radius:6px; background:#eff6ff; color:var(--ui-blue-700);
 }
 body .ui-table-summary-icon svg { width:14px; height:14px; }
 body .ui-table-count { color:var(--ui-navy-900); font-weight:800; }
+
+/*
+ * Actividad por usuario: organiza indicadores y conteos acumulados antes del historial.
+ * Se conecta con actividad.index y conserva contraste profesional en ambos temas.
+ */
+body .activity-user-summary { margin-bottom:1.7rem; }
+body .activity-section-heading {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    margin:0 0 14px;
+}
+body .activity-section-heading h2 {
+    margin:3px 0 0;
+    color:var(--ui-navy-900);
+    font-size:20px;
+    letter-spacing:0;
+}
+body .activity-section-heading p { margin:4px 0 0; color:var(--ui-muted); font-size:13px; }
+body .activity-section-kicker {
+    color:var(--ui-blue-600);
+    font-size:10px;
+    font-weight:850;
+    letter-spacing:.12em;
+}
+body .activity-stats-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+body .activity-stats-grid .stat-card { min-height:104px; padding:1rem 1.1rem; }
+body .activity-stats-grid .stat-num { font-size:28px; }
+body .activity-summary-table-card {
+    overflow:auto;
+    border:1px solid var(--ui-border);
+    border-radius:var(--ui-radius);
+    background:var(--ui-surface);
+    box-shadow:var(--ui-shadow-sm);
+}
+body .activity-summary-table-card table { margin:0; box-shadow:none; }
+body .activity-summary-table-card th,
+body .activity-summary-table-card td { white-space:nowrap; }
+body .activity-summary-table-card td[data-resumen-total],
+body .activity-summary-table-card td[data-resumen-agregados],
+body .activity-summary-table-card td[data-resumen-editados],
+body .activity-summary-table-card td[data-resumen-eliminados],
+body .activity-summary-table-card td[data-resumen-otras] {
+    text-align:center;
+    font-weight:800;
+}
+body .activity-detail-section { margin-top:1.7rem; }
 /* Herramientas MoonShine: permiten elegir columnas y se conectan con cada tabla mejorada por JavaScript. */
 body .ui-table-tools { display:flex; align-items:center; gap:8px; margin-left:auto; }
 body .ui-column-picker { position:relative; }

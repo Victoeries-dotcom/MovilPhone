@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const numericHeaders = /^(#|total|monto|precio|ingresos?|egresos?|balance|cantidad|existencia|stock|compras|productos|piezas?|servicios anteriores|valor costo)$/i;
 
         document.querySelectorAll('.content table').forEach(function (table, tableIndex) {
-            if (table.closest('.ui-table-panel') || table.closest('[id*="ticket"]')) return;
+            if (table.hasAttribute('data-ui-table-static') || table.closest('.ui-table-panel') || table.closest('[id*="ticket"]')) return;
 
             const bodySection = table.tBodies[0];
             const rows = bodySection ? Array.from(bodySection.rows) : [];
@@ -338,17 +338,9 @@ document.addEventListener('DOMContentLoaded', function () {
             meta.className = 'ui-table-meta';
             const summary = document.createElement('div');
             summary.className = 'ui-table-summary';
-            /*
-             * Lee la descripción opcional declarada en la vista.
-             * Se conecta con data-table-summary-note sin afectar las demás tablas del sistema.
-             */
-            const summaryNote = table.dataset.tableSummaryNote
-                ? '<span class="ui-table-summary-note">' + escapeHtml(table.dataset.tableSummaryNote) + '</span>'
-                : '';
             summary.innerHTML = '<span class="ui-table-summary-icon"><i data-lucide="table-2"></i></span>'
                 + '<span><strong class="ui-table-count">' + dataRows.length + '</strong> '
-                + (dataRows.length === 1 ? 'registro' : 'registros') + '</span>'
-                + summaryNote;
+                + (dataRows.length === 1 ? 'registro' : 'registros') + '</span>';
             const hint = document.createElement('span');
             hint.className = 'ui-table-hint';
             hint.innerHTML = '<i data-lucide="move-horizontal"></i><span>Desliza para ver más</span>';

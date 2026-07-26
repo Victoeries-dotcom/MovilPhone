@@ -16,14 +16,53 @@ class AdminActivityController extends Controller
         $this->soloAdmin();
         $sucursalId = session('sucursal_id');
 
-        $actividades = AdminActivity::with(['usuario', 'sucursal'])
+        /*
+         * Define una sola consulta por sucursal para que el resumen y el historial
+         * se conecten con los mismos registros de admin_activities.
+         */
+        $consultaSucursal = AdminActivity::query()
             ->when($sucursalId, fn ($query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn ($query) => $query->whereRaw('1 = 0'));
+
+        /*
+         * Agrupa la actividad por usuario y sucursal.
+         * Se conecta con users y sucursales para mostrar quién realizó cada tipo de acción.
+         */
+        $resumenUsuarios = (clone $consultaSucursal)
+            ->with(['usuario', 'sucursal'])
+            ->select(['user_id', 'sucursal_id'])
+            ->selectRaw('COUNT(*) AS total_registros')
+            ->selectRaw("SUM(CASE WHEN UPPER(accion) IN ('CREAR', 'AGREGAR', 'REGISTRAR') THEN 1 ELSE 0 END) AS agregados")
+            ->selectRaw("SUM(CASE WHEN UPPER(accion) IN ('EDITAR', 'ACTUALIZAR') THEN 1 ELSE 0 END) AS editados")
+            ->selectRaw("SUM(CASE WHEN UPPER(accion) IN ('ELIMINAR', 'BORRAR') THEN 1 ELSE 0 END) AS eliminados")
+            ->selectRaw("SUM(CASE WHEN UPPER(accion) NOT IN ('CREAR', 'AGREGAR', 'REGISTRAR', 'EDITAR', 'ACTUALIZAR', 'ELIMINAR', 'BORRAR') THEN 1 ELSE 0 END) AS otras_acciones")
+            ->groupBy('user_id', 'sucursal_id')
+            ->orderByDesc('total_registros')
+            ->get();
+
+        /*
+         * Calcula los indicadores generales desde el resumen agrupado.
+         * Se conecta con las tarjetas de la vista y representa toda la actividad de la sucursal.
+         */
+        $totalesActividad = [
+            'total' => (int) $resumenUsuarios->sum('total_registros'),
+            'agregados' => (int) $resumenUsuarios->sum('agregados'),
+            'editados' => (int) $resumenUsuarios->sum('editados'),
+            'eliminados' => (int) $resumenUsuarios->sum('eliminados'),
+            'otras' => (int) $resumenUsuarios->sum('otras_acciones'),
+        ];
+
+        /*
+         * Mantiene el historial detallado limitado a los 40 movimientos más recientes.
+         * Se conecta con la tabla inferior y con la actualización automática de la vista.
+         */
+        $actividades = (clone $consultaSucursal)
+            ->with(['usuario', 'sucursal'])
             ->latest()
             ->limit(40)
             ->get();
 
-        return view('actividad.index', compact('actividades'));
+        return view('actividad.index', compact('actividades', 'resumenUsuarios', 'totalesActividad'));
     }
 
     /**
@@ -39,7 +78,7 @@ class AdminActivityController extends Controller
 
         $actividades = AdminActivity::with(['usuario', 'sucursal'])
             ->when($sucursalId, fn ($query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($desdeId > 0, fn ($query) => $query->where('id', '>', $desdeId))
             ->oldest()
             ->limit(30)
@@ -49,6 +88,8 @@ class AdminActivityController extends Controller
                 'modulo' => $actividad->modulo,
                 'accion' => $actividad->accion,
                 'descripcion' => $actividad->descripcion,
+                'usuario_id' => $actividad->user_id ?? 0,
+                'sucursal_id' => $actividad->sucursal_id ?? 0,
                 'usuario' => $actividad->usuario->name ?? 'SISTEMA',
                 'sucursal' => $actividad->sucursal->nombre ?? 'SIN SUCURSAL',
                 'fecha' => $actividad->created_at->format('d/m/Y H:i:s'),

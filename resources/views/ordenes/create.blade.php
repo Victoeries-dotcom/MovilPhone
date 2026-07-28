@@ -367,7 +367,15 @@
             @endif
 
             {{-- Formulario principal: envía todos los datos de Nueva OS a OrdenServicioController::store. --}}
-            <form method="POST" action="{{ route('ordenes.store') }}" id="osForm">
+            <form
+                method="POST"
+                action="{{ route('ordenes.store') }}"
+                id="osForm"
+                data-device-catalog
+                data-initial-device-type="{{ old('tipo_dispositivo') }}"
+                data-initial-device-brand="{{ old('marca') }}"
+                data-initial-device-model="{{ old('modelo') }}"
+            >
             @csrf
 
             {{-- Conserva el cliente anterior seleccionado y lo conecta con ordenes_servicio.cliente_id. --}}
@@ -398,7 +406,13 @@
                             class="os-input"
                             type="tel"
                             id="buscar_cliente_telefono"
-                            placeholder="999-000-0000"
+                            inputmode="numeric"
+                            autocomplete="tel"
+                            minlength="10"
+                            maxlength="10"
+                            pattern="[0-9]{10}"
+                            title="Escribe exactamente 10 dígitos."
+                            placeholder="9990000000"
                             data-no-mayusculas
                         >
                         <button type="button" class="os-btn os-btn-secondary" id="buscar-cliente-btn" onclick="buscarClienteAnterior()">
@@ -413,7 +427,8 @@
             <div class="os-step" id="step-2">
                 <div class="os-step-label">Paso 2 de 9</div>
                 <div class="os-step-title">¿Cuál es su teléfono?</div>
-                <input class="os-input" type="tel" name="cliente_telefono" id="cliente_telefono" value="{{ old('cliente_telefono') }}" placeholder="999-000-0000" required>
+                <input class="os-input" type="tel" name="cliente_telefono" id="cliente_telefono" value="{{ old('cliente_telefono') }}" inputmode="numeric" autocomplete="tel" minlength="10" maxlength="10" pattern="[0-9]{10}" title="Escribe exactamente 10 dígitos." placeholder="9990000000" required>
+                <div class="os-hint">Escribe exactamente 10 dígitos, sin espacios ni guiones.</div>
                 <div class="os-actions">
                     <button type="button" class="os-btn os-btn-secondary" onclick="prevStep(2)">Atrás</button>
                     <button type="button" class="os-btn os-btn-primary" onclick="nextStep(2)">Continuar</button>
@@ -424,7 +439,7 @@
             <div class="os-step" id="step-3">
                 <div class="os-step-label">Paso 3 de 9</div>
                 <div class="os-step-title">¿Tiene un teléfono extra para avisarle?</div>
-                <input class="os-input" type="tel" name="cliente_telefono_extra" id="cliente_telefono_extra" value="{{ old('cliente_telefono_extra') }}" placeholder="Número alternativo opcional">
+                <input class="os-input" type="tel" name="cliente_telefono_extra" id="cliente_telefono_extra" value="{{ old('cliente_telefono_extra') }}" inputmode="numeric" autocomplete="tel" minlength="10" maxlength="10" pattern="[0-9]{10}" title="Escribe exactamente 10 dígitos o deja el campo vacío." placeholder="Número alternativo opcional">
                 <div class="os-hint">Si no tiene, deja este campo vacío y continúa.</div>
                 <div class="os-actions">
                     <button type="button" class="os-btn os-btn-secondary" onclick="prevStep(3)">Atrás</button>
@@ -432,34 +447,43 @@
                 </div>
             </div>
 
-            {{-- Paso 4: guarda tipo_dispositivo en ordenes_servicio para identificar el equipo. --}}
+            {{-- Paso 4: el catálogo inicia la relación tipo → marca → modelo y guarda el tipo elegido. --}}
             <div class="os-step" id="step-4">
                 <div class="os-step-label">Paso 4 de 9</div>
                 <div class="returning-client-confirmation" id="returning-client-confirmation"></div>
                 <div class="os-step-title">¿Qué tipo de dispositivo es?</div>
-                <input class="os-input" type="text" name="tipo_dispositivo" id="tipo_dispositivo" value="{{ old('tipo_dispositivo') }}" placeholder="Teléfono, tablet, computadora, consola..." required>
+                <select class="os-input" id="tipo_dispositivo_select" data-device-type-select required></select>
+                <input class="os-input" type="text" id="tipo_dispositivo_custom" data-device-type-custom hidden placeholder="Escribe el tipo de dispositivo">
+                <input type="hidden" name="tipo_dispositivo" id="tipo_dispositivo" data-device-type-value>
+                <div class="os-hint">Selecciona una opción o usa “Otro” para escribir un dispositivo no incluido.</div>
                 <div class="os-actions">
                     <button type="button" class="os-btn os-btn-secondary" onclick="prevStep(4)">Atrás</button>
                     <button type="button" class="os-btn os-btn-primary" onclick="nextStep(4)">Continuar</button>
                 </div>
             </div>
 
-            {{-- Paso 5: guarda marca en la orden y se muestra en listas/detalle. --}}
+            {{-- Paso 5: muestra únicamente las marcas relacionadas con el tipo de dispositivo seleccionado. --}}
             <div class="os-step" id="step-5">
                 <div class="os-step-label">Paso 5 de 9</div>
                 <div class="os-step-title">¿Cuál es la marca?</div>
-                <input class="os-input" type="text" name="marca" id="marca" value="{{ old('marca') }}" placeholder="Apple, Samsung, Xiaomi..." required>
+                <select class="os-input" id="marca_select" data-device-brand-select required></select>
+                <input class="os-input" type="text" id="marca_custom" data-device-brand-custom hidden placeholder="Escribe la marca">
+                <input type="hidden" name="marca" id="marca" data-device-brand-value>
+                <div class="os-hint">Las marcas cambian automáticamente según el tipo de dispositivo.</div>
                 <div class="os-actions">
                     <button type="button" class="os-btn os-btn-secondary" onclick="prevStep(5)">Atrás</button>
                     <button type="button" class="os-btn os-btn-primary" onclick="nextStep(5)">Continuar</button>
                 </div>
             </div>
 
-            {{-- Paso 6: guarda modelo para identificar con precisión el dispositivo. --}}
+            {{-- Paso 6: filtra los modelos por tipo y marca; el valor final se guarda en la OS. --}}
             <div class="os-step" id="step-6">
                 <div class="os-step-label">Paso 6 de 9</div>
                 <div class="os-step-title">¿Cuál es su modelo?</div>
-                <input class="os-input" type="text" name="modelo" id="modelo" value="{{ old('modelo') }}" placeholder="iPhone 13, Galaxy A52..." required>
+                <select class="os-input" id="modelo_select" data-device-model-select required></select>
+                <input class="os-input" type="text" id="modelo_custom" data-device-model-custom hidden placeholder="Escribe el modelo">
+                <input type="hidden" name="modelo" id="modelo" data-device-model-value>
+                <div class="os-hint">Por ejemplo, Apple mostrará únicamente los modelos Apple disponibles.</div>
                 <div class="os-actions">
                     <button type="button" class="os-btn os-btn-secondary" onclick="prevStep(6)">Atrás</button>
                     <button type="button" class="os-btn os-btn-primary" onclick="nextStep(6)">Continuar</button>
@@ -652,14 +676,18 @@
      * Se conecta con los botones Continuar de cada pregunta.
      */
     function nextStep(currentStep, required = true) {
+        // Sincroniza los selectores inteligentes con los campos que recibe OrdenServicioController::store.
+        window.syncDeviceCatalogFields?.();
+
         const current = document.getElementById('step-' + currentStep);
         const fields = current.querySelectorAll('input[required], textarea[required], select[required]');
 
         if (required) {
             for (const field of fields) {
-                if (!field.value.trim()) {
+                if (!field.value.trim() || !field.checkValidity()) {
                     field.focus();
                     field.style.borderColor = '#dc2626';
+                    field.reportValidity();
                     setTimeout(() => field.style.borderColor = '', 1200);
                     return;
                 }
@@ -844,9 +872,27 @@
         }
     });
 
+    /*
+     * Conserva solamente números y limita los teléfonos a 10 dígitos.
+     * Se conecta con la validación del controlador y con la búsqueda de clientes anteriores.
+     */
+    ['buscar_cliente_telefono', 'cliente_telefono', 'cliente_telefono_extra'].forEach(function(id) {
+        const input = document.getElementById(id);
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 10);
+        });
+    });
+
     mostrarPaso(@json($pasoInicialOs));
     selectMetodoAnticipo(document.getElementById('metodo_pago_anticipo').value || 'efectivo');
     toggleMetodoAnticipo();
 </script>
+
+{{-- Inicializa el catálogo dependiente y conecta tipo, marca y modelo con los campos enviados al controlador. --}}
+@include('ordenes.partials.device-catalog-script')
 
 @endsection

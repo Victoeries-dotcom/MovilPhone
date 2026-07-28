@@ -156,7 +156,10 @@ class OrdenServicioController extends Controller
         $tecnicos = User::where('rol', 'tecnico')->where('sucursal_id', $sucursalId)->orderBy('name')->get();
         $clientes = Cliente::where('sucursal_habitual_id', $sucursalId)->orderBy('nombre')->get();
 
-        return view('ordenes.create', compact('sucursales', 'tecnicos', 'clientes'));
+        // Catálogo central: alimenta los selectores dependientes de tipo, marca y modelo en Nueva OS.
+        $deviceCatalog = config('device_catalog', []);
+
+        return view('ordenes.create', compact('sucursales', 'tecnicos', 'clientes', 'deviceCatalog'));
     }
 
     // Guardar nueva OS
@@ -182,9 +185,10 @@ class OrdenServicioController extends Controller
                 ),
             ],
             'cliente_nombre' => 'required|string',
-            'cliente_telefono' => 'required|string|max:50',
-            'cliente_telefono_normalizado' => 'required|string|max:80',
-            'cliente_telefono_extra' => 'nullable|string',
+            // Los teléfonos funcionan como identificadores del cliente y deben contener exactamente 10 dígitos.
+            'cliente_telefono' => ['required', 'regex:/^[0-9]{10}$/'],
+            'cliente_telefono_normalizado' => ['required', 'regex:/^[0-9]{10}$/'],
+            'cliente_telefono_extra' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'sucursal_id' => 'required|exists:sucursales,id',
             'tecnico_id' => [
                 'nullable',
@@ -204,6 +208,10 @@ class OrdenServicioController extends Controller
             'contrasena_dispositivo' => 'nullable|string|max:255',
             'anticipo' => 'nullable|numeric|min:0',
             'metodo_pago_anticipo' => 'nullable|string',
+        ], [
+            'cliente_telefono.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
+            'cliente_telefono_normalizado.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
+            'cliente_telefono_extra.regex' => 'El teléfono extra debe contener exactamente 10 dígitos.',
         ]);
 
         // Si el asistente seleccionó un cliente anterior, confirma que su ID y teléfono coincidan.
@@ -344,12 +352,13 @@ class OrdenServicioController extends Controller
 
         $request->validate([
             'cliente_nombre' => 'required|string|max:255',
-            'cliente_telefono' => 'required|string|max:30',
-            'cliente_telefono_normalizado' => 'required|string|max:80',
+            // Mantiene la misma identidad telefónica de 10 dígitos al editar la OS y su cliente relacionado.
+            'cliente_telefono' => ['required', 'regex:/^[0-9]{10}$/'],
+            'cliente_telefono_normalizado' => ['required', 'regex:/^[0-9]{10}$/'],
             'marca' => 'required|string',
             'modelo' => 'required|string',
             'tipo_dispositivo' => 'required|string',
-            'cliente_telefono_extra' => 'nullable|string|max:30',
+            'cliente_telefono_extra' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'imei' => 'nullable|string|max:255',
             'tecnico_id' => 'nullable|exists:users,id',
             'problema_reportado' => 'required|string',
@@ -363,6 +372,10 @@ class OrdenServicioController extends Controller
             'anticipo' => 'nullable|numeric|min:0',
             'metodo_pago_anticipo' => 'nullable|in:efectivo,transferencia,tarjeta',
             'fecha_entrega_estimada' => 'nullable|date',
+        ], [
+            'cliente_telefono.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
+            'cliente_telefono_normalizado.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
+            'cliente_telefono_extra.regex' => 'El teléfono extra debe contener exactamente 10 dígitos.',
         ]);
 
         // Impide asignar a este cliente el teléfono único que ya identifica a otro registro.

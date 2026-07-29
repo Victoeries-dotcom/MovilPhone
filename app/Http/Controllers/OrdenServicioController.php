@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -184,7 +185,7 @@ class OrdenServicioController extends Controller
                     fn ($clientes) => $clientes->where('sucursal_habitual_id', $sucursalId)
                 ),
             ],
-            'cliente_nombre' => 'required|string',
+            'cliente_nombre' => 'required|string|max:255',
             // Los teléfonos funcionan como identificadores del cliente y deben contener exactamente 10 dígitos.
             'cliente_telefono' => ['required', 'regex:/^[0-9]{10}$/'],
             'cliente_telefono_normalizado' => ['required', 'regex:/^[0-9]{10}$/'],
@@ -199,104 +200,128 @@ class OrdenServicioController extends Controller
                         ->where('sucursal_id', $sucursalId)
                 ),
             ],
-            'tipo_dispositivo' => 'required|string',
-            'marca' => 'required|string',
-            'modelo' => 'required|string',
-            'problema_reportado' => 'required|string',
-            'accesorios_entregados' => 'nullable|string',
-            'estado_fisico' => 'required|string',
+            'tipo_dispositivo' => 'required|string|max:255',
+            'marca' => 'required|string|max:255',
+            'modelo' => 'required|string|max:255',
+            'imei' => 'nullable|string|max:255',
+            'problema_reportado' => 'required|string|max:5000',
+            'accesorios_entregados' => 'nullable|string|max:2000',
+            'estado_fisico' => 'required|string|max:5000',
             'contrasena_dispositivo' => 'nullable|string|max:255',
             'anticipo' => 'nullable|numeric|min:0',
-            'metodo_pago_anticipo' => 'nullable|string',
+            'metodo_pago_anticipo' => ['nullable', Rule::in(['efectivo', 'transferencia', 'tarjeta'])],
         ], [
             'cliente_telefono.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
             'cliente_telefono_normalizado.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
             'cliente_telefono_extra.regex' => 'El teléfono extra debe contener exactamente 10 dígitos.',
         ]);
 
-        // Si el asistente seleccionó un cliente anterior, confirma que su ID y teléfono coincidan.
-        $cliente = null;
-        if ($request->filled('cliente_id')) {
-            $cliente = Cliente::whereKey($request->cliente_id)
-                ->where('telefono_normalizado', $telefonoNormalizado)
+        /**
+         * Guarda Cliente, OS, Historial y Caja como una sola operación.
+         * La transacción evita datos incompletos si alguno de esos módulos falla.
+         */
+        [$orden, $cliente] = DB::transaction(function () use ($request, $telefonoNormalizado) {
+            // Si se eligió un cliente anterior, confirma dentro de la transacción que ID y teléfono coincidan.
+            $cliente = null;
+            if ($request->filled('cliente_id')) {
+                $cliente = Cliente::whereKey($request->cliente_id)
+                    ->where('telefono_normalizado', $telefonoNormalizado)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $cliente) {
+                    throw ValidationException::withMessages([
+                        'cliente_telefono' => 'El teléfono fue modificado y ya no coincide con el cliente anterior seleccionado.',
+                    ]);
+                }
+            }
+
+            // Reutiliza el cliente por su teléfono único o crea el registro conectado con esta sucursal.
+            $cliente ??= Cliente::where('telefono_normalizado', $telefonoNormalizado)
+                ->lockForUpdate()
                 ->first();
 
-            if (! $cliente) {
-                throw ValidationException::withMessages([
-                    'cliente_telefono' => 'El teléfono fue modificado y ya no coincide con el cliente anterior seleccionado.',
+            if ($cliente) {
+                $cliente->update([
+                    'nombre' => Str::upper($request->cliente_nombre),
+                    'telefono_principal' => $request->cliente_telefono,
+                    'telefono_alternativo' => $request->filled('cliente_telefono_extra')
+                        ? $request->cliente_telefono_extra
+                        : $cliente->telefono_alternativo,
+                    'sucursal_habitual_id' => $cliente->sucursal_habitual_id ?: $request->sucursal_id,
+                ]);
+            } else {
+                $cliente = Cliente::create([
+                    'nombre' => Str::upper($request->cliente_nombre),
+                    'telefono_principal' => $request->cliente_telefono,
+                    'telefono_normalizado' => $telefonoNormalizado,
+                    'telefono_alternativo' => $request->cliente_telefono_extra,
+                    'sucursal_habitual_id' => $request->sucursal_id,
                 ]);
             }
+
+            /**
+             * Bloquea brevemente la sucursal para que dos capturas simultáneas no reciban el mismo folio.
+             * Se conecta con sucursales.id y con la secuencia visible en ordenes_servicio.numero_os.
+             */
+            $sucursal = Sucursal::whereKey($request->sucursal_id)->lockForUpdate()->firstOrFail();
+            $prefix = $this->generarPrefijoSucursal($sucursal->nombre);
+            $numeroOs = $this->generarNumeroOs($prefix, (int) date('Y'));
+
+            // Crea la orden con los datos del asistente y la conecta con Cliente, Sucursal y Técnico.
+            $orden = OrdenServicio::create([
+                'numero_os' => $numeroOs,
+                'cliente_id' => $cliente->id,
+                'cliente_telefono_extra' => $request->cliente_telefono_extra,
+                'sucursal_id' => $request->sucursal_id,
+                'tecnico_id' => $request->tecnico_id,
+                'tipo_dispositivo' => $request->tipo_dispositivo,
+                'marca' => $request->marca,
+                'modelo' => $request->modelo,
+                'imei' => $request->imei,
+                'problema_reportado' => $request->problema_reportado,
+                'accesorios_entregados' => $request->accesorios_entregados ?: 'NINGUNO',
+                'estado_fisico' => $request->estado_fisico,
+                // Guarda el patrón, PIN o contraseña del equipo y se conecta con el detalle de la orden.
+                'contrasena_dispositivo' => $request->contrasena_dispositivo,
+                'cobro_diagnostico' => 0,
+                'anticipo' => $request->anticipo ?? 0,
+                'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
+            ]);
+
+            // Crea el primer estado y lo conecta con la línea de tiempo de la nueva OS.
+            HistorialEstado::create([
+                'os_id' => $orden->id,
+                'estado' => 'RECIBIDO',
+            ]);
+
+            // Sincroniza el anticipo con Caja y conecta el cobro con la orden mediante os_id.
+            $this->sincronizarCobroOrdenEnCaja($orden);
+
+            return [$orden, $cliente];
+        }, 3);
+
+        /**
+         * La auditoría es informativa: una falla en Actividad no debe convertir una OS ya guardada en error 500.
+         * El aviso queda en laravel.log para que pueda revisarse sin afectar Ordenes, Cliente o Caja.
+         */
+        try {
+            AdminActivityLogger::registrar(
+                'ÓRDENES',
+                'CREADA',
+                'Orden '.$orden->numero_os.' creada para '.$cliente->nombre,
+                $orden->sucursal_id,
+                $orden
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('No fue posible registrar la creación de la OS en Actividad.', [
+                'orden_id' => $orden->id,
+                'numero_os' => $orden->numero_os,
+                'error' => $exception->getMessage(),
+            ]);
         }
 
-        // Reutiliza el registro existente por teléfono o crea uno solamente si realmente es nuevo.
-        $cliente ??= Cliente::where('telefono_normalizado', $telefonoNormalizado)->first();
-
-        if ($cliente) {
-            $cliente->update([
-                'nombre' => Str::upper($request->cliente_nombre),
-                'telefono_principal' => $request->cliente_telefono,
-                'telefono_alternativo' => $request->filled('cliente_telefono_extra')
-                    ? $request->cliente_telefono_extra
-                    : $cliente->telefono_alternativo,
-                'sucursal_habitual_id' => $cliente->sucursal_habitual_id ?: $request->sucursal_id,
-            ]);
-        } else {
-            $cliente = Cliente::create([
-                'nombre' => Str::upper($request->cliente_nombre),
-                'telefono_principal' => $request->cliente_telefono,
-                'telefono_normalizado' => $telefonoNormalizado,
-                'telefono_alternativo' => $request->cliente_telefono_extra,
-                'sucursal_habitual_id' => $request->sucursal_id,
-            ]);
-        }
-
-        // Genera el número de OS según la sucursal y lo conecta con el folio visible del servicio.
-        $sucursal = Sucursal::find($request->sucursal_id);
-        $prefix = $sucursal->nombre === 'Izamal' ? 'IZA' : 'BUC';
-        $year = date('Y');
-        $ultimo = OrdenServicio::where('sucursal_id', $request->sucursal_id)->count() + 1;
-        $numero_os = $prefix.'-'.$year.'-'.str_pad($ultimo, 4, '0', STR_PAD_LEFT);
-
-        // Crea la orden con los datos solicitados en Nueva OS y los conecta con ordenes_servicio.
-        $orden = OrdenServicio::create([
-            'numero_os' => $numero_os,
-            'cliente_id' => $cliente->id,
-            'cliente_telefono_extra' => $request->cliente_telefono_extra,
-            'sucursal_id' => $request->sucursal_id,
-            'tecnico_id' => $request->tecnico_id,
-            'tipo_dispositivo' => $request->tipo_dispositivo,
-            'marca' => $request->marca,
-            'modelo' => $request->modelo,
-            'imei' => $request->imei,
-            'problema_reportado' => $request->problema_reportado,
-            'accesorios_entregados' => $request->accesorios_entregados ?: 'NINGUNO',
-            'estado_fisico' => $request->estado_fisico,
-            // Guarda el patrón, PIN o contraseña del equipo y se conecta con el detalle de la orden.
-            'contrasena_dispositivo' => $request->contrasena_dispositivo,
-            'cobro_diagnostico' => 0,
-            'anticipo' => $request->anticipo ?? 0,
-            'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
-        ]);
-
-        // Registrar en historial
-        HistorialEstado::create([
-            'os_id' => $orden->id,
-            'estado' => 'RECIBIDO',
-        ]);
-
-        // Sincroniza el anticipo con Caja y conecta el cobro con la orden mediante os_id.
-        $this->sincronizarCobroOrdenEnCaja($orden);
-
-        // Registra la nueva orden para que el admin vea quién capturó el servicio.
-        AdminActivityLogger::registrar(
-            'ÓRDENES',
-            'CREADA',
-            'Orden '.$numero_os.' creada para '.$cliente->nombre,
-            $orden->sucursal_id,
-            $orden
-        );
-
-        return redirect()->route('ordenes.index')->with('success', 'Orden '.$numero_os.' creada correctamente.');
+        return redirect()->route('ordenes.index')->with('success', 'Orden '.$orden->numero_os.' creada correctamente.');
     }
 
     // Ver detalle de una OS
@@ -709,6 +734,37 @@ class OrdenServicioController extends Controller
         } else {
             MovimientoCaja::create($datos);
         }
+    }
+
+    /**
+     * Construye el prefijo del folio con las primeras letras de la sucursal activa.
+     * Se conecta con sucursales.nombre para que Izamal, Buctzotz y futuras sucursales no compartan por error el mismo código.
+     */
+    private function generarPrefijoSucursal(string $nombreSucursal): string
+    {
+        $nombreNormalizado = preg_replace('/[^A-Z0-9]/', '', Str::upper(Str::ascii($nombreSucursal))) ?? '';
+
+        return str_pad(substr($nombreNormalizado, 0, 3), 3, 'X');
+    }
+
+    /**
+     * Obtiene el siguiente folio usando el número mayor realmente guardado, aunque existan órdenes eliminadas.
+     * Se conecta globalmente con ordenes_servicio.numero_os para no repetir una clave única entre sucursales.
+     */
+    private function generarNumeroOs(string $prefix, int $year): string
+    {
+        $patron = '/^'.preg_quote($prefix, '/').'-'.$year.'-(\d+)$/';
+
+        $ultimoNumero = OrdenServicio::query()
+            ->where('numero_os', 'like', $prefix.'-'.$year.'-%')
+            ->pluck('numero_os')
+            ->reduce(function (int $mayor, string $folio) use ($patron): int {
+                return preg_match($patron, $folio, $coincidencias)
+                    ? max($mayor, (int) $coincidencias[1])
+                    : $mayor;
+            }, 0);
+
+        return $prefix.'-'.$year.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
     }
 
     // Eliminar OS

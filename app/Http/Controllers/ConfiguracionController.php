@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Support\AdminActivityLogger;
 
 class ConfiguracionController extends Controller
 {
@@ -79,7 +79,8 @@ class ConfiguracionController extends Controller
     public function guardarGarantia(Request $request)
     {
         $request->validate([
-            'politica_garantia' => 'required|string|max:3000',
+            // El límite coincide con el contador de la vista y evita textos demasiado extensos en el ticket.
+            'politica_garantia' => 'required|string|max:1500',
         ]);
 
         $consulta = DB::table('configuraciones')->where('clave', 'politica_garantia');
@@ -89,7 +90,7 @@ class ConfiguracionController extends Controller
         ];
 
         // created_at se asigna solo la primera vez para conservar la fecha original.
-        if (!$consulta->exists()) {
+        if (! $consulta->exists()) {
             $datos['clave'] = 'politica_garantia';
             $datos['created_at'] = now();
             DB::table('configuraciones')->insert($datos);
@@ -114,6 +115,7 @@ class ConfiguracionController extends Controller
 
             if ($consulta->exists()) {
                 $consulta->update(['valor' => $valor, 'updated_at' => now()]);
+
                 continue;
             }
 

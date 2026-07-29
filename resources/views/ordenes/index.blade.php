@@ -9,12 +9,19 @@
             Sucursal: <strong>{{ $sucursalActiva?->nombre ?? 'Sin seleccionar' }}</strong>
         </p>
     </div>
-    <div class="orders-page-actions">
-        <a href="{{ route('ventas.create') }}" class="btn orders-action-primary">
-            <i data-lucide="package-check" aria-hidden="true"></i>
-            <span>Vender productos</span>
-        </a>
-        {{-- Garantía filtra las órdenes de la sucursal activa sin abrir Configuración, que es exclusiva del Super Usuario. --}}
+      <div class="orders-page-actions">
+          <a href="{{ route('ventas.create') }}" class="btn orders-action-primary">
+              <i data-lucide="package-check" aria-hidden="true"></i>
+              <span>Vender productos</span>
+          </a>
+          {{-- Política: conecta exclusivamente al Super Usuario con el texto impreso antes del folio del ticket. --}}
+          @if(auth()->user()?->rol === 'superusuario')
+              <a href="{{ route('configuracion.garantia') }}" class="btn orders-action-neutral" title="Configurar política de garantía">
+                  <i data-lucide="file-shield" aria-hidden="true"></i>
+                  <span>Política</span>
+              </a>
+          @endif
+          {{-- Garantía filtra las órdenes de la sucursal activa sin abrir Configuración, que es exclusiva del Super Usuario. --}}
         <a href="{{ route('ordenes.index', ['estado' => 'GARANTÍA']) }}" class="btn orders-action-neutral">
             <i data-lucide="shield-check" aria-hidden="true"></i>
             <span>Garantía</span>
@@ -649,6 +656,5 @@ document.addEventListener('keydown', function (event) {
 });
 </script>
 @endsection
-
 
 

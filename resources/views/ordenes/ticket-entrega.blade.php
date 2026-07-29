@@ -23,10 +23,8 @@
         ? \Carbon\Carbon::parse($ordenServicio->fecha_entrega_real)->format('d/m/Y H:i')
         : now()->format('d/m/Y H:i');
 
-    // Política opcional: solo se consulta si existe la tabla configuraciones en esta instalación.
-    $politica = \Illuminate\Support\Facades\Schema::hasTable('configuraciones')
-        ? \Illuminate\Support\Facades\DB::table('configuraciones')->where('clave', 'politica_garantia')->value('valor')
-        : null;
+    // La política llega desde OrdenServicioController para evitar consultar la base de datos desde la vista.
+    $politica = $politica ?? null;
 @endphp
 
 {{-- Contenedor visual: centra el ticket y le da el tamaño del recibo mostrado en el archivo de referencia. --}}
@@ -115,7 +113,8 @@
             {{-- Política de garantía: se muestra solo si existe configuración guardada. --}}
             <section class="ticket-warranty">
                 <div class="ticket-warranty-title">POLÍTICA DE GARANTÍA</div>
-                <div>{{ $politica }}</div>
+                {{-- pre-line conserva los saltos escritos por el administrador sin permitir HTML inseguro. --}}
+                <div class="ticket-warranty-text">{{ $politica }}</div>
             </section>
         @endif
 
@@ -255,6 +254,7 @@
 }
 
 .ticket-warranty-title { font-size: 12px; font-weight: 900; margin-bottom: 7px; }
+.ticket-warranty-text { white-space: pre-line; }
 
 /* Pie del ticket: cierra el comprobante con folio interno y agradecimiento. */
 .ticket-footer {

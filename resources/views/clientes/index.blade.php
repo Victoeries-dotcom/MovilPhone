@@ -85,7 +85,8 @@
                         <span class="client-service-chip"><i data-lucide="wrench"></i> {{ $cliente->ordenes_count }} total</span>
                         <small class="client-secondary">{{ $cliente->servicios_anteriores_count }} finalizados</small>
                     </td>
-                    <td><strong>${{ number_format($cliente->ordenes_sum_presupuesto_total ?? 0, 2) }}</strong></td>
+                    {{-- Muestra el total de anticipos y cobros finales de todas las OS del cliente, calculado por ClienteController. --}}
+                    <td><strong>${{ number_format($cliente->valor_ordenes_registrado ?? 0, 2) }}</strong></td>
                     <td>
                         <a href="{{ route('clientes.show', $cliente) }}" class="btn client-history-button">
                             <i data-lucide="clipboard-list"></i> Ver historial

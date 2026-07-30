@@ -23,7 +23,14 @@ class ClienteController extends Controller
                     $ordenes->whereIn('estado', ['ENTREGADO', 'RECHAZADO']);
                 },
             ])
-            ->withSum('ordenes as ordenes_sum_presupuesto_total', 'presupuesto_total');
+            ->addSelect([
+                // Suma anticipo y cobro final de todas las OS conectadas por cliente_id, sin excluir ningún estado.
+                'valor_ordenes_registrado' => DB::table('ordenes_servicio')
+                    ->selectRaw(
+                        'COALESCE(SUM(COALESCE(anticipo, 0) + COALESCE(cobro_diagnostico, 0)), 0)'
+                    )
+                    ->whereColumn('ordenes_servicio.cliente_id', 'clientes.id'),
+            ]);
 
         // La sesión del Super Usuario o la asignación de Usuario impiden mezclar clientes entre sucursales.
         $sucursalId = $this->sucursalActivaId();

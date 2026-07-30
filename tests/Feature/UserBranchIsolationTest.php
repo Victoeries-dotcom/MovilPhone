@@ -108,6 +108,45 @@ class UserBranchIsolationTest extends TestCase
     }
 
     /**
+     * Verifica que Valor registrado sume anticipos y cobros finales de todas las OS del cliente.
+     * Se conecta con ClienteController y cubre órdenes activas, entregadas y rechazadas.
+     */
+    public function test_clientes_suma_el_valor_de_ordenes_activas_y_anteriores(): void
+    {
+        [$buctzotz, , $usuario] = $this->crearContextoDeSucursales();
+        $cliente = Cliente::create([
+            'nombre' => 'CLIENTE CON HISTORIAL COMPLETO',
+            'telefono_principal' => '9911000010',
+            'sucursal_habitual_id' => $buctzotz->id,
+        ]);
+
+        // Cada OS usa la misma fórmula que Ticket y Caja: anticipo + cobro final o diagnóstico.
+        OrdenServicio::create(array_merge(
+            $this->datosOrden('BUC-VALOR-0001', $cliente->id, $buctzotz->id, 'ORDEN ACTIVA'),
+            ['estado' => 'RECIBIDO', 'anticipo' => 100, 'cobro_diagnostico' => 25.50]
+        ));
+        OrdenServicio::create(array_merge(
+            $this->datosOrden('BUC-VALOR-0002', $cliente->id, $buctzotz->id, 'ORDEN ENTREGADA'),
+            ['estado' => 'ENTREGADO', 'anticipo' => 150, 'cobro_diagnostico' => 50]
+        ));
+        OrdenServicio::create(array_merge(
+            $this->datosOrden('BUC-VALOR-0003', $cliente->id, $buctzotz->id, 'ORDEN RECHAZADA'),
+            ['estado' => 'RECHAZADO', 'anticipo' => 75, 'cobro_diagnostico' => 50]
+        ));
+
+        $this
+            ->actingAs($usuario)
+            ->withSession([
+                'sucursal_id' => $buctzotz->id,
+                'sucursal_nombre' => $buctzotz->nombre,
+            ])
+            ->get(route('clientes.index'))
+            ->assertOk()
+            ->assertSee('CLIENTE CON HISTORIAL COMPLETO')
+            ->assertSee('$450.50');
+    }
+
+    /**
      * Verifica que el superusuario conserve Corte de caja sin mostrar Registrar movimiento.
      * Se conecta con caja.index y con la autorización exclusiva definida en routes/web.php.
      */

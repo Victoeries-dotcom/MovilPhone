@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Models\DeviceCatalogEntry;
 use App\Models\HistorialEstado;
 use App\Models\MovimientoCaja;
 use App\Models\OrdenServicio;
@@ -157,8 +158,8 @@ class OrdenServicioController extends Controller
         $tecnicos = User::where('rol', 'tecnico')->where('sucursal_id', $sucursalId)->orderBy('name')->get();
         $clientes = Cliente::where('sucursal_habitual_id', $sucursalId)->orderBy('nombre')->get();
 
-        // Catálogo central: alimenta los selectores dependientes de tipo, marca y modelo en Nueva OS.
-        $deviceCatalog = config('device_catalog', []);
+        // Combina el catálogo inicial con los equipos escritos manualmente en órdenes anteriores.
+        $deviceCatalog = $this->catalogoDispositivosActualizado();
 
         return view('ordenes.create', compact('sucursales', 'tecnicos', 'clientes', 'deviceCatalog'));
     }
@@ -287,6 +288,13 @@ class OrdenServicioController extends Controller
                 'cobro_diagnostico' => 0,
                 'anticipo' => $request->anticipo ?? 0,
                 'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
+            ]);
+
+            // Aprende la combinación capturada para ofrecerla en futuras órdenes, incluso si se escribió en "Otro".
+            DeviceCatalogEntry::firstOrCreate([
+                'device_type' => trim($request->tipo_dispositivo),
+                'brand' => trim($request->marca),
+                'model' => trim($request->modelo),
             ]);
 
             // Crea el primer estado y lo conecta con la línea de tiempo de la nueva OS.
@@ -799,6 +807,32 @@ class OrdenServicioController extends Controller
     {
         $sucursalId = $this->sucursalActivaId();
         abort_if(! $sucursalId || (int) $ordenServicio->sucursal_id !== $sucursalId, 403);
+    }
+
+    /**
+     * Agrega al catálogo configurado las combinaciones aprendidas al guardar órdenes de servicio.
+     *
+     * @return array<string, array<string, array<int, string>>>
+     */
+    private function catalogoDispositivosActualizado(): array
+    {
+        $catalogo = config('device_catalog', []);
+
+        DeviceCatalogEntry::query()
+            ->orderBy('device_type')
+            ->orderBy('brand')
+            ->orderBy('model')
+            ->each(function (DeviceCatalogEntry $entrada) use (&$catalogo): void {
+                $catalogo[$entrada->device_type] ??= [];
+                $catalogo[$entrada->device_type][$entrada->brand] ??= [];
+
+                if (! in_array($entrada->model, $catalogo[$entrada->device_type][$entrada->brand], true)) {
+                    $catalogo[$entrada->device_type][$entrada->brand][] = $entrada->model;
+                    sort($catalogo[$entrada->device_type][$entrada->brand], SORT_NATURAL | SORT_FLAG_CASE);
+                }
+            });
+
+        return $catalogo;
     }
 
     /**

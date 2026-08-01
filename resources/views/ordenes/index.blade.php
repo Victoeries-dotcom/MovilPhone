@@ -14,18 +14,18 @@
               <i data-lucide="package-check" aria-hidden="true"></i>
               <span>Vender productos</span>
           </a>
-          {{-- Política: conecta exclusivamente al Super Usuario con el texto impreso antes del folio del ticket. --}}
+          {{-- Garantía abre el editor para el Super Usuario; los demás roles conservan el filtro operativo. --}}
           @if(auth()->user()?->rol === 'superusuario')
               <a href="{{ route('configuracion.garantia') }}" class="btn orders-action-neutral" title="Configurar política de garantía">
-                  <i data-lucide="file-shield" aria-hidden="true"></i>
-                  <span>Política</span>
+                  <i data-lucide="shield-check" aria-hidden="true"></i>
+                  <span>Garantía</span>
+              </a>
+          @else
+              <a href="{{ route('ordenes.index', ['estado' => 'GARANTÍA']) }}" class="btn orders-action-neutral">
+                  <i data-lucide="shield-check" aria-hidden="true"></i>
+                  <span>Garantía</span>
               </a>
           @endif
-          {{-- Garantía filtra las órdenes de la sucursal activa sin abrir Configuración, que es exclusiva del Super Usuario. --}}
-        <a href="{{ route('ordenes.index', ['estado' => 'GARANTÍA']) }}" class="btn orders-action-neutral">
-            <i data-lucide="shield-check" aria-hidden="true"></i>
-            <span>Garantía</span>
-        </a>
         <button type="button" class="btn btn-danger orders-action-outline" onclick="abrirModalEgreso()">
             <i data-lucide="circle-minus" aria-hidden="true"></i>
             <span>Egreso</span>
@@ -656,4 +656,3 @@ document.addEventListener('keydown', function (event) {
 });
 </script>
 @endsection
-

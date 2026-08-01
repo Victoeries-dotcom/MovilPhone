@@ -29,6 +29,20 @@ class WarrantyPolicyTest extends TestCase
             ->assertSee(config('warranty.default_policy'));
     }
 
+    public function test_warranty_button_opens_the_policy_editor_for_superuser(): void
+    {
+        [$sucursal, $superusuario] = $this->crearSuperusuario();
+
+        // La acción visible en Órdenes debe abrir la interfaz solicitada, no aplicar el filtro GARANTÍA.
+        $this->actingAs($superusuario)
+            ->withSession(['sucursal_id' => $sucursal->id])
+            ->get(route('ordenes.index'))
+            ->assertOk()
+            ->assertSee('href="'.route('configuracion.garantia').'"', false)
+            ->assertSee('>Garantía</span>', false)
+            ->assertDontSee('>Política</span>', false);
+    }
+
     public function test_saved_policy_is_shown_on_delivery_ticket_before_folio(): void
     {
         [$sucursal, $superusuario] = $this->crearSuperusuario();

@@ -10,11 +10,11 @@
 $badgeClass = [
     'RECIBIDO' => 'badge-recibido',
     'EN DIAGNÓSTICO' => 'badge-diagnostico',
-    'ESPERANDO AUTORIZACIÓN' => 'badge-espera',
+    'ESPERANDO AUTORIZACIÓN' => 'badge-recibido',
     'AUTORIZADO' => 'badge-autorizado',
     'RECHAZADO' => 'badge-rechazado',
     'EN REPARACIÓN' => 'badge-reparacion',
-    'ESPERANDO REFACCIÓN' => 'badge-espera',
+    'ESPERANDO REFACCIÓN' => 'badge-reparacion',
     'TERMINADO' => 'badge-terminado',
     'NOTIFICADO' => 'badge-terminado',
     'ENTREGADO' => 'badge-entregado',

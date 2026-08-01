@@ -100,14 +100,11 @@
         .card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
         .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
-        .badge-recibido { background: #e5e5e5; color: #555; }
-        .badge-diagnostico { background: #dbeafe; color: #1d4ed8; }
-        .badge-espera { background: #fef3c7; color: #92400e; }
-        .badge-autorizado { background: #dcfce7; color: #166534; }
+        /* Cada etiqueta usa la misma familia cromática que su tarjeta de resumen en Órdenes. */
+        .badge-recibido, .badge-espera, .badge-autorizado { background: #ede9fe; color: #5b45c8; }
+        .badge-diagnostico, .badge-reparacion { background: #fff7d6; color: #a16207; }
         .badge-rechazado { background: #fee2e2; color: #991b1b; }
-        .badge-reparacion { background: #ede9fe; color: #5b21b6; }
-        .badge-terminado { background: #ccfbf1; color: #065f46; }
-        .badge-entregado { background: #f0fdf4; color: #166534; }
+        .badge-terminado, .badge-entregado { background: #dcfce7; color: #087647; }
         .badge-garantia { background: #fce7f3; color: #9d174d; }
         .form-group { margin-bottom: 1rem; }
         .form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; font-weight: 600; }
@@ -127,7 +124,7 @@
     {{-- Capa visual global: conecta todas las vistas con colores, sombras y animaciones profesionales. --}}
 {{-- Estilos globales: la ruta relativa evita depender de APP_URL al trabajar con Laragon o artisan serve. --}}
 {{-- Versión de contraste: obliga al navegador y a Laravel Cloud a cargar los tonos legibles más recientes. --}}
-<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260724-light-contrast">
+<link rel="stylesheet" href="/css/movilphone-ui.css?v=20260731-order-status-colors">
 </head>
 {{-- El rol expuesto en data-user-role conecta el CSS con la vista autorizada, sin alterar permisos del backend. --}}
 <body

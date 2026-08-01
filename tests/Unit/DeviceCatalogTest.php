@@ -33,4 +33,20 @@ class DeviceCatalogTest extends TestCase
         $this->assertArrayHasKey('Televisión / Smart TV', $catalog);
         $this->assertGreaterThanOrEqual(12, count($catalog));
     }
+
+    /**
+     * Verifica que el selector cubra también familias reparables fuera de celulares y computadoras.
+     */
+    public function test_catalog_contains_a_broad_set_of_repairable_devices(): void
+    {
+        $catalog = config('device_catalog');
+
+        $this->assertGreaterThanOrEqual(24, count($catalog));
+        $this->assertArrayHasKey('Cámara de seguridad / DVR', $catalog);
+        $this->assertArrayHasKey('Dron', $catalog);
+        $this->assertArrayHasKey('Lector electrónico / libreta digital', $catalog);
+        $this->assertArrayHasKey('Realidad virtual / aumentada', $catalog);
+        $this->assertContains('Xiaomi 17 Ultra', $catalog['Teléfono celular']['Xiaomi']);
+        $this->assertContains('Meta Quest 3', $catalog['Realidad virtual / aumentada']['Meta']);
+    }
 }

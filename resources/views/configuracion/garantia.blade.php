@@ -27,7 +27,7 @@
             <span><i data-lucide="clipboard-list" aria-hidden="true"></i></span>
             <div>
                 <h2>Texto de la política</h2>
-                <p>Este contenido se agregará automáticamente al final de cada ticket de entrega.</p>
+                <p>Este contenido se agregará al final de cada ticket, inmediatamente antes del folio.</p>
             </div>
         </div>
 

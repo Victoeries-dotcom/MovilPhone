@@ -46,6 +46,7 @@ return [
             'moto e14', 'ThinkPhone',
         ],
         'Xiaomi' => [
+            'Xiaomi 17 Ultra', 'Xiaomi 17', 'Xiaomi 17T Pro', 'Xiaomi 17T',
             'Xiaomi 15 Ultra', 'Xiaomi 15 Pro', 'Xiaomi 15', 'Xiaomi 14 Ultra',
             'Xiaomi 14T Pro', 'Xiaomi 14T', 'Xiaomi 14', 'Xiaomi 13T Pro',
             'Xiaomi 13T', 'Xiaomi 13', 'Xiaomi MIX Flip', 'Xiaomi MIX Fold 4',
@@ -113,6 +114,16 @@ return [
             'HMD Skyline', 'HMD Fusion', 'HMD Pulse Pro', 'HMD Pulse+',
             'Nokia G42 5G', 'Nokia G22', 'Nokia C32',
         ],
+        'TECNO' => [
+            'PHANTOM V Fold2 5G', 'PHANTOM V Flip2 5G', 'CAMON 40 Premier 5G',
+            'CAMON 40 Pro 5G', 'CAMON 40', 'POVA 7 Pro 5G', 'POVA 7', 'SPARK 40 Pro+', 'SPARK 40',
+        ],
+        'Infinix' => [
+            'GT 30 Pro', 'NOTE 50 Pro+', 'NOTE 50 Pro', 'NOTE 50',
+            'HOT 60 Pro+', 'HOT 60 Pro', 'HOT 60', 'SMART 10 Plus', 'SMART 10',
+        ],
+        'itel' => ['S25 Ultra', 'S25', 'CITY 100', 'A90', 'P70', 'A80'],
+        'Fairphone' => ['Fairphone 6', 'Fairphone 5', 'Fairphone 4'],
     ],
 
     'Tableta' => [
@@ -294,5 +305,90 @@ return [
         'Optoma' => ['UHD Series', 'CinemaX', 'GT Series', 'ZH Series'],
         'LG' => ['CineBeam', 'ProBeam'],
         'Samsung' => ['The Premiere', 'The Freestyle'],
+    ],
+
+    'Dispositivo de streaming' => [
+        'Roku' => ['Roku Ultra', 'Roku Streaming Stick 4K', 'Roku Express 4K+', 'Roku Express', 'Roku Streambar'],
+        'Amazon' => ['Fire TV Cube', 'Fire TV Stick 4K Max', 'Fire TV Stick 4K', 'Fire TV Stick HD'],
+        'Apple' => ['Apple TV 4K (3.ª generación)', 'Apple TV 4K (2.ª generación)', 'Apple TV HD'],
+        'Google' => ['Google TV Streamer 4K', 'Chromecast con Google TV 4K', 'Chromecast con Google TV HD'],
+        'Xiaomi' => ['Xiaomi TV Box S (3rd Gen)', 'Xiaomi TV Box S (2nd Gen)', 'Xiaomi TV Stick 4K'],
+        'NVIDIA' => ['SHIELD TV Pro', 'SHIELD TV'],
+    ],
+
+    'Cámara de seguridad / DVR' => [
+        'Hikvision' => ['Cámara IP', 'Cámara TurboHD', 'DVR TurboHD', 'NVR', 'Videoportero'],
+        'Dahua' => ['Cámara IP', 'Cámara HDCVI', 'XVR', 'NVR', 'Videoportero'],
+        'EZVIZ' => ['H9c', 'H8c', 'C8C', 'C6N', 'C3N', 'DB2'],
+        'TP-Link Tapo' => ['Tapo C660 KIT', 'Tapo C520WS', 'Tapo C425', 'Tapo C320WS', 'Tapo C225', 'Tapo C110'],
+        'Reolink' => ['Argus 4 Pro', 'TrackMix', 'Duo 3 PoE', 'RLC-811A', 'NVR'],
+        'eufy Security' => ['eufyCam S3 Pro', 'SoloCam S340', 'Indoor Cam S350', 'Video Doorbell E340', 'HomeBase 3'],
+        'Ring' => ['Stick Up Cam Pro', 'Spotlight Cam Pro', 'Indoor Cam', 'Video Doorbell Pro', 'Floodlight Cam'],
+        'Google Nest' => ['Nest Cam', 'Nest Cam con reflector', 'Nest Doorbell'],
+    ],
+
+    'Dron' => [
+        'DJI' => ['Mavic 4 Pro', 'Air 3S', 'Air 3', 'Mini 4 Pro', 'Mini 3', 'Avata 2', 'Neo', 'Flip'],
+        'Autel Robotics' => ['EVO Max 4T', 'EVO Lite+', 'EVO Nano+', 'Dragonfish'],
+        'FIMI' => ['X8 Tele', 'X8 Pro', 'X8 Mini V2'],
+        'Potensic' => ['ATOM 2', 'ATOM', 'ATOM SE'],
+        'Parrot' => ['ANAFI Ai', 'ANAFI USA', 'ANAFI'],
+    ],
+
+    'Lector electrónico / libreta digital' => [
+        'Amazon Kindle' => ['Kindle Scribe', 'Kindle Colorsoft', 'Kindle Paperwhite Signature Edition', 'Kindle Paperwhite', 'Kindle'],
+        'Kobo' => ['Kobo Elipsa 2E', 'Kobo Libra Colour', 'Kobo Clara Colour', 'Kobo Clara BW', 'Kobo Sage'],
+        'BOOX' => ['Tab X C', 'Note Air4 C', 'Go 10.3', 'Go Color 7', 'Palma 2'],
+        'reMarkable' => ['reMarkable Paper Pro', 'reMarkable 2'],
+        'PocketBook' => ['InkPad Eo', 'InkPad Color 3', 'Era Color', 'Verse Pro'],
+    ],
+
+    'Control / gamepad' => [
+        'Sony PlayStation' => ['DualSense Edge', 'DualSense', 'DualShock 4', 'PlayStation Portal'],
+        'Microsoft Xbox' => ['Xbox Elite Wireless Controller Series 2', 'Xbox Wireless Controller', 'Xbox Adaptive Controller'],
+        'Nintendo' => ['Nintendo Switch 2 Pro Controller', 'Joy-Con 2', 'Nintendo Switch Pro Controller', 'Joy-Con'],
+        '8BitDo' => ['Ultimate 2 Wireless', 'Ultimate 2C', 'Pro 2', 'SN30 Pro'],
+        'Logitech G' => ['G Cloud', 'F710', 'F310', 'G923', 'G29'],
+        'Razer' => ['Wolverine V3 Pro', 'Kishi Ultra', 'Kishi V2'],
+        'GameSir' => ['G8 Galileo', 'G7 SE', 'Tarantula Pro', 'Nova Lite'],
+    ],
+
+    'Realidad virtual / aumentada' => [
+        'Meta' => ['Meta Quest 3S', 'Meta Quest 3', 'Meta Quest Pro', 'Meta Quest 2'],
+        'Sony PlayStation' => ['PlayStation VR2', 'PlayStation VR'],
+        'Apple' => ['Apple Vision Pro'],
+        'HTC' => ['VIVE Focus Vision', 'VIVE XR Elite', 'VIVE Pro 2'],
+        'PICO' => ['PICO 4 Ultra', 'PICO 4 Enterprise', 'PICO 4'],
+        'Valve' => ['Valve Index'],
+    ],
+
+    'Almacenamiento / NAS' => [
+        'Western Digital' => ['My Passport', 'My Book', 'WD_BLACK P40', 'WD_BLACK D10', 'My Cloud'],
+        'Seagate' => ['Expansion', 'Backup Plus', 'One Touch', 'FireCuda', 'IronWolf'],
+        'SanDisk' => ['Extreme Portable SSD', 'Extreme PRO Portable SSD', 'Ultra Dual Drive', 'Portable SSD'],
+        'Kingston' => ['XS2000', 'XS1000', 'DataTraveler Max', 'DataTraveler Exodia'],
+        'Crucial' => ['X10 Pro', 'X9 Pro', 'X9', 'P3 Plus', 'T500'],
+        'Synology' => ['BeeStation', 'DiskStation DS224+', 'DiskStation DS923+', 'DiskStation DS1522+'],
+        'QNAP' => ['TS-264', 'TS-464', 'TS-233', 'TBS-464'],
+    ],
+
+    'No-break / regulador / fuente de poder' => [
+        'APC' => ['Back-UPS', 'Back-UPS Pro', 'Smart-UPS', 'Easy UPS', 'SurgeArrest'],
+        'CyberPower' => ['PFC Sinewave UPS', 'AVR UPS', 'Standby UPS', 'Smart App UPS'],
+        'Tripp Lite' => ['SmartPro UPS', 'Internet Office UPS', 'AVR Series', 'Isobar'],
+        'CDP' => ['R-UPR Series', 'UPO Series', 'R-SMART Series', 'Regulador'],
+        'Koblenz' => ['No-break interactivo', 'Regulador electrónico', 'Supresor de picos'],
+        'EVGA' => ['SuperNOVA G Series', 'SuperNOVA P Series', 'SuperNOVA GT Series'],
+        'Corsair' => ['AX Series', 'HX Series', 'RM Series', 'CX Series', 'SF Series'],
+        'Cooler Master' => ['V Series', 'MWE Gold', 'MWE Bronze', 'XG Series'],
+    ],
+
+    'Autoestéreo / multimedia vehicular' => [
+        'Pioneer' => ['DMH Series', 'AVH Series', 'MVH Series', 'DEH Series'],
+        'Sony' => ['XAV Series', 'DSX Series', 'MEX Series'],
+        'Kenwood' => ['Excelon', 'DMX Series', 'DDX Series', 'KMM Series'],
+        'JVC' => ['KW Series', 'KD Series', 'KW-M Series'],
+        'Alpine' => ['Halo Series', 'iLX Series', 'UTE Series'],
+        'ATOTO' => ['S8 Series', 'A6 Series', 'F7 Series'],
     ],
 ];

@@ -353,14 +353,12 @@ class OrdenServicioController extends Controller
         // Carga cliente y sucursal para mostrar exactamente los datos capturados en Nueva OS.
         $ordenServicio->load(['cliente', 'sucursal']);
 
-        // Muestra técnicos de la misma sucursal y conserva al técnico asignado aunque sea un usuario antiguo.
-        $tecnicos = User::where(function ($query) use ($ordenServicio) {
-            $query->where('sucursal_id', $ordenServicio->sucursal_id)
-                ->orWhereNull('sucursal_id')
-                ->when($ordenServicio->tecnico_id, function ($usuarios) use ($ordenServicio) {
-                    $usuarios->orWhere('id', $ordenServicio->tecnico_id);
-                });
-        })->orderBy('name')->get();
+        // El selector solo permite tecnicos que pertenecen a la sucursal de esta orden.
+        $tecnicos = User::query()
+            ->where('rol', 'tecnico')
+            ->where('sucursal_id', $ordenServicio->sucursal_id)
+            ->orderBy('name')
+            ->get();
 
         return view('ordenes.edit', compact('ordenServicio', 'tecnicos'));
     }
@@ -385,7 +383,13 @@ class OrdenServicioController extends Controller
             'tipo_dispositivo' => 'required|string',
             'cliente_telefono_extra' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'imei' => 'nullable|string|max:255',
-            'tecnico_id' => 'nullable|exists:users,id',
+            // Repite la restriccion del selector para impedir asignaciones manipuladas desde el navegador.
+            'tecnico_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($usuarios) => $usuarios
+                    ->where('rol', 'tecnico')
+                    ->where('sucursal_id', $ordenServicio->sucursal_id)),
+            ],
             'problema_reportado' => 'required|string',
             'problema_diagnosticado' => 'nullable|string',
             'accesorios_entregados' => 'nullable|string',

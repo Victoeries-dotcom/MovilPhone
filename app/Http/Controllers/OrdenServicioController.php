@@ -602,6 +602,8 @@ class OrdenServicioController extends Controller
         $politica = Schema::hasTable('configuraciones')
             ? DB::table('configuraciones')->where('clave', 'politica_garantia')->value('valor')
             : null;
+        // La política inicial protege los tickets aun antes de la primera personalización del taller.
+        $politica = $politica ?: config('warranty.default_policy');
 
         return view('ordenes.ticket-entrega', compact(
             'ordenServicio',

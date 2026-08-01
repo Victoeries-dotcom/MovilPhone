@@ -67,7 +67,7 @@ class ConfiguracionController extends Controller
     {
         $politica = DB::table('configuraciones')
             ->where('clave', 'politica_garantia')
-            ->value('valor');
+            ->value('valor') ?: config('warranty.default_policy');
 
         return view('configuracion.garantia', compact('politica'));
     }

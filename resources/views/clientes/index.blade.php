@@ -8,10 +8,19 @@
         <h1>Clientes</h1>
         <p>Consulta contactos, servicios e historial de reparaciones de la sucursal activa.</p>
     </div>
-    <a href="{{ route('clientes.create') }}" class="btn btn-primary">
-        <i data-lucide="user-plus" aria-hidden="true"></i>
-        Nuevo cliente
-    </a>
+    <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+        @if(in_array(auth()->user()->rol, ['superusuario', 'usuario'], true))
+            {{-- El enlace solo se muestra a los mismos roles que protege el middleware del reporte. --}}
+            <a href="{{ route('clientes.reportes.usuarios') }}" class="btn">
+                <i data-lucide="chart-no-axes-combined" aria-hidden="true"></i>
+                Reporte por usuario
+            </a>
+        @endif
+        <a href="{{ route('clientes.create') }}" class="btn btn-primary">
+            <i data-lucide="user-plus" aria-hidden="true"></i>
+            Nuevo cliente
+        </a>
+    </div>
 </section>
 
 {{-- Indicadores: usan los conteos calculados por ClienteController::index para resumir esta sucursal. --}}

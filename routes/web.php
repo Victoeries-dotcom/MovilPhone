@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminActivityController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ClienteReporteController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GlobalSearchController;
@@ -37,6 +38,16 @@ Route::middleware('auth')->group(function () {
     /* Clientes se comparte entre taller y ventas; el middleware verifica users.rol en el backend. */
     Route::middleware('role:superusuario,usuario,tecnico,vendedor')->group(function () {
         Route::resource('clientes', ClienteController::class);
+    });
+
+    /* Reporte por cliente: el middleware protege tambien PDF y Excel contra acceso directo por URL. */
+    Route::middleware('role:superusuario,usuario')->group(function () {
+        Route::get('clientes-reportes/usuarios', [ClienteReporteController::class, 'index'])
+            ->name('clientes.reportes.usuarios');
+        Route::get('clientes-reportes/usuarios/pdf', [ClienteReporteController::class, 'pdf'])
+            ->name('clientes.reportes.usuarios.pdf');
+        Route::get('clientes-reportes/usuarios/excel', [ClienteReporteController::class, 'excel'])
+            ->name('clientes.reportes.usuarios.excel');
     });
 
     /* Ordenes pertenece al equipo de taller y conserva entrega, rechazo, ticket y sticker. */

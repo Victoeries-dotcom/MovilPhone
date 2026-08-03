@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\FailedLoginAlert;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -70,6 +72,68 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertGuest();
+    }
+
+    public function test_third_invalid_password_sends_alert_and_blocks_account_for_five_minutes(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create([
+            'email' => 'acceso@movilphone.test',
+            'correo_contacto' => 'seguridad@movilphone.test',
+        ]);
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $this->from('/login')->post('/login', [
+                'email' => $user->email,
+                'password' => 'incorrecta',
+            ])->assertSessionHasErrors('password');
+        }
+
+        Mail::assertNothingSent();
+
+        $this->from('/login')->post('/login', [
+            'email' => $user->email,
+            'password' => 'incorrecta',
+        ])->assertSessionHasErrors([
+            'password' => 'Demasiados intentos incorrectos. Vuelve a intentarlo en 5 minutos.',
+        ]);
+
+        Mail::assertSent(FailedLoginAlert::class, function (FailedLoginAlert $mail): bool {
+            $contenido = $mail->render();
+
+            return $mail->hasTo('seguridad@movilphone.test')
+                && $mail->loginEmail === 'acceso@movilphone.test'
+                && $mail->ipAddress === '127.0.0.1'
+                && str_contains($contenido, '3 contraseñas incorrectas')
+                && str_contains($contenido, '127.0.0.1');
+        });
+
+        // La contraseña correcta tampoco evade el bloqueo hasta que termine el plazo.
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertSessionHasErrors('password');
+        $this->assertGuest();
+    }
+
+    public function test_successful_login_resets_previous_failed_attempts(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create();
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $this->post('/login', ['email' => $user->email, 'password' => 'incorrecta']);
+        }
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertRedirect(route('dashboard', absolute: false));
+        $this->post('/logout');
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $this->post('/login', ['email' => $user->email, 'password' => 'incorrecta']);
+        }
+
+        Mail::assertNothingSent();
     }
 
     public function test_users_can_logout(): void

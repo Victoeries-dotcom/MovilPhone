@@ -129,10 +129,9 @@
             <div class="form-group">
                 <label>Rol *</label>
                 <select name="rol" id="u_rol" required onchange="usuarioToggleRolInfo()">
+                    {{-- Los perfiles editables coinciden con la validación segura de UsuarioController::update. --}}
                     <option value="usuario" {{ old('rol', $usuario->rol) == 'usuario' ? 'selected' : '' }}>Usuario</option>
                     <option value="superusuario" {{ old('rol', $usuario->rol) == 'superusuario' ? 'selected' : '' }}>Super Usuario</option>
-                    <option value="capturista" {{ old('rol', $usuario->rol) == 'capturista' ? 'selected' : '' }}>Capturista</option>
-                    <option value="vendedor" {{ old('rol', $usuario->rol) == 'vendedor' ? 'selected' : '' }}>Vendedor</option>
                     <option value="tecnico" {{ old('rol', $usuario->rol) == 'tecnico' ? 'selected' : '' }}>Tecnico</option>
                 </select>
             </div>

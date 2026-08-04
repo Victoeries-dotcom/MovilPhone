@@ -60,7 +60,8 @@ class UsuarioController extends Controller
             'correo_contacto' => 'required|email|max:255',
             // users.email permanece único porque se conecta con el inicio de sesión.
             'email' => 'required|email|unique:users,email',
-            'rol' => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
+            // users.rol se limita a los tres perfiles vigentes, incluso ante solicitudes manipuladas.
+            'rol' => 'required|in:superusuario,tecnico,usuario',
             'sucursal_id' => 'required|exists:sucursales,id',
             // Solo el rol "usuario" tiene login real, por eso la contraseña se exige nada más en ese caso.
             'password' => 'required_if:rol,usuario|nullable|string|min:6|confirmed',
@@ -117,7 +118,8 @@ class UsuarioController extends Controller
             'telefono' => 'nullable|string|max:20',
             'correo_contacto' => 'required|email|max:255',
             'email' => 'required|email|unique:users,email,'.$usuario->id,
-            'rol' => 'required|in:superusuario,capturista,vendedor,tecnico,usuario',
+            // La edición aplica la misma lista permitida que el formulario de creación.
+            'rol' => 'required|in:superusuario,tecnico,usuario',
             // Una cuenta Super Usuario global se conecta con todas las sedes y puede permanecer sin sucursal.
             'sucursal_id' => 'nullable|required_unless:rol,superusuario|exists:sucursales,id',
             // Para una cuenta con acceso existente es opcional; vacía conserva la contraseña actual.

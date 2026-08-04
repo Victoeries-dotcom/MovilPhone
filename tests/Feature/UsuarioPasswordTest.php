@@ -105,6 +105,39 @@ class UsuarioPasswordTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    /** Confirma que la interfaz y users.rol acepten únicamente los tres perfiles vigentes. */
+    public function test_admin_only_sees_and_can_assign_current_roles(): void
+    {
+        $sucursal = Sucursal::create(['nombre' => 'MOTUL']);
+        $admin = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => $sucursal->id,
+        ]);
+
+        // La pestaña de alta ya no expone Capturista ni Vendedor como opciones seleccionables.
+        $this->actingAs($admin)
+            ->get(route('usuarios.create'))
+            ->assertOk()
+            ->assertSee('value="usuario"', false)
+            ->assertSee('value="superusuario"', false)
+            ->assertSee('value="tecnico"', false)
+            ->assertDontSee('value="capturista"', false)
+            ->assertDontSee('value="vendedor"', false);
+
+        // UsuarioController::store rechaza también un rol retirado enviado manualmente.
+        $respuesta = $this->actingAs($admin)->post(route('usuarios.store'), [
+            'name' => 'ROL RETIRADO',
+            'telefono' => '9990000000',
+            'correo_contacto' => 'contacto@ejemplo.com',
+            'email' => 'retirado@ejemplo.com',
+            'rol' => 'vendedor',
+            'sucursal_id' => $sucursal->id,
+        ]);
+
+        $respuesta->assertSessionHasErrors('rol');
+        $this->assertDatabaseMissing('users', ['email' => 'retirado@ejemplo.com']);
+    }
+
     /**
      * Verifica que el administrador global vea el control de contraseña,
      * pueda actualizarla sin elegir sucursal y utilice la nueva clave en LoginRequest.

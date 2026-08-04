@@ -244,10 +244,9 @@
                 <div class="usuario-label">Paso 4 de 5</div>
                 <div class="usuario-title">Rol y sucursal</div>
                 <select class="usuario-input" name="rol" id="u_rol" required onchange="usuarioBuildProgress(4); usuarioToggleRolInfo();">
+                    {{-- Solo se ofrecen los perfiles vigentes que acepta UsuarioController::store. --}}
                     <option value="usuario" {{ old('rol') == 'usuario' ? 'selected' : '' }}>Usuario</option>
                     <option value="superusuario" {{ old('rol') == 'superusuario' ? 'selected' : '' }}>Super Usuario</option>
-                    <option value="capturista" {{ old('rol') == 'capturista' ? 'selected' : '' }}>Capturista</option>
-                    <option value="vendedor" {{ old('rol') == 'vendedor' ? 'selected' : '' }}>Vendedor</option>
                     <option value="tecnico" {{ old('rol') == 'tecnico' ? 'selected' : '' }}>Tecnico</option>
                 </select>
 

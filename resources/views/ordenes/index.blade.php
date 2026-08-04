@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-{{-- Cabecera operativa: conecta accesos rápidos con Ventas, Caja y la creación de una nueva orden. --}}
+{{-- Cabecera operativa: reúne Garantía, Caja y la creación de una nueva orden. --}}
 <div class="page-header orders-page-header">
     <div>
         <h1>Órdenes de Servicio</h1>
@@ -10,10 +10,6 @@
         </p>
     </div>
       <div class="orders-page-actions">
-          <a href="{{ route('ventas.create') }}" class="btn orders-action-primary">
-              <i data-lucide="package-check" aria-hidden="true"></i>
-              <span>Vender productos</span>
-          </a>
           {{-- Garantía abre el editor para el Super Usuario; los demás roles conservan el filtro operativo. --}}
           @if(auth()->user()?->rol === 'superusuario')
               <a href="{{ route('configuracion.garantia') }}" class="btn orders-action-neutral" title="Configurar política de garantía">

@@ -118,6 +118,23 @@
                 </select>
             </div>
 
+            @if($puedeCambiarEstado)
+                <div class="form-group">
+                    <label>Estado de la orden *</label>
+                    {{-- Superusuario y usuario cambian ordenes_servicio.estado; el controlador registra historial y sucursal. --}}
+                    <select name="estado" required>
+                        @foreach($estados as $valorEstado => $etiquetaEstado)
+                            <option
+                                value="{{ $valorEstado }}"
+                                {{ old('estado', $ordenServicio->estado) === $valorEstado ? 'selected' : '' }}
+                            >
+                                {{ $etiquetaEstado }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+
             <div class="form-group full-width">
                 <label>Problema reportado *</label>
                 {{-- Conserva la falla descrita en el paso 7 de Nueva OS. --}}

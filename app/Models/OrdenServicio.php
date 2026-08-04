@@ -8,6 +8,21 @@ class OrdenServicio extends Model
 {
     protected $table = 'ordenes_servicio';
 
+    // Catálogo único para mostrar y validar los estados guardados en ordenes_servicio.estado.
+    public const ESTADOS = [
+        'RECIBIDO' => 'En espera',
+        'EN DIAGNÓSTICO' => 'Diagnóstico',
+        'ESPERANDO AUTORIZACIÓN' => 'Esperando autorización',
+        'AUTORIZADO' => 'Autorizado',
+        'EN REPARACIÓN' => 'Reparación',
+        'ESPERANDO REFACCIÓN' => 'Esperando refacción',
+        'TERMINADO' => 'Listo para recoger',
+        'NOTIFICADO' => 'Notificado',
+        'ENTREGADO' => 'Entregado',
+        'RECHAZADO' => 'No quedó / Rechazado',
+        'GARANTÍA' => 'Garantía',
+    ];
+
     protected $fillable = [
         'numero_os',
         'cliente_id',
@@ -35,21 +50,21 @@ class OrdenServicio extends Model
         'mano_obra',
         'fecha_entrega_estimada',
         'fecha_entrega_real',
-        'os_origen_id'
+        'os_origen_id',
     ];
 
     const TRANSICIONES = [
-        'RECIBIDO'                 => ['EN DIAGNÓSTICO'],
-        'EN DIAGNÓSTICO'           => ['ESPERANDO AUTORIZACIÓN'],
-        'ESPERANDO AUTORIZACIÓN'   => ['AUTORIZADO', 'RECHAZADO'],
-        'AUTORIZADO'               => ['EN REPARACIÓN'],
-        'RECHAZADO'                => [],
-        'EN REPARACIÓN'            => ['ESPERANDO REFACCIÓN', 'TERMINADO'],
-        'ESPERANDO REFACCIÓN'      => ['EN REPARACIÓN'],
-        'TERMINADO'                => ['NOTIFICADO', 'ENTREGADO'],
-        'NOTIFICADO'               => ['ENTREGADO'],
-        'ENTREGADO'                => ['GARANTÍA'],
-        'GARANTÍA'                 => [],
+        'RECIBIDO' => ['EN DIAGNÓSTICO'],
+        'EN DIAGNÓSTICO' => ['ESPERANDO AUTORIZACIÓN'],
+        'ESPERANDO AUTORIZACIÓN' => ['AUTORIZADO', 'RECHAZADO'],
+        'AUTORIZADO' => ['EN REPARACIÓN'],
+        'RECHAZADO' => [],
+        'EN REPARACIÓN' => ['ESPERANDO REFACCIÓN', 'TERMINADO'],
+        'ESPERANDO REFACCIÓN' => ['EN REPARACIÓN'],
+        'TERMINADO' => ['NOTIFICADO', 'ENTREGADO'],
+        'NOTIFICADO' => ['ENTREGADO'],
+        'ENTREGADO' => ['GARANTÍA'],
+        'GARANTÍA' => [],
     ];
 
     public function cliente()
@@ -85,6 +100,7 @@ class OrdenServicio extends Model
     public function puedeAvanzarA(string $nuevoEstado): bool
     {
         $permitidos = self::TRANSICIONES[$this->estado] ?? [];
+
         return in_array($nuevoEstado, $permitidos);
     }
 }

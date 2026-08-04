@@ -368,7 +368,11 @@ class OrdenServicioController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('ordenes.edit', compact('ordenServicio', 'tecnicos'));
+        // El mismo catálogo alimenta el selector para superusuario, usuario y cualquier sucursal futura.
+        $estados = OrdenServicio::ESTADOS;
+        $puedeCambiarEstado = in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true);
+
+        return view('ordenes.edit', compact('ordenServicio', 'tecnicos', 'estados', 'puedeCambiarEstado'));
     }
 
     // Guardar edición
@@ -391,6 +395,10 @@ class OrdenServicioController extends Controller
             'tipo_dispositivo' => 'required|string',
             'cliente_telefono_extra' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'imei' => 'nullable|string|max:255',
+            // Solo superusuario y usuario pueden enviar uno de los estados oficiales.
+            'estado' => in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true)
+                ? ['required', Rule::in(array_keys(OrdenServicio::ESTADOS))]
+                : ['prohibited'],
             // Repite la restriccion del selector para impedir asignaciones manipuladas desde el navegador.
             'tecnico_id' => [
                 'nullable',
@@ -437,6 +445,12 @@ class OrdenServicioController extends Controller
             'telefono_alternativo' => $request->cliente_telefono_extra,
         ]);
 
+        $estadoAnterior = $ordenServicio->estado;
+        // Los demás roles conservan el estado actual aunque manipulen manualmente la petición.
+        $estadoEditado = in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true)
+            ? $request->estado
+            : $estadoAnterior;
+
         // Actualiza el equipo con los mismos campos de Nueva OS y normaliza textos descriptivos en mayúsculas.
         $ordenServicio->update([
             'tecnico_id' => $request->tecnico_id,
@@ -445,6 +459,8 @@ class OrdenServicioController extends Controller
             'tipo_dispositivo' => Str::upper($request->tipo_dispositivo),
             'cliente_telefono_extra' => $request->cliente_telefono_extra,
             'imei' => $request->filled('imei') ? Str::upper($request->imei) : null,
+            // Guarda la opción validada del selector en ordenes_servicio.estado.
+            'estado' => $estadoEditado,
             'problema_reportado' => Str::upper($request->problema_reportado),
             'problema_diagnosticado' => $request->filled('problema_diagnosticado')
                 ? Str::upper($request->problema_diagnosticado)
@@ -462,6 +478,23 @@ class OrdenServicioController extends Controller
             'anticipo' => $request->anticipo ?? 0,
             'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
         ]);
+
+        if ($estadoAnterior !== $estadoEditado) {
+            // Conserva evidencia del cambio realizado desde Editar OS en historial_estados.
+            HistorialEstado::create([
+                'os_id' => $ordenServicio->id,
+                'estado' => $estadoEditado,
+                'nota' => 'Cambio de estado desde Editar OS.',
+            ]);
+
+            AdminActivityLogger::registrar(
+                'ÓRDENES',
+                'ESTADO',
+                'Orden '.$ordenServicio->numero_os.' cambió de '.$estadoAnterior.' a '.$estadoEditado,
+                $ordenServicio->sucursal_id,
+                $ordenServicio
+            );
+        }
 
         // Actualiza la misma fila de Caja cuando cambian el anticipo o el cobro de la orden.
         $this->sincronizarCobroOrdenEnCaja($ordenServicio->fresh());

@@ -70,6 +70,16 @@
 </section>
 
 {{-- Filtros: combinan cliente, periodo y estado sin permitir cambiar la sucursal activa desde la URL. --}}
+@php
+    // Ambos selectores usan los valores exactos almacenados en ordenes_servicio.estado.
+    $estadosDisponibles = [
+        'EN DIAGNÓSTICO' => 'Diagnóstico',
+        'EN REPARACIÓN' => 'Reparación',
+        'TERMINADO' => 'Listo para recoger',
+        'RECHAZADO' => 'No quedó / Rechazado',
+        'GARANTÍA' => 'Garantía',
+    ];
+@endphp
 <form method="GET" class="orders-filter-panel">
     <label class="orders-filter-field orders-filter-search">
         <span class="orders-filter-label"><i data-lucide="search" aria-hidden="true"></i> Buscar cliente</span>
@@ -104,16 +114,7 @@
             <i data-lucide="list-filter" aria-hidden="true"></i>
             <select name="estado">
                 <option value="">Todos los estados</option>
-                @foreach([
-                    'RECIBIDO' => 'En espera',
-                    'EN DIAGNÓSTICO' => 'Diagnóstico',
-                    'EN REPARACIÓN' => 'Reparación',
-                    'TERMINADO' => 'Listo para recoger',
-                    'NOTIFICADO' => 'Notificado',
-                    'ENTREGADO' => 'Entregado',
-                    'RECHAZADO' => 'No quedó / Rechazado',
-                    'GARANTÍA' => 'Garantía',
-                ] as $estado => $label)
+                @foreach($estadosDisponibles as $estado => $label)
                     <option value="{{ $estado }}" {{ request('estado') === $estado ? 'selected' : '' }}>{{ $label }}</option>
                 @endforeach
             </select>
@@ -166,14 +167,8 @@
             'RECHAZADO' => 'Rechazado',
             'GARANTÍA' => 'En garantía',
         ][$orden->estado] ?? $orden->estado;
-        // Las opciones usan los valores exactos almacenados en ordenes_servicio.estado.
-        $estadosRapidos = [
-            'EN DIAGNÓSTICO' => 'Diagnóstico',
-            'EN REPARACIÓN' => 'Reparación',
-            'TERMINADO' => 'Listo para recoger',
-            'RECHAZADO' => 'No quedó / Rechazado',
-            'GARANTÍA' => 'Garantía',
-        ];
+        // La lista compartida evita diferencias entre el filtro y el cambio rápido de estado.
+        $estadosRapidos = $estadosDisponibles;
     @endphp
     <article class="card order-service-card {{ $claseResultado }}">
         <div class="order-service-content">

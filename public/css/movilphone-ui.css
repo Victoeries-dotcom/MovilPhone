@@ -1801,10 +1801,10 @@ body .orders-stat-rejected::after { background:#dc4555 !important; }
 body .orders-stat-warranty .stat-num { color:#b0003a !important; }
 body .orders-stat-warranty::after { background:#b0003a !important; }
 
-/* El panel de filtros envuelve buscador y estado en controles etiquetados para facilitar el trabajo repetitivo. */
+/* El panel mantiene el buscador amplio y coloca Periodo entre cliente y estado. */
 body .orders-filter-panel {
     display:grid;
-    grid-template-columns:minmax(280px,1fr) minmax(230px,280px) auto;
+    grid-template-columns:minmax(430px,1fr) minmax(300px,340px) minmax(230px,280px) auto;
     align-items:end;
     gap:14px;
     margin-bottom:1.6rem;
@@ -1832,7 +1832,8 @@ body .orders-filter-label {
 }
 body .orders-filter-label svg { width:13px; height:13px; }
 body .orders-input-wrap,
-body .orders-select-wrap {
+body .orders-select-wrap,
+body .orders-period-wrap {
     position:relative;
     display:flex;
     align-items:center;
@@ -1844,7 +1845,8 @@ body .orders-select-wrap {
     transition:border-color var(--ui-ease), box-shadow var(--ui-ease), background var(--ui-ease);
 }
 body .orders-input-wrap:focus-within,
-body .orders-select-wrap:focus-within {
+body .orders-select-wrap:focus-within,
+body .orders-period-wrap:focus-within {
     border-color:#16a34a;
     box-shadow:0 0 0 3px rgba(22,163,74,.13);
 }
@@ -1871,6 +1873,27 @@ body .orders-select-wrap select {
     color:var(--ui-ink) !important;
 }
 body .orders-select-wrap select { cursor:pointer; }
+body .orders-period-wrap select,
+body .orders-period-wrap input {
+    min-width:0;
+    height:100%;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:var(--ui-ink) !important;
+}
+body .orders-period-wrap select {
+    width:42%;
+    padding:0 8px 0 13px !important;
+    border-right:1px solid var(--ui-border) !important;
+    cursor:pointer;
+}
+body .orders-period-wrap input {
+    width:58%;
+    padding:0 10px !important;
+}
+body .orders-period-wrap input:disabled { color:var(--ui-muted) !important; cursor:not-allowed; }
 body .orders-filter-actions {
     display:flex;
     align-items:center;
@@ -2026,7 +2049,8 @@ html[data-ui-theme="light"] body .orders-filter-panel,
 html[data-ui-theme="light"] body .order-service-card,
 html[data-ui-theme="light"] body .orders-empty-state { border-color:#dde2e8; background:#fff !important; }
 html[data-ui-theme="light"] body .orders-input-wrap,
-html[data-ui-theme="light"] body .orders-select-wrap { border-color:#d6dde6; background:#f8fafc; }
+html[data-ui-theme="light"] body .orders-select-wrap,
+html[data-ui-theme="light"] body .orders-period-wrap { border-color:#d6dde6; background:#f8fafc; }
 html[data-ui-theme="light"] body .order-service-card.is-delivered { border-color:#22a861 !important; background:#f2fcf6 !important; }
 html[data-ui-theme="light"] body .order-service-card.is-rejected { border-color:#dc4555 !important; background:#fff6f6 !important; }
 html[data-ui-theme="light"] body .order-service-card.is-warranty { border-color:#b0003a !important; background:#fff6fa !important; }
@@ -2034,6 +2058,7 @@ html[data-ui-theme="light"] body .order-service-card.is-warranty { border-color:
 /* Respuesta de Órdenes: conserva botones y textos completos en tabletas y teléfonos. */
 @media (max-width:1380px) {
     body .orders-stats { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    body .orders-filter-panel { grid-template-columns:minmax(300px,1fr) minmax(250px,1fr) minmax(210px,1fr) auto; }
     body .order-service-content { grid-template-columns:1fr; }
     body .order-service-summary { max-width:none; }
     body .order-service-actions { justify-content:flex-start; }

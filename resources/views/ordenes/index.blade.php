@@ -69,13 +69,31 @@
     </article>
 </section>
 
-{{-- Filtros: envían search y estado por GET a OrdenServicioController::index y conservan el aislamiento por sucursal. --}}
+{{-- Filtros: combinan cliente, periodo y estado sin permitir cambiar la sucursal activa desde la URL. --}}
 <form method="GET" class="orders-filter-panel">
     <label class="orders-filter-field orders-filter-search">
         <span class="orders-filter-label"><i data-lucide="search" aria-hidden="true"></i> Buscar cliente</span>
         <span class="orders-input-wrap">
             <i data-lucide="search" aria-hidden="true"></i>
             <input type="search" name="search" placeholder="Nombre o teléfono..." value="{{ request('search') }}">
+        </span>
+    </label>
+    <label class="orders-filter-field orders-filter-period">
+        <span class="orders-filter-label"><i data-lucide="calendar-range" aria-hidden="true"></i> Periodo</span>
+        <span class="orders-period-wrap">
+            <select name="periodo" id="orders-period-type" aria-label="Tipo de periodo">
+                <option value="">Sin periodo</option>
+                <option value="dia" {{ request('periodo') === 'dia' ? 'selected' : '' }}>Día</option>
+                <option value="semana" {{ request('periodo') === 'semana' ? 'selected' : '' }}>Semana</option>
+                <option value="mes" {{ request('periodo') === 'mes' ? 'selected' : '' }}>Mes</option>
+            </select>
+            {{-- El tipo se ajusta con JavaScript para usar los selectores nativos de día, semana y mes. --}}
+            <input
+                id="orders-period-value"
+                name="periodo_valor"
+                value="{{ request('periodo_valor') }}"
+                aria-label="Periodo seleccionado"
+            >
         </span>
     </label>
     <label class="orders-filter-field">
@@ -104,7 +122,7 @@
             <i data-lucide="search" aria-hidden="true"></i>
             <span>Buscar</span>
         </button>
-        @if(request('search') || request('estado'))
+        @if(request('search') || request('periodo') || request('periodo_valor') || request('estado'))
             <a href="{{ route('ordenes.index') }}" class="btn" title="Quitar filtros">
                 <i data-lucide="rotate-ccw" aria-hidden="true"></i>
                 <span>Limpiar</span>
@@ -419,6 +437,27 @@
 </form>
 
 <script>
+// Mantiene un solo control y activa el calendario apropiado para Día, Semana o Mes.
+function configurarFiltroPeriodo() {
+    const tipo = document.getElementById('orders-period-type');
+    const valor = document.getElementById('orders-period-value');
+    if (!tipo || !valor) return;
+
+    const tiposEntrada = { dia: 'date', semana: 'week', mes: 'month' };
+    const tipoSeleccionado = tiposEntrada[tipo.value] || 'date';
+    valor.type = tipoSeleccionado;
+    valor.disabled = !tipo.value;
+    valor.required = Boolean(tipo.value);
+    valor.placeholder = tipo.value ? 'Seleccionar' : 'Elige periodo';
+}
+
+document.addEventListener('DOMContentLoaded', configurarFiltroPeriodo);
+document.getElementById('orders-period-type')?.addEventListener('change', function () {
+    const valor = document.getElementById('orders-period-value');
+    if (valor) valor.value = '';
+    configurarFiltroPeriodo();
+});
+
 // Variables del rechazo: conectan el selector de estado con el modal y el formulario POST.
 let rechazoOrdenId = null;
 let rechazoAnticipoMaximo = 0;

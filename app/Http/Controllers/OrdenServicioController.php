@@ -10,6 +10,7 @@ use App\Models\OrdenServicio;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Support\AdminActivityLogger;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -42,6 +43,11 @@ class OrdenServicioController extends Controller
 
         if ($request->estado) {
             $query->where('estado', $request->estado);
+        }
+
+        // Filtra por created_at dentro del día, semana ISO o mes que eligió el usuario.
+        if ($rangoPeriodo = $this->rangoPeriodoSeleccionado($request)) {
+            $query->whereBetween('created_at', $rangoPeriodo);
         }
 
         if ($request->search) {
@@ -104,6 +110,59 @@ class OrdenServicioController extends Controller
             'contadorEstados',
             'sucursalActiva'
         ));
+    }
+
+    /**
+     * Convierte el periodo elegido en límites completos para ordenes_servicio.created_at.
+     *
+     * @return array{CarbonImmutable, CarbonImmutable}|null
+     */
+    private function rangoPeriodoSeleccionado(Request $request): ?array
+    {
+        $request->validate([
+            'periodo' => ['nullable', Rule::in(['dia', 'semana', 'mes'])],
+            'periodo_valor' => ['nullable', 'required_with:periodo', 'string', 'max:10'],
+        ]);
+
+        if (! $request->filled('periodo') || ! $request->filled('periodo_valor')) {
+            return null;
+        }
+
+        $zonaHoraria = config('app.timezone');
+        $valor = $request->string('periodo_valor')->toString();
+
+        try {
+            if ($request->periodo === 'dia' && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $valor, $fecha)) {
+                $inicio = CarbonImmutable::create((int) $fecha[1], (int) $fecha[2], (int) $fecha[3], 0, 0, 0, $zonaHoraria);
+
+                if ($inicio->format('Y-m-d') === $valor) {
+                    return [$inicio->startOfDay(), $inicio->endOfDay()];
+                }
+            }
+
+            if ($request->periodo === 'semana' && preg_match('/^(\d{4})-W(\d{2})$/', $valor, $semana)) {
+                $inicio = CarbonImmutable::create((int) $semana[1], 1, 4, 0, 0, 0, $zonaHoraria)
+                    ->setISODate((int) $semana[1], (int) $semana[2]);
+
+                if ($inicio->isoWeekYear === (int) $semana[1] && $inicio->isoWeek === (int) $semana[2]) {
+                    return [$inicio->startOfWeek(), $inicio->endOfWeek()];
+                }
+            }
+
+            if ($request->periodo === 'mes' && preg_match('/^(\d{4})-(\d{2})$/', $valor, $mes)) {
+                $inicio = CarbonImmutable::create((int) $mes[1], (int) $mes[2], 1, 0, 0, 0, $zonaHoraria);
+
+                if ($inicio->format('Y-m') === $valor) {
+                    return [$inicio->startOfMonth(), $inicio->endOfMonth()];
+                }
+            }
+        } catch (\Throwable) {
+            // El mensaje uniforme evita aceptar fechas que PHP normalice silenciosamente.
+        }
+
+        throw ValidationException::withMessages([
+            'periodo_valor' => 'Selecciona un día, semana o mes válido.',
+        ]);
     }
 
     /**

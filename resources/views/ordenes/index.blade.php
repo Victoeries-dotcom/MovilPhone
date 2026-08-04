@@ -81,6 +81,8 @@
     <label class="orders-filter-field orders-filter-period">
         <span class="orders-filter-label"><i data-lucide="calendar-range" aria-hidden="true"></i> Periodo</span>
         <span class="orders-period-wrap">
+            {{-- El icono integra el selector y la fecha en una sola barra visual, igual que los filtros laterales. --}}
+            <i data-lucide="calendar-days" aria-hidden="true"></i>
             <select name="periodo" id="orders-period-type" aria-label="Tipo de periodo">
                 <option value="">Sin periodo</option>
                 <option value="dia" {{ request('periodo') === 'dia' ? 'selected' : '' }}>Día</option>

@@ -1851,7 +1851,8 @@ body .orders-period-wrap:focus-within {
     box-shadow:0 0 0 3px rgba(22,163,74,.13);
 }
 body .orders-input-wrap > svg,
-body .orders-select-wrap > svg {
+body .orders-select-wrap > svg,
+body .orders-period-wrap > svg {
     position:absolute;
     left:14px;
     width:16px;
@@ -1875,24 +1876,33 @@ body .orders-select-wrap select {
 body .orders-select-wrap select { cursor:pointer; }
 body .orders-period-wrap select,
 body .orders-period-wrap input {
+    display:block !important;
     min-width:0;
-    height:100%;
+    height:44px !important;
+    min-height:44px !important;
+    margin:0 !important;
     border:0 !important;
     border-radius:0 !important;
     background:transparent !important;
     box-shadow:none !important;
     color:var(--ui-ink) !important;
+    font:inherit !important;
+    font-size:13px !important;
+    line-height:44px !important;
 }
 body .orders-period-wrap select {
     width:42%;
-    padding:0 8px 0 13px !important;
+    padding:0 9px 0 42px !important;
     border-right:1px solid var(--ui-border) !important;
     cursor:pointer;
 }
 body .orders-period-wrap input {
     width:58%;
-    padding:0 10px !important;
+    padding:0 12px !important;
 }
+/* El contenedor recorta los controles nativos para que Periodo funcione como una sola pieza profesional. */
+body .orders-period-wrap { overflow:hidden; }
+body .orders-period-wrap input::-webkit-calendar-picker-indicator { cursor:pointer; opacity:.72; }
 body .orders-period-wrap input:disabled { color:var(--ui-muted) !important; cursor:not-allowed; }
 body .orders-filter-actions {
     display:flex;

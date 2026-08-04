@@ -86,6 +86,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('ventas', VentaController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
     });
 
+    /* La política es global: Super Usuario y usuario pueden editarla para todas las sucursales. */
+    Route::middleware('role:superusuario,usuario')->group(function () {
+        Route::get('configuracion/garantia', [ConfiguracionController::class, 'editarGarantia'])->name('configuracion.garantia');
+        Route::post('configuracion/garantia', [ConfiguracionController::class, 'guardarGarantia'])->name('configuracion.garantia.guardar');
+    });
+
     /* Administracion avanzada: configuracion, usuarios, reportes, actividad y respaldos. */
     Route::middleware('role:superusuario')->group(function () {
         Route::resource('usuarios', UsuarioController::class);
@@ -104,9 +110,6 @@ Route::middleware('auth')->group(function () {
 
         Route::get('configuracion', [ConfiguracionController::class, 'edit'])->name('configuracion.edit');
         Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
-        Route::get('configuracion/garantia', [ConfiguracionController::class, 'editarGarantia'])->name('configuracion.garantia');
-        Route::post('configuracion/garantia', [ConfiguracionController::class, 'guardarGarantia'])->name('configuracion.garantia.guardar');
-
         Route::get('configuracion/respaldos', [BackupController::class, 'index'])->name('respaldos.index');
         Route::post('configuracion/respaldos', [BackupController::class, 'store'])->name('respaldos.store');
         Route::get('configuracion/respaldos/{archivo}', [BackupController::class, 'download'])->name('respaldos.download');

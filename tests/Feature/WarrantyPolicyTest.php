@@ -90,13 +90,47 @@ class WarrantyPolicyTest extends TestCase
         $this->assertLessThan(strpos($contenido, 'Folio: #'), strpos($contenido, $politica));
     }
 
-    public function test_regular_user_cannot_edit_the_global_warranty_policy(): void
+    public function test_regular_user_can_edit_policy_and_future_branches_use_the_same_value(): void
     {
-        $usuario = User::factory()->create(['rol' => 'usuario']);
+        $sucursalActual = Sucursal::create(['nombre' => 'SUCURSAL ACTUAL']);
+        $usuario = User::factory()->create([
+            'rol' => 'usuario',
+            'sucursal_id' => $sucursalActual->id,
+        ]);
+        $politica = 'GARANTÍA GLOBAL PARA SUCURSALES ACTUALES Y FUTURAS.';
+
+        // El acceso visible en Órdenes abre el mismo editor que utiliza el Super Usuario.
+        $this->actingAs($usuario)
+            ->withSession(['sucursal_id' => $sucursalActual->id])
+            ->get(route('ordenes.index'))
+            ->assertOk()
+            ->assertSee('href="'.route('configuracion.garantia').'"', false);
 
         $this->actingAs($usuario)
+            ->withSession(['sucursal_id' => $sucursalActual->id])
             ->get(route('configuracion.garantia'))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertSee('Guardar política');
+
+        // La clave no contiene sucursal_id: una sola política alimenta los tickets de toda sucursal futura.
+        $this->actingAs($usuario)
+            ->withSession(['sucursal_id' => $sucursalActual->id])
+            ->post(route('configuracion.garantia.guardar'), [
+                'politica_garantia' => $politica,
+            ])
+            ->assertRedirect(route('configuracion.garantia'));
+
+        $sucursalFutura = Sucursal::create(['nombre' => 'SUCURSAL FUTURA']);
+        $usuarioFuturo = User::factory()->create([
+            'rol' => 'usuario',
+            'sucursal_id' => $sucursalFutura->id,
+        ]);
+
+        $this->actingAs($usuarioFuturo)
+            ->withSession(['sucursal_id' => $sucursalFutura->id])
+            ->get(route('configuracion.garantia'))
+            ->assertOk()
+            ->assertSee($politica);
     }
 
     /**

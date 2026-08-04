@@ -161,13 +161,7 @@
                 <div class="order-service-heading">
                     <strong>{{ $orden->numero_os }}</strong>
                     <span class="badge {{ $badgeClass }}">{{ $badgeLabel }}</span>
-                    @if($esEntregado)
-                        <span class="order-result-badge is-success"><i data-lucide="badge-check"></i> Completado</span>
-                    @elseif($esRechazado)
-                        <span class="order-result-badge is-danger"><i data-lucide="circle-x"></i> No quedó</span>
-                    @elseif($esGarantia)
-                        <span class="order-result-badge is-warranty"><i data-lucide="shield-check"></i> En garantía</span>
-                    @endif
+                    {{-- La insignia principal ya comunica el estado final; se evita repetir Entregado, Rechazado o Garantía. --}}
                 </div>
                 <p class="order-service-client">
                     {{ $orden->cliente->nombre ?? 'Sin cliente' }} · {{ $orden->cliente->telefono_principal ?? 'Sin teléfono' }}

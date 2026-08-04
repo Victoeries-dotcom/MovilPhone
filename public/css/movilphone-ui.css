@@ -1791,6 +1791,13 @@ body .orders-stat-card .stat-label {
     line-height:1.35;
 }
 body .orders-stat-card .stat-num { margin-top:6px; }
+/* Cada barra inferior reutiliza el color de la insignia del estado mostrada en las órdenes. */
+body .orders-stat-waiting::after { background:#8069f2 !important; }
+body .orders-stat-diagnostic::after { background:#f5b73b !important; }
+body .orders-stat-repair::after { background:#f5b73b !important; }
+body .orders-stat-ready::after { background:#20b879 !important; }
+body .orders-stat-delivered::after { background:#22a861 !important; }
+body .orders-stat-rejected::after { background:#dc4555 !important; }
 body .orders-stat-warranty .stat-num { color:#b0003a !important; }
 body .orders-stat-warranty::after { background:#b0003a !important; }
 

@@ -219,19 +219,21 @@
             <a href="{{ route('caja.index') }}" class="nav-link {{ request()->is('caja*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="wallet-cards"></i></span> Caja
             </a>
-            <a href="{{ route('usuarios.index') }}" class="nav-link {{ request()->is('usuarios*') ? 'active' : '' }}">
-                <span class="icon"><i data-lucide="users"></i></span> Usuarios
-            </a>
-            <a href="{{ route('sucursales.index') }}" class="nav-link {{ request()->is('sucursales*') ? 'active' : '' }}">
-                <span class="icon"><i data-lucide="store"></i></span> Sucursales
-            </a>
-            <div class="nav-divider"></div>
-            <div class="nav-section">Roles</div>
+            {{-- Los módulos comerciales permanecen en el menú operativo y conservan sus rutas y permisos. --}}
             <a href="{{ route('categorias.index') }}" class="nav-link {{ request()->is('categorias*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="tags"></i></span> Categorías
             </a>
             <a href="{{ route('ventas.index') }}" class="nav-link {{ request()->is('ventas*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="shopping-cart"></i></span> Ventas
+            </a>
+            <div class="nav-divider"></div>
+            <div class="nav-section">Monitoreo</div>
+            {{-- Monitoreo agrupa la administración de users.rol y users.sucursal_id sin modificar autorizaciones. --}}
+            <a href="{{ route('usuarios.index') }}" class="nav-link {{ request()->is('usuarios*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="users"></i></span> Usuarios
+            </a>
+            <a href="{{ route('sucursales.index') }}" class="nav-link {{ request()->is('sucursales*') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="store"></i></span> Sucursales
             </a>
             <div class="nav-divider"></div>
             <div class="nav-section">Reportes</div>

@@ -10,8 +10,8 @@
         </p>
     </div>
       <div class="orders-page-actions">
-          {{-- Garantía abre el editor para el Super Usuario; los demás roles conservan el filtro operativo. --}}
-          @if(auth()->user()?->rol === 'superusuario')
+          {{-- Super Usuario y usuario comparten la edición global; los demás roles conservan el filtro operativo. --}}
+          @if(in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true))
               <a href="{{ route('configuracion.garantia') }}" class="btn orders-action-neutral" title="Configurar política de garantía">
                   <i data-lucide="shield-check" aria-hidden="true"></i>
                   <span>Garantía</span>

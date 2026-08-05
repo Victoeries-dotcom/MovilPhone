@@ -10,10 +10,11 @@
 </div>
 
 @php
-    // Importes del ticket: se conectan con ordenes_servicio y con el cobro guardado al entregar.
+    // Importes del ticket: reparación es el costo total y el anticipo únicamente reduce lo pendiente.
     $anticipo = (float) ($ordenServicio->anticipo ?? 0);
     $reparacion = (float) ($cobroFinal ?? ($ordenServicio->cobro_diagnostico ?? 0));
-    $total = (float) ($totalRegistrado ?? ($anticipo + $reparacion));
+    $total = (float) ($totalRegistrado ?? $reparacion);
+    $faltante = max(0, $total - $anticipo);
 
     // Contacto alternativo: primero usa el dato capturado en la OS y después el dato del cliente.
     $contactoAlternativo = $ordenServicio->cliente_telefono_extra ?: ($ordenServicio->cliente->telefono_alternativo ?? '—');
@@ -90,7 +91,7 @@
             </div>
         </section>
 
-        {{-- Cobros: separa reparación y anticipo para que el cliente vea cómo se forma el total. --}}
+        {{-- Cobros: muestra el costo total, lo anticipado y el saldo que todavía falta pagar. --}}
         <section class="ticket-section ticket-section-cobros">
             <div class="ticket-section-title">---COBROS---</div>
             <div class="ticket-row">
@@ -101,9 +102,13 @@
                 <span>ANTICIPO PAGADO:</span>
                 <strong>${{ number_format($anticipo, 2) }}</strong>
             </div>
+            <div class="ticket-row">
+                <span>FALTANTE DEL PAGO:</span>
+                <strong>${{ number_format($faltante, 2) }}</strong>
+            </div>
         </section>
 
-        {{-- Total final: suma anticipo y reparación registrados en la entrega. --}}
+        {{-- Total final: conserva el costo completo de la reparación sin volver a sumar el anticipo. --}}
         <div class="ticket-total">
             <span>TOTAL DEL SERVICIO</span>
             <strong>${{ number_format($total, 2) }}</strong>

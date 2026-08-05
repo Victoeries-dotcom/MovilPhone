@@ -8,16 +8,12 @@ class OrdenServicio extends Model
 {
     protected $table = 'ordenes_servicio';
 
-    // Catálogo único para mostrar y validar los estados guardados en ordenes_servicio.estado.
+    // Catálogo único del panel principal: alimenta el selector y valida ordenes_servicio.estado.
     public const ESTADOS = [
         'RECIBIDO' => 'En espera',
         'EN DIAGNÓSTICO' => 'Diagnóstico',
-        'ESPERANDO AUTORIZACIÓN' => 'Esperando autorización',
-        'AUTORIZADO' => 'Autorizado',
         'EN REPARACIÓN' => 'Reparación',
-        'ESPERANDO REFACCIÓN' => 'Esperando refacción',
         'TERMINADO' => 'Listo para recoger',
-        'NOTIFICADO' => 'Notificado',
         'ENTREGADO' => 'Entregado',
         'RECHAZADO' => 'No quedó / Rechazado',
         'GARANTÍA' => 'Garantía',

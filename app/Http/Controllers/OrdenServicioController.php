@@ -652,8 +652,9 @@ class OrdenServicioController extends Controller
 
         $tecnicoEntrega = User::findOrFail($request->tecnico_entrega_id);
         $cobroFinal = (float) ($request->cobro_final ?? 0);
-        // cobro_final representa el costo completo de la reparación; el anticipo solo reduce el saldo pendiente.
-        $totalRegistrado = $cobroFinal;
+        $anticipo = (float) ($ordenServicio->anticipo ?? 0);
+        // cobro_final es el faltante pagado al entregar; junto con el anticipo forma el total del servicio.
+        $totalRegistrado = $anticipo + $cobroFinal;
 
         // Guarda tecnico_id y conecta permanentemente la orden con el técnico seleccionado.
         $ordenServicio->update([
@@ -698,8 +699,11 @@ class OrdenServicioController extends Controller
         $ordenServicio->load(['cliente', 'sucursal', 'tecnico']);
         $tecnicoEntrega = session('tecnico_entrega', $ordenServicio->tecnico->name ?? '—');
         $cobroFinal = session('cobro_final', $ordenServicio->cobro_diagnostico ?? 0);
-        // Al reabrir el ticket, conserva como total únicamente el costo completo de la reparación.
-        $totalRegistrado = session('total_registrado', $ordenServicio->cobro_diagnostico ?? 0);
+        // Al reabrir el ticket, reconstruye el total con el anticipo y el faltante guardados en la orden.
+        $totalRegistrado = session(
+            'total_registrado',
+            (float) ($ordenServicio->anticipo ?? 0) + (float) ($ordenServicio->cobro_diagnostico ?? 0)
+        );
 
         // La política se conecta con ConfiguracionController y aparece al final del ticket.
         $politica = Schema::hasTable('configuraciones')

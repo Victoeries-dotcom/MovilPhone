@@ -6,15 +6,14 @@ use PHPUnit\Framework\TestCase;
 
 class WarrantyTicketLayoutTest extends TestCase
 {
-    public function test_ticket_uses_repair_as_total_and_subtracts_the_advance_from_the_balance(): void
+    public function test_ticket_adds_the_advance_and_final_payment_to_the_service_total(): void
     {
-        // Protege la regla comercial del recibo: el anticipo reduce el saldo, pero no aumenta el total.
+        // Protege la regla comercial: anticipo y faltante pagado forman el total cobrado del servicio.
         $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/ticket-entrega.blade.php');
 
-        $this->assertStringContainsString('$total = (float) ($totalRegistrado ?? $reparacion);', $template);
-        $this->assertStringContainsString('$faltante = max(0, $total - $anticipo);', $template);
-        $this->assertStringContainsString('FALTANTE DEL PAGO:', $template);
-        $this->assertStringNotContainsString('$anticipo + $reparacion', $template);
+        $this->assertStringContainsString('$total = (float) ($totalRegistrado ?? ($anticipo + $faltante));', $template);
+        $this->assertStringContainsString('FALTANTE PAGADO:', $template);
+        $this->assertStringContainsString('number_format($total, 2)', $template);
     }
 
     public function test_warranty_policy_is_rendered_before_the_internal_ticket_number(): void

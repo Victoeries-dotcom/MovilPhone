@@ -309,12 +309,12 @@
     </div>
 </div>
 
-{{-- Modal de cobro: registra el saldo o cobro final y se conecta con movimientos_caja. --}}
+{{-- Modal de cobro: registra el faltante pagado al entregar y se conecta con movimientos_caja. --}}
 <div id="modal-entregar-cobro" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
     <div style="background:white;border-radius:14px;padding:2rem;width:100%;max-width:520px;box-shadow:0 24px 70px rgba(15,23,42,.24);">
-        <h2 style="font-size:22px;font-weight:800;color:#0f1f3d;margin:0 0 .5rem;">💵 Cobro final</h2>
-        <p style="font-size:14px;color:#64748b;margin:0 0 1.5rem;">Ingresa el monto que se cobrará al entregar el equipo.</p>
-        <label style="display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:.45rem;">Cobro final ($)</label>
+        <h2 style="font-size:22px;font-weight:800;color:#0f1f3d;margin:0 0 .5rem;">💵 Pago al entregar</h2>
+        <p style="font-size:14px;color:#64748b;margin:0 0 1.5rem;">Ingresa el faltante que el cliente paga al recibir el equipo. Se sumará al anticipo.</p>
+        <label style="display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:.45rem;">Faltante pagado ($)</label>
         <input type="number" id="entrega-cobro" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:12px 14px;border:1px solid #dbe3ef;border-radius:8px;font-size:15px;">
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
             <button type="button" class="btn" onclick="volverATecnicoEntrega()">← Atrás</button>
@@ -329,7 +329,7 @@
         <h2 style="font-size:22px;font-weight:800;color:#0f1f3d;margin:0 0 .5rem;">🧾 Confirmar entrega</h2>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Orden: <strong id="entrega-label-os"></strong></p>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Técnico: <strong id="entrega-label-tecnico"></strong></p>
-        <p style="font-size:14px;color:#64748b;margin:.35rem 0 1.25rem;">Cobro final: <strong id="entrega-label-cobro"></strong></p>
+        <p style="font-size:14px;color:#64748b;margin:.35rem 0 1.25rem;">Faltante pagado: <strong id="entrega-label-cobro"></strong></p>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.8rem;color:#1e3a8a;font-size:13px;">Al confirmar, la orden cambiará a ENTREGADO, se guardará en el historial y se generará el ticket.</div>
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
             <button type="button" class="btn" onclick="volverACobroEntrega()">← Atrás</button>

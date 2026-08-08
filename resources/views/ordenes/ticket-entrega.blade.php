@@ -10,11 +10,10 @@
 </div>
 
 @php
-    // Importes del ticket: reparación es el costo total y el anticipo únicamente reduce lo pendiente.
+    // Importes del ticket: el anticipo y el faltante cobrado al entregar forman el total del servicio.
     $anticipo = (float) ($ordenServicio->anticipo ?? 0);
-    $reparacion = (float) ($cobroFinal ?? ($ordenServicio->cobro_diagnostico ?? 0));
-    $total = (float) ($totalRegistrado ?? $reparacion);
-    $faltante = max(0, $total - $anticipo);
+    $faltante = (float) ($cobroFinal ?? ($ordenServicio->cobro_diagnostico ?? 0));
+    $total = (float) ($totalRegistrado ?? ($anticipo + $faltante));
 
     // Contacto alternativo: primero usa el dato capturado en la OS y después el dato del cliente.
     $contactoAlternativo = $ordenServicio->cliente_telefono_extra ?: ($ordenServicio->cliente->telefono_alternativo ?? '—');
@@ -91,24 +90,24 @@
             </div>
         </section>
 
-        {{-- Cobros: muestra el costo total, lo anticipado y el saldo que todavía falta pagar. --}}
+        {{-- Cobros: desglosa lo pagado por adelantado y lo liquidado al entregar. --}}
         <section class="ticket-section ticket-section-cobros">
             <div class="ticket-section-title">---COBROS---</div>
             <div class="ticket-row">
                 <span>REPARACIÓN:</span>
-                <strong>${{ number_format($reparacion, 2) }}</strong>
+                <strong>${{ number_format($total, 2) }}</strong>
             </div>
             <div class="ticket-row">
                 <span>ANTICIPO PAGADO:</span>
                 <strong>${{ number_format($anticipo, 2) }}</strong>
             </div>
             <div class="ticket-row">
-                <span>FALTANTE DEL PAGO:</span>
+                <span>FALTANTE PAGADO:</span>
                 <strong>${{ number_format($faltante, 2) }}</strong>
             </div>
         </section>
 
-        {{-- Total final: conserva el costo completo de la reparación sin volver a sumar el anticipo. --}}
+        {{-- Total final: suma una sola vez el anticipo y el faltante pagado al entregar. --}}
         <div class="ticket-total">
             <span>TOTAL DEL SERVICIO</span>
             <strong>${{ number_format($total, 2) }}</strong>

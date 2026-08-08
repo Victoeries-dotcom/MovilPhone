@@ -335,7 +335,7 @@
         6 => ['modelo'],
         7 => ['problema_reportado'],
         8 => ['contrasena_dispositivo'],
-        9 => ['estado_fisico', 'accesorios_entregados', 'anticipo', 'metodo_pago_anticipo', 'sucursal_id'],
+        9 => ['estado_fisico', 'accesorios_entregados', 'anticipo', 'cobro_diagnostico', 'metodo_pago_anticipo', 'sucursal_id'],
     ];
     $pasoInicialOs = 1;
     foreach ($camposPorPaso as $numeroPaso => $campos) {
@@ -523,7 +523,7 @@
                 </div>
             </div>
 
-            {{-- Paso 9: guarda estado_fisico, accesorios_entregados, anticipo y metodo_pago_anticipo en la orden. --}}
+            {{-- Paso 9: guarda estado fisico y los importes iniciales conectados con la orden. --}}
             <div class="os-step" id="step-9">
                 <div class="os-step-label">Paso 9 de 9</div>
                 <div class="os-step-title">Estado físico y anticipo</div>
@@ -533,6 +533,9 @@
                 <input class="os-input" type="text" name="accesorios_entregados" id="accesorios_entregados" value="{{ old('accesorios_entregados') }}" placeholder="Cargador, funda, audífonos... (opcional)">
                 <label class="os-hint" for="anticipo" style="display:block;text-transform:uppercase;font-weight:800;margin:0.75rem 0 0.4rem;">Anticipo recibido ($)</label>
                 <input class="os-input" type="number" name="anticipo" id="anticipo" value="{{ old('anticipo', 0) }}" min="0" step="0.01" placeholder="0.00" oninput="toggleMetodoAnticipo(); updateResumen();">
+                <label class="os-hint" for="cobro_diagnostico" style="display:block;text-transform:uppercase;font-weight:800;margin:0.75rem 0 0.4rem;">Diagnóstico del dispositivo ($)</label>
+                {{-- Este importe se conecta directamente con ordenes_servicio.cobro_diagnostico. --}}
+                <input class="os-input" type="number" name="cobro_diagnostico" id="cobro_diagnostico" value="{{ old('cobro_diagnostico', 0) }}" min="0" step="0.01" placeholder="0.00" oninput="updateResumen();">
 
                 {{-- Este campo oculto guarda el método seleccionado y se conecta con ordenes_servicio.metodo_pago_anticipo. --}}
                 <input type="hidden" name="metodo_pago_anticipo" id="metodo_pago_anticipo" value="{{ old('metodo_pago_anticipo', 'efectivo') }}">
@@ -553,6 +556,7 @@
                     <div>Tipo: <strong id="resumen_tipo">—</strong></div>
                     <div>Marca / Modelo: <strong id="resumen_equipo">—</strong></div>
                     <div>Anticipo: <strong id="resumen_anticipo">$0.00</strong></div>
+                    <div>Diagnóstico: <strong id="resumen_diagnostico">$0.00</strong></div>
                 </div>
 
                 <div class="os-actions">
@@ -802,12 +806,14 @@
         const marca = document.getElementById('marca').value || '';
         const modelo = document.getElementById('modelo').value || '';
         const anticipo = Number(document.getElementById('anticipo').value || 0);
+        const diagnostico = Number(document.getElementById('cobro_diagnostico').value || 0);
 
         document.getElementById('resumen_cliente').textContent = cliente;
         document.getElementById('resumen_telefono').textContent = telefono;
         document.getElementById('resumen_tipo').textContent = tipo;
         document.getElementById('resumen_equipo').textContent = [marca, modelo].filter(Boolean).join(' ') || '—';
         document.getElementById('resumen_anticipo').textContent = '$' + anticipo.toFixed(2);
+        document.getElementById('resumen_diagnostico').textContent = '$' + diagnostico.toFixed(2);
     }
 
     /*

@@ -271,6 +271,8 @@ class OrdenServicioController extends Controller
             'estado_fisico' => 'required|string|max:5000',
             'contrasena_dispositivo' => 'nullable|string|max:255',
             'anticipo' => 'nullable|numeric|min:0',
+            // El importe capturado en el asistente se guarda en ordenes_servicio.cobro_diagnostico.
+            'cobro_diagnostico' => 'nullable|numeric|min:0',
             'metodo_pago_anticipo' => ['nullable', Rule::in(['efectivo', 'transferencia', 'tarjeta'])],
         ], [
             'cliente_telefono.regex' => 'El teléfono principal debe contener exactamente 10 dígitos.',
@@ -354,7 +356,7 @@ class OrdenServicioController extends Controller
                 'estado_fisico' => $request->estado_fisico,
                 // Guarda el patrón, PIN o contraseña del equipo y se conecta con el detalle de la orden.
                 'contrasena_dispositivo' => $request->contrasena_dispositivo,
-                'cobro_diagnostico' => 0,
+                'cobro_diagnostico' => $request->cobro_diagnostico ?? 0,
                 'anticipo' => $request->anticipo ?? 0,
                 'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
             ]);

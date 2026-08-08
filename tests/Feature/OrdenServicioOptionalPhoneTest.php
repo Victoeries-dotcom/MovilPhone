@@ -85,6 +85,41 @@ class OrdenServicioOptionalPhoneTest extends TestCase
         ]);
     }
 
+    public function test_new_order_saves_the_device_diagnostic_amount(): void
+    {
+        [$usuario, $sucursal, $sesion] = $this->contextoDeSucursal();
+
+        // Comprueba que el campo numérico del asistente llegue a ordenes_servicio.cobro_diagnostico.
+        $this->actingAs($usuario)
+            ->withSession($sesion)
+            ->post(route('ordenes.store'), array_merge(
+                $this->datosOrden('CLIENTE CON DIAGNOSTICO', $sucursal->id),
+                ['cobro_diagnostico' => 200.50]
+            ))
+            ->assertRedirect(route('ordenes.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('ordenes_servicio', [
+            'cobro_diagnostico' => 200.50,
+        ]);
+    }
+
+    public function test_new_order_rejects_a_negative_device_diagnostic_amount(): void
+    {
+        [$usuario, $sucursal, $sesion] = $this->contextoDeSucursal();
+
+        // La validación del servidor impide registrar importes negativos aunque se manipule el formulario.
+        $this->actingAs($usuario)
+            ->withSession($sesion)
+            ->post(route('ordenes.store'), array_merge(
+                $this->datosOrden('CLIENTE CON DIAGNOSTICO INVALIDO', $sucursal->id),
+                ['cobro_diagnostico' => -1]
+            ))
+            ->assertSessionHasErrors('cobro_diagnostico');
+
+        $this->assertDatabaseCount('ordenes_servicio', 0);
+    }
+
     /**
      * Crea el usuario y la sucursal que exige la protección de órdenes.
      *

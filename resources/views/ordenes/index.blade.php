@@ -331,10 +331,12 @@
         </div>
         {{-- Este aviso bloquea la entrega cuando ordenes_servicio no tiene registrado el total del servicio. --}}
         <div id="entrega-aviso-sin-total" role="alert" style="display:none;background:#fef2f2;border:1px solid #ef4444;border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;color:#b91c1c;font-size:13px;font-weight:800;line-height:1.45;">
-            No colocaste el total del servicio. Registra el total del servicio antes de continuar con la entrega.
+            No colocaste el total del servicio. Registra el total del servicio antes de continuar con la entrega. (Ve a Órdenes → Editar → Guardar)
         </div>
         <label style="display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:.45rem;">Faltante pagado ($)</label>
-        <input type="number" id="entrega-cobro" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:12px 14px;border:1px solid #dbe3ef;border-radius:8px;font-size:15px;">
+        {{-- El faltante se calcula con total menos anticipo; readonly evita capturar un importe distinto por error. --}}
+        <input type="number" id="entrega-cobro" min="0" step="0.01" placeholder="0.00" readonly aria-describedby="entrega-cobro-ayuda" style="width:100%;padding:12px 14px;border:1px solid #dbe3ef;border-radius:8px;font-size:15px;background:#f8fafc;color:#0f1f3d;font-weight:800;cursor:not-allowed;">
+        <p id="entrega-cobro-ayuda" style="margin:.5rem 0 0;color:#64748b;font-size:12px;line-height:1.4;">Este importe se calcula automáticamente: precio del servicio menos anticipo pagado.</p>
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
             <button type="button" class="btn" onclick="volverATecnicoEntrega()">← Atrás</button>
             <button type="button" id="entrega-boton-siguiente" class="btn btn-primary" onclick="pasarAConfirmarEntrega()">Siguiente →</button>
@@ -543,10 +545,8 @@ function abrirModalEntregar(id, numeroOs, precioServicio, anticipo, cobroActual,
     const faltanteEsperado = Math.max(0, entregaPrecioServicio - entregaAnticipo);
     const tecnicoSelect = document.getElementById('entrega-tecnico');
     tecnicoSelect.value = tecnicoId ? String(tecnicoId) : '';
-    // Un pago previamente guardado tiene prioridad; en una entrega nueva propone automáticamente el faltante.
-    document.getElementById('entrega-cobro').value = Number(cobroActual || 0) > 0
-        ? Number(cobroActual).toFixed(2)
-        : faltanteEsperado.toFixed(2);
+    // El cobro final siempre coincide con el faltante que el servidor valida para generar el ticket.
+    document.getElementById('entrega-cobro').value = faltanteEsperado.toFixed(2);
     document.getElementById('entrega-precio-servicio').textContent = '$' + entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-anticipo-pagado').textContent = '$' + entregaAnticipo.toFixed(2);
     document.getElementById('entrega-falta-pagar').textContent = '$' + faltanteEsperado.toFixed(2);
@@ -606,7 +606,9 @@ function pasarAConfirmarEntrega() {
         return;
     }
 
-    const cobro = parseFloat(document.getElementById('entrega-cobro').value) || 0;
+    // Recalcula el dato antes de enviarlo para proteger el flujo incluso si el HTML fue manipulado.
+    const cobro = Math.max(0, entregaPrecioServicio - entregaAnticipo);
+    document.getElementById('entrega-cobro').value = cobro.toFixed(2);
     document.getElementById('entrega-cobro-hidden').value = cobro.toFixed(2);
     document.getElementById('entrega-label-os').textContent = entregaNumeroOs;
     document.getElementById('entrega-label-tecnico').textContent = document.getElementById('entrega-tecnico-nombre-hidden').value;

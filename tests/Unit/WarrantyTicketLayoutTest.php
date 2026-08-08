@@ -34,8 +34,20 @@ class WarrantyTicketLayoutTest extends TestCase
         $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/index.blade.php');
 
         $this->assertStringContainsString('No colocaste el total del servicio.', $template);
+        $this->assertStringContainsString('(Ve a Órdenes → Editar → Guardar)', $template);
         $this->assertStringContainsString("botonSiguiente.disabled = sinTotalServicio", $template);
         $this->assertStringContainsString('if (entregaPrecioServicio <= 0)', $template);
+    }
+
+    public function test_delivery_payment_is_calculated_and_cannot_be_overwritten(): void
+    {
+        // Evita que el usuario capture el total completo cuando solo debe registrar el saldo restante.
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/index.blade.php');
+
+        $this->assertStringContainsString('id="entrega-cobro"', $template);
+        $this->assertStringContainsString('readonly aria-describedby="entrega-cobro-ayuda"', $template);
+        $this->assertStringContainsString("document.getElementById('entrega-cobro').value = faltanteEsperado.toFixed(2);", $template);
+        $this->assertStringContainsString('const cobro = Math.max(0, entregaPrecioServicio - entregaAnticipo);', $template);
     }
 
     public function test_new_order_places_device_diagnostic_before_advance(): void

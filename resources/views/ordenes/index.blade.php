@@ -329,11 +329,15 @@
                 <span style="font-weight:800;">Falta por pagar:</span><strong id="entrega-falta-pagar">$0.00</strong>
             </div>
         </div>
+        {{-- Este aviso bloquea la entrega cuando ordenes_servicio no tiene registrado el total del servicio. --}}
+        <div id="entrega-aviso-sin-total" role="alert" style="display:none;background:#fef2f2;border:1px solid #ef4444;border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;color:#b91c1c;font-size:13px;font-weight:800;line-height:1.45;">
+            No colocaste el total del servicio. Registra el total del servicio antes de continuar con la entrega.
+        </div>
         <label style="display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:.45rem;">Faltante pagado ($)</label>
         <input type="number" id="entrega-cobro" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:12px 14px;border:1px solid #dbe3ef;border-radius:8px;font-size:15px;">
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
             <button type="button" class="btn" onclick="volverATecnicoEntrega()">← Atrás</button>
-            <button type="button" class="btn btn-primary" onclick="pasarAConfirmarEntrega()">Siguiente →</button>
+            <button type="button" id="entrega-boton-siguiente" class="btn btn-primary" onclick="pasarAConfirmarEntrega()">Siguiente →</button>
         </div>
     </div>
 </div>
@@ -546,8 +550,20 @@ function abrirModalEntregar(id, numeroOs, precioServicio, anticipo, cobroActual,
     document.getElementById('entrega-precio-servicio').textContent = '$' + entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-anticipo-pagado').textContent = '$' + entregaAnticipo.toFixed(2);
     document.getElementById('entrega-falta-pagar').textContent = '$' + faltanteEsperado.toFixed(2);
+    actualizarBloqueoTotalServicio();
     document.getElementById('modal-entregar-tecnico').style.display = 'flex';
     setTimeout(() => tecnicoSelect.focus(), 100);
+}
+
+// Muestra el aviso rojo y bloquea el siguiente paso hasta que la OS tenga un total mayor que cero.
+function actualizarBloqueoTotalServicio() {
+    const sinTotalServicio = entregaPrecioServicio <= 0;
+    const aviso = document.getElementById('entrega-aviso-sin-total');
+    const botonSiguiente = document.getElementById('entrega-boton-siguiente');
+
+    aviso.style.display = sinTotalServicio ? 'block' : 'none';
+    botonSiguiente.disabled = sinTotalServicio;
+    botonSiguiente.setAttribute('aria-disabled', String(sinTotalServicio));
 }
 
 // Cierra todos los pasos del modal sin guardar cambios.
@@ -584,6 +600,12 @@ function volverATecnicoEntrega() {
 
 // Prepara el resumen final antes de enviar la entrega al servidor.
 function pasarAConfirmarEntrega() {
+    // Esta segunda validación evita continuar aunque se intente ejecutar la función fuera del botón visible.
+    if (entregaPrecioServicio <= 0) {
+        document.getElementById('entrega-aviso-sin-total').style.display = 'block';
+        return;
+    }
+
     const cobro = parseFloat(document.getElementById('entrega-cobro').value) || 0;
     document.getElementById('entrega-cobro-hidden').value = cobro.toFixed(2);
     document.getElementById('entrega-label-os').textContent = entregaNumeroOs;

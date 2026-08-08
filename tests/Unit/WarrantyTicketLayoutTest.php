@@ -28,6 +28,16 @@ class WarrantyTicketLayoutTest extends TestCase
         $this->assertStringContainsString('faltanteEsperado.toFixed(2)', $template);
     }
 
+    public function test_delivery_modal_blocks_progress_when_service_total_is_missing(): void
+    {
+        // El aviso visual y la validación JavaScript deben impedir llegar a la confirmación con total en cero.
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/index.blade.php');
+
+        $this->assertStringContainsString('No colocaste el total del servicio.', $template);
+        $this->assertStringContainsString("botonSiguiente.disabled = sinTotalServicio", $template);
+        $this->assertStringContainsString('if (entregaPrecioServicio <= 0)', $template);
+    }
+
     public function test_new_order_places_device_diagnostic_before_advance(): void
     {
         // Conserva el orden visual solicitado sin cambiar los nombres enviados al controlador.

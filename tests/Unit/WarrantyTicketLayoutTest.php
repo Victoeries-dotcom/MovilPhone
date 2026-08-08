@@ -28,6 +28,18 @@ class WarrantyTicketLayoutTest extends TestCase
         $this->assertStringContainsString('faltanteEsperado.toFixed(2)', $template);
     }
 
+    public function test_new_order_places_device_diagnostic_before_advance(): void
+    {
+        // Conserva el orden visual solicitado sin cambiar los nombres enviados al controlador.
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/create.blade.php');
+        $diagnosticPosition = strpos($template, 'Diagnóstico del dispositivo ($)');
+        $advancePosition = strpos($template, 'Anticipo recibido ($)');
+
+        $this->assertNotFalse($diagnosticPosition);
+        $this->assertNotFalse($advancePosition);
+        $this->assertLessThan($advancePosition, $diagnosticPosition);
+    }
+
     public function test_warranty_policy_is_rendered_before_the_internal_ticket_number(): void
     {
         // Revisa el orden real del recibo: política al final del contenido y folio inmediatamente después.

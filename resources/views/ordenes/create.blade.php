@@ -531,11 +531,11 @@
                 <textarea class="os-textarea" name="estado_fisico" id="estado_fisico" placeholder="Golpes, rayones, pantalla rota..." required>{{ old('estado_fisico') }}</textarea>
                 <label class="os-hint" for="accesorios_entregados" style="display:block;text-transform:uppercase;font-weight:800;margin:0.75rem 0 0.4rem;">Accesorios que entrega</label>
                 <input class="os-input" type="text" name="accesorios_entregados" id="accesorios_entregados" value="{{ old('accesorios_entregados') }}" placeholder="Cargador, funda, audífonos... (opcional)">
-                <label class="os-hint" for="anticipo" style="display:block;text-transform:uppercase;font-weight:800;margin:0.75rem 0 0.4rem;">Anticipo recibido ($)</label>
-                <input class="os-input" type="number" name="anticipo" id="anticipo" value="{{ old('anticipo', 0) }}" min="0" step="0.01" placeholder="0.00" oninput="toggleMetodoAnticipo(); updateResumen();">
                 <label class="os-hint" for="cobro_diagnostico" style="display:block;text-transform:uppercase;font-weight:800;margin:0.75rem 0 0.4rem;">Diagnóstico del dispositivo ($)</label>
                 {{-- Este importe se conecta directamente con ordenes_servicio.cobro_diagnostico. --}}
                 <input class="os-input" type="number" name="cobro_diagnostico" id="cobro_diagnostico" value="{{ old('cobro_diagnostico', 0) }}" min="0" step="0.01" placeholder="0.00" oninput="updateResumen();">
+                <label class="os-hint" for="anticipo" style="display:block;text-transform:uppercase;font-weight:800;margin:0.75rem 0 0.4rem;">Anticipo recibido ($)</label>
+                <input class="os-input" type="number" name="anticipo" id="anticipo" value="{{ old('anticipo', 0) }}" min="0" step="0.01" placeholder="0.00" oninput="toggleMetodoAnticipo(); updateResumen();">
 
                 {{-- Este campo oculto guarda el método seleccionado y se conecta con ordenes_servicio.metodo_pago_anticipo. --}}
                 <input type="hidden" name="metodo_pago_anticipo" id="metodo_pago_anticipo" value="{{ old('metodo_pago_anticipo', 'efectivo') }}">

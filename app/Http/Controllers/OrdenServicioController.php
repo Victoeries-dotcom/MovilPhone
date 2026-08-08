@@ -920,9 +920,11 @@ class OrdenServicioController extends Controller
         return $prefix.'-'.$year.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
     }
 
-    // Eliminar OS
+    // Elimina la OS únicamente cuando users.rol identifica al Super Usuario autenticado.
     public function destroy(OrdenServicio $ordenServicio)
     {
+        abort_unless(auth()->user()?->rol === 'superusuario', 403);
+
         $this->asegurarSucursalActiva($ordenServicio);
         $numeroOs = $ordenServicio->numero_os;
         $sucursalId = $ordenServicio->sucursal_id;

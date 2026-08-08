@@ -230,13 +230,16 @@
                 <a href="{{ route('ordenes.edit', $orden) }}" class="btn">
                     <i data-lucide="pencil" aria-hidden="true"></i><span>Editar</span>
                 </a>
-                <form method="POST" action="{{ route('ordenes.destroy', $orden) }}"
-                    onsubmit="return confirmarEliminacionSistema(event, 'la orden de servicio', '{{ addslashes($orden->numero_os) }}');">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-danger">
-                        <i data-lucide="trash-2" aria-hidden="true"></i><span>Eliminar</span>
-                    </button>
-                </form>
+                {{-- users.rol limita la acción destructiva visible exclusivamente al Super Usuario. --}}
+                @if(auth()->user()?->rol === 'superusuario')
+                    <form method="POST" action="{{ route('ordenes.destroy', $orden) }}" data-order-delete-form
+                        onsubmit="return confirmarEliminacionSistema(event, 'la orden de servicio', '{{ addslashes($orden->numero_os) }}');">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-danger">
+                            <i data-lucide="trash-2" aria-hidden="true"></i><span>Eliminar</span>
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
     </article>

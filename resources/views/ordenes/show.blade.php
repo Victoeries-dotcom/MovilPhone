@@ -157,11 +157,14 @@ $anticipoDisponible = (float) ($ordenServicio->anticipo ?? 0);
 
 <div style="display:flex;gap:8px">
     <a href="{{ route('ordenes.edit', $ordenServicio) }}" class="btn btn-primary">Editar</a>
-    <form method="POST" action="{{ route('ordenes.destroy', $ordenServicio) }}"
-        onsubmit="return confirmarEliminacionSistema(event, 'la orden de servicio', '{{ addslashes($ordenServicio->numero_os) }}');">
-        @csrf @method('DELETE')
-        <button type="submit" class="btn btn-danger">Eliminar</button>
-    </form>
+    {{-- El detalle replica la misma autorización visual basada en users.rol. --}}
+    @if(auth()->user()?->rol === 'superusuario')
+        <form method="POST" action="{{ route('ordenes.destroy', $ordenServicio) }}" data-order-delete-form
+            onsubmit="return confirmarEliminacionSistema(event, 'la orden de servicio', '{{ addslashes($ordenServicio->numero_os) }}');">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+        </form>
+    @endif
 </div>
 
 <script>

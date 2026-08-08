@@ -602,7 +602,9 @@ function volverACobroEntrega() {
 // Envía la entrega a Laravel; el controlador actualiza estado, historial, caja y ticket.
 function confirmarEntregaEquipo() {
     const form = document.getElementById('form-entrega-equipo');
-    form.action = '/ordenes/' + entregaOrdenId + '/entregar';
+    // Laravel genera la URL completa para conservar la carpeta base desde la que se abre MovilPhone.
+    const urlEntrega = @json(route('ordenes.entregar', ['ordenServicio' => '__ORDEN_ID__']));
+    form.action = urlEntrega.replace('__ORDEN_ID__', encodeURIComponent(entregaOrdenId));
     form.submit();
 }
 

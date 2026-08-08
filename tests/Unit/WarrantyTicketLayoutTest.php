@@ -33,10 +33,10 @@ class WarrantyTicketLayoutTest extends TestCase
         // El aviso visual y la validación JavaScript deben impedir llegar a la confirmación con total en cero.
         $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/index.blade.php');
 
-        $this->assertStringContainsString('No colocaste el total del servicio.', $template);
-        $this->assertStringContainsString('(Ve a Órdenes → Editar → Guardar)', $template);
-        $this->assertStringContainsString("botonSiguiente.disabled = sinTotalServicio", $template);
-        $this->assertStringContainsString('if (entregaPrecioServicio <= 0)', $template);
+        $this->assertStringContainsString('Editar precio total del servicio ($)', $template);
+        $this->assertStringContainsString('name="presupuesto_total"', $template);
+        $this->assertStringContainsString('botonSiguiente.disabled = precioInvalido', $template);
+        $this->assertStringContainsString('entregaPrecioServicio < entregaAnticipo', $template);
     }
 
     public function test_delivery_payment_is_calculated_and_cannot_be_overwritten(): void

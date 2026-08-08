@@ -662,19 +662,15 @@ class OrdenServicioController extends Controller
                         ->where('sucursal_id', $ordenServicio->sucursal_id);
                 }),
             ],
+            // presupuesto_total es el mismo campo que usa Editar OS; guardarlo aquí mantiene ambas pantallas sincronizadas.
+            'presupuesto_total' => 'required|numeric|min:0.01|max:999999.99',
             'cobro_final' => 'required|numeric|min:0',
         ]);
 
         $tecnicoEntrega = User::findOrFail($request->tecnico_entrega_id);
         $cobroFinal = (float) ($request->cobro_final ?? 0);
-        $precioServicio = $ordenServicio->precioServicio();
+        $precioServicio = (float) $request->presupuesto_total;
         $anticipo = (float) ($ordenServicio->anticipo ?? 0);
-
-        if ($precioServicio <= 0) {
-            throw ValidationException::withMessages([
-                'cobro_final' => 'Registra el precio del servicio antes de entregar el equipo.',
-            ]);
-        }
 
         if ($anticipo - $precioServicio >= 0.01) {
             throw ValidationException::withMessages([
@@ -689,11 +685,13 @@ class OrdenServicioController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($ordenServicio, $tecnicoEntrega, $cobroFinal): void {
+        DB::transaction(function () use ($ordenServicio, $tecnicoEntrega, $cobroFinal, $precioServicio): void {
             // pago_final conserva la liquidación sin destruir ordenes_servicio.cobro_diagnostico.
             $ordenServicio->update([
                 'estado' => 'ENTREGADO',
                 'fecha_entrega_real' => now(),
+                // Este valor también alimenta Editar OS y el total impreso en el ticket.
+                'presupuesto_total' => $precioServicio,
                 'pago_final' => $cobroFinal,
                 'tecnico_id' => $tecnicoEntrega->id,
             ]);

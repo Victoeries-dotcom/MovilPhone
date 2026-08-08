@@ -329,9 +329,16 @@
                 <span style="font-weight:800;">Falta por pagar:</span><strong id="entrega-falta-pagar">$0.00</strong>
             </div>
         </div>
-        {{-- Este aviso bloquea la entrega cuando ordenes_servicio no tiene registrado el total del servicio. --}}
+        {{-- Este panel edita presupuesto_total, el mismo campo que muestra Editar OS y usa el ticket. --}}
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+            <label for="entrega-precio-input" style="display:block;font-size:13px;font-weight:800;color:#1e3a8a;margin-bottom:.45rem;">Editar precio total del servicio ($)</label>
+            <input type="number" id="entrega-precio-input" min="0.01" max="999999.99" step="0.01" inputmode="decimal" placeholder="0.00" aria-describedby="entrega-precio-ayuda"
+                style="width:100%;padding:12px 14px;border:1px solid #93c5fd;border-radius:8px;font-size:15px;background:white;color:#0f1f3d;font-weight:800;box-sizing:border-box;">
+            <p id="entrega-precio-ayuda" style="margin:.5rem 0 0;color:#475569;font-size:12px;line-height:1.4;">Se guardará en la orden, se actualizará automáticamente en Editar y aparecerá en el ticket.</p>
+        </div>
+        {{-- Este aviso bloquea la entrega hasta capturar un precio válido que cubra el anticipo recibido. --}}
         <div id="entrega-aviso-sin-total" role="alert" style="display:none;background:#fef2f2;border:1px solid #ef4444;border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;color:#b91c1c;font-size:13px;font-weight:800;line-height:1.45;">
-            No colocaste el total del servicio. Registra el total del servicio antes de continuar con la entrega. (Ve a Órdenes → Editar → Guardar)
+            Captura un precio del servicio mayor que cero y que no sea menor al anticipo pagado.
         </div>
         <label style="display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:.45rem;">Faltante pagado ($)</label>
         {{-- El faltante se calcula con total menos anticipo; readonly evita capturar un importe distinto por error. --}}
@@ -350,6 +357,7 @@
         <h2 style="font-size:22px;font-weight:800;color:#0f1f3d;margin:0 0 .5rem;">🧾 Confirmar entrega</h2>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Orden: <strong id="entrega-label-os"></strong></p>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Técnico: <strong id="entrega-label-tecnico"></strong></p>
+        <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Precio del servicio: <strong id="entrega-label-precio"></strong></p>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0 1.25rem;">Faltante pagado: <strong id="entrega-label-cobro"></strong></p>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.8rem;color:#1e3a8a;font-size:13px;">Al confirmar, la orden cambiará a ENTREGADO, se guardará en el historial y se generará el ticket.</div>
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
@@ -437,6 +445,8 @@
     {{-- Laravel recibe el ID y vuelve a validar que corresponda a la sucursal de la orden. --}}
     <input type="hidden" name="tecnico_entrega_id" id="entrega-tecnico-id-hidden">
     <input type="hidden" id="entrega-tecnico-nombre-hidden">
+    {{-- Envía el precio al mismo campo presupuesto_total que usa el formulario Editar OS. --}}
+    <input type="hidden" name="presupuesto_total" id="entrega-precio-hidden">
     <input type="hidden" name="cobro_final" id="entrega-cobro-hidden">
 </form>
 
@@ -547,6 +557,7 @@ function abrirModalEntregar(id, numeroOs, precioServicio, anticipo, cobroActual,
     tecnicoSelect.value = tecnicoId ? String(tecnicoId) : '';
     // El cobro final siempre coincide con el faltante que el servidor valida para generar el ticket.
     document.getElementById('entrega-cobro').value = faltanteEsperado.toFixed(2);
+    document.getElementById('entrega-precio-input').value = entregaPrecioServicio > 0 ? entregaPrecioServicio.toFixed(2) : '';
     document.getElementById('entrega-precio-servicio').textContent = '$' + entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-anticipo-pagado').textContent = '$' + entregaAnticipo.toFixed(2);
     document.getElementById('entrega-falta-pagar').textContent = '$' + faltanteEsperado.toFixed(2);
@@ -555,16 +566,24 @@ function abrirModalEntregar(id, numeroOs, precioServicio, anticipo, cobroActual,
     setTimeout(() => tecnicoSelect.focus(), 100);
 }
 
-// Muestra el aviso rojo y bloquea el siguiente paso hasta que la OS tenga un total mayor que cero.
+// Recalcula el faltante mientras se edita y bloquea valores vacíos o menores al anticipo.
 function actualizarBloqueoTotalServicio() {
-    const sinTotalServicio = entregaPrecioServicio <= 0;
+    const precioCapturado = Number(document.getElementById('entrega-precio-input').value);
+    entregaPrecioServicio = Number.isFinite(precioCapturado) ? precioCapturado : 0;
+    const precioInvalido = entregaPrecioServicio <= 0 || entregaPrecioServicio < entregaAnticipo;
+    const faltanteEsperado = Math.max(0, entregaPrecioServicio - entregaAnticipo);
     const aviso = document.getElementById('entrega-aviso-sin-total');
     const botonSiguiente = document.getElementById('entrega-boton-siguiente');
 
-    aviso.style.display = sinTotalServicio ? 'block' : 'none';
-    botonSiguiente.disabled = sinTotalServicio;
-    botonSiguiente.setAttribute('aria-disabled', String(sinTotalServicio));
+    document.getElementById('entrega-precio-servicio').textContent = '$' + Math.max(0, entregaPrecioServicio).toFixed(2);
+    document.getElementById('entrega-falta-pagar').textContent = '$' + faltanteEsperado.toFixed(2);
+    document.getElementById('entrega-cobro').value = faltanteEsperado.toFixed(2);
+    aviso.style.display = precioInvalido ? 'block' : 'none';
+    botonSiguiente.disabled = precioInvalido;
+    botonSiguiente.setAttribute('aria-disabled', String(precioInvalido));
 }
+
+document.getElementById('entrega-precio-input')?.addEventListener('input', actualizarBloqueoTotalServicio);
 
 // Cierra todos los pasos del modal sin guardar cambios.
 function cerrarModalEntrega() {
@@ -601,17 +620,21 @@ function volverATecnicoEntrega() {
 // Prepara el resumen final antes de enviar la entrega al servidor.
 function pasarAConfirmarEntrega() {
     // Esta segunda validación evita continuar aunque se intente ejecutar la función fuera del botón visible.
-    if (entregaPrecioServicio <= 0) {
+    actualizarBloqueoTotalServicio();
+    if (entregaPrecioServicio <= 0 || entregaPrecioServicio < entregaAnticipo) {
         document.getElementById('entrega-aviso-sin-total').style.display = 'block';
+        document.getElementById('entrega-precio-input').focus();
         return;
     }
 
     // Recalcula el dato antes de enviarlo para proteger el flujo incluso si el HTML fue manipulado.
     const cobro = Math.max(0, entregaPrecioServicio - entregaAnticipo);
     document.getElementById('entrega-cobro').value = cobro.toFixed(2);
+    document.getElementById('entrega-precio-hidden').value = entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-cobro-hidden').value = cobro.toFixed(2);
     document.getElementById('entrega-label-os').textContent = entregaNumeroOs;
     document.getElementById('entrega-label-tecnico').textContent = document.getElementById('entrega-tecnico-nombre-hidden').value;
+    document.getElementById('entrega-label-precio').textContent = '$' + entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-label-cobro').textContent = '$' + cobro.toFixed(2);
     document.getElementById('modal-entregar-cobro').style.display = 'none';
     document.getElementById('modal-entregar-confirmar').style.display = 'flex';

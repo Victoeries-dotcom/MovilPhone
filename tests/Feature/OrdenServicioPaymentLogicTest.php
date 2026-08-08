@@ -13,16 +13,17 @@ class OrdenServicioPaymentLogicTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_delivery_preserves_diagnostic_and_saves_exact_final_payment(): void
+    public function test_delivery_updates_service_price_and_saves_exact_final_payment(): void
     {
         [$usuario, $tecnico, $sucursal, $orden] = $this->contextoDeEntrega();
 
-        // Caso comercial solicitado: precio $500 menos anticipo $200 exige un pago final de $300.
+        // El panel cambia el precio de $500 a $650; con $200 de anticipo exige exactamente $450 al entregar.
         $this->actingAs($usuario)
             ->withSession(['sucursal_id' => $sucursal->id, 'sucursal_nombre' => $sucursal->nombre])
             ->post(route('ordenes.entregar', $orden), [
                 'tecnico_entrega_id' => $tecnico->id,
-                'cobro_final' => 300,
+                'presupuesto_total' => 650,
+                'cobro_final' => 450,
             ])
             ->assertRedirect(route('ordenes.ticketEntrega', $orden))
             ->assertSessionHasNoErrors();
@@ -31,13 +32,14 @@ class OrdenServicioPaymentLogicTest extends TestCase
             'id' => $orden->id,
             'estado' => 'ENTREGADO',
             'cobro_diagnostico' => 500,
-            'presupuesto_total' => 500,
+            // presupuesto_total es el mismo valor que muestra después el formulario Editar OS.
+            'presupuesto_total' => 650,
             'anticipo' => 200,
-            'pago_final' => 300,
+            'pago_final' => 450,
         ]);
         $this->assertDatabaseHas('movimientos_caja', [
             'os_id' => $orden->id,
-            'monto' => 500,
+            'monto' => 650,
             'anticipo' => 200,
             'saldo_pendiente' => 0,
         ]);
@@ -52,6 +54,8 @@ class OrdenServicioPaymentLogicTest extends TestCase
             ->withSession(['sucursal_id' => $sucursal->id, 'sucursal_nombre' => $sucursal->nombre])
             ->post(route('ordenes.entregar', $orden), [
                 'tecnico_entrega_id' => $tecnico->id,
+                // Conserva el precio actual para probar únicamente el rechazo de un pago incorrecto.
+                'presupuesto_total' => 500,
                 'cobro_final' => 500,
             ])
             ->assertSessionHasErrors([

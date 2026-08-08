@@ -16,6 +16,18 @@ class WarrantyTicketLayoutTest extends TestCase
         $this->assertStringContainsString('number_format($total, 2)', $template);
     }
 
+    public function test_delivery_modal_shows_service_price_advance_and_remaining_balance(): void
+    {
+        // Verifica que el paso posterior al técnico explique cómo se obtiene el faltante antes de cobrarlo.
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/index.blade.php');
+
+        $this->assertStringContainsString('Precio del servicio:', $template);
+        $this->assertStringContainsString('Anticipo pagado:', $template);
+        $this->assertStringContainsString('Falta por pagar:', $template);
+        $this->assertStringContainsString('Math.max(0, entregaPrecioServicio - entregaAnticipo)', $template);
+        $this->assertStringContainsString("faltanteEsperado.toFixed(2)", $template);
+    }
+
     public function test_warranty_policy_is_rendered_before_the_internal_ticket_number(): void
     {
         // Revisa el orden real del recibo: política al final del contenido y folio inmediatamente después.

@@ -206,7 +206,7 @@
                 @if($orden->estado === 'TERMINADO')
                     {{-- Entregar abre el flujo que registra técnico, cobro final y movimiento de Caja. --}}
                     <button type="button" class="btn btn-success"
-                        onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ $orden->cobro_diagnostico ?? 0 }}, {{ $orden->tecnico_id ?? 'null' }})">
+                        onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ (float) ($orden->presupuesto_total ?? 0) }}, {{ (float) ($orden->anticipo ?? 0) }}, {{ (float) ($orden->cobro_diagnostico ?? 0) }}, {{ $orden->tecnico_id ?? 'null' }})">
                         <i data-lucide="package-check" aria-hidden="true"></i><span>Entregar</span>
                     </button>
                 @endif
@@ -313,7 +313,19 @@
 <div id="modal-entregar-cobro" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
     <div style="background:white;border-radius:14px;padding:2rem;width:100%;max-width:520px;box-shadow:0 24px 70px rgba(15,23,42,.24);">
         <h2 style="font-size:22px;font-weight:800;color:#0f1f3d;margin:0 0 .5rem;">💵 Pago al entregar</h2>
-        <p style="font-size:14px;color:#64748b;margin:0 0 1.5rem;">Ingresa el faltante que el cliente paga al recibir el equipo. Se sumará al anticipo.</p>
+        <p style="font-size:14px;color:#64748b;margin:0 0 1rem;">Ingresa el faltante que el cliente paga al recibir el equipo. Se sumará al anticipo.</p>
+        {{-- Resumen conectado con presupuesto_total y anticipo para mostrar la liquidación antes de entregar. --}}
+        <div style="background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px;padding:1rem;margin-bottom:1.25rem;display:grid;gap:.65rem;">
+            <div style="display:flex;justify-content:space-between;gap:1rem;font-size:14px;color:#334155;">
+                <span>Precio del servicio:</span><strong id="entrega-precio-servicio">$0.00</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:1rem;font-size:14px;color:#334155;">
+                <span>Anticipo pagado:</span><strong id="entrega-anticipo-pagado">$0.00</strong>
+            </div>
+            <div style="border-top:1px solid #cbd5e1;padding-top:.65rem;display:flex;justify-content:space-between;gap:1rem;font-size:15px;color:#0f1f3d;">
+                <span style="font-weight:800;">Falta por pagar:</span><strong id="entrega-falta-pagar">$0.00</strong>
+            </div>
+        </div>
         <label style="display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:.45rem;">Faltante pagado ($)</label>
         <input type="number" id="entrega-cobro" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:12px 14px;border:1px solid #dbe3ef;border-radius:8px;font-size:15px;">
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
@@ -512,14 +524,25 @@ function confirmarRechazoOrden() {
 // Variables temporales del modal de entrega; conectan los pasos visuales con el formulario oculto.
 let entregaOrdenId = null;
 let entregaNumeroOs = '';
+let entregaPrecioServicio = 0;
+let entregaAnticipo = 0;
 
-// Abre el primer paso del modal cuando la OS está lista para recoger.
-function abrirModalEntregar(id, numeroOs, cobroActual, tecnicoId = null) {
+// Abre el flujo y conserva los importes de la OS para el resumen posterior a la selección del técnico.
+function abrirModalEntregar(id, numeroOs, precioServicio, anticipo, cobroActual, tecnicoId = null) {
     entregaOrdenId = id;
     entregaNumeroOs = numeroOs;
+    entregaPrecioServicio = Math.max(0, Number(precioServicio || 0));
+    entregaAnticipo = Math.max(0, Number(anticipo || 0));
+    const faltanteEsperado = Math.max(0, entregaPrecioServicio - entregaAnticipo);
     const tecnicoSelect = document.getElementById('entrega-tecnico');
     tecnicoSelect.value = tecnicoId ? String(tecnicoId) : '';
-    document.getElementById('entrega-cobro').value = Number(cobroActual || 0) > 0 ? Number(cobroActual).toFixed(2) : '';
+    // Un pago previamente guardado tiene prioridad; en una entrega nueva propone automáticamente el faltante.
+    document.getElementById('entrega-cobro').value = Number(cobroActual || 0) > 0
+        ? Number(cobroActual).toFixed(2)
+        : faltanteEsperado.toFixed(2);
+    document.getElementById('entrega-precio-servicio').textContent = '$' + entregaPrecioServicio.toFixed(2);
+    document.getElementById('entrega-anticipo-pagado').textContent = '$' + entregaAnticipo.toFixed(2);
+    document.getElementById('entrega-falta-pagar').textContent = '$' + faltanteEsperado.toFixed(2);
     document.getElementById('modal-entregar-tecnico').style.display = 'flex';
     setTimeout(() => tecnicoSelect.focus(), 100);
 }

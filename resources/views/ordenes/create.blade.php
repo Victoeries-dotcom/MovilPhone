@@ -423,15 +423,15 @@
                 </div>
             </div>
 
-            {{-- Paso 2: guarda cliente_telefono y lo conecta con clientes.telefono_principal. --}}
+            {{-- Paso 2: el contacto es opcional; si se captura, identifica al cliente por teléfono. --}}
             <div class="os-step" id="step-2">
                 <div class="os-step-label">Paso 2 de 9</div>
-                <div class="os-step-title">¿Cuál es su teléfono?</div>
-                <input class="os-input" type="tel" name="cliente_telefono" id="cliente_telefono" value="{{ old('cliente_telefono') }}" inputmode="numeric" autocomplete="tel" minlength="10" maxlength="10" pattern="[0-9]{10}" title="Escribe exactamente 10 dígitos." placeholder="9990000000" required>
-                <div class="os-hint">Escribe exactamente 10 dígitos, sin espacios ni guiones.</div>
+                <div class="os-step-title">¿Cuál es su teléfono? <span style="font-size:16px;font-weight:600;color:#64748b;">(opcional)</span></div>
+                <input class="os-input" type="tel" name="cliente_telefono" id="cliente_telefono" value="{{ old('cliente_telefono') }}" inputmode="numeric" autocomplete="tel" minlength="10" maxlength="10" pattern="[0-9]{10}" title="Si lo capturas, escribe exactamente 10 dígitos." placeholder="9990000000">
+                <div class="os-hint">Puedes continuar sin proporcionar un número. Si capturas uno, escribe exactamente 10 dígitos.</div>
                 <div class="os-actions">
                     <button type="button" class="os-btn os-btn-secondary" onclick="prevStep(2)">Atrás</button>
-                    <button type="button" class="os-btn os-btn-primary" onclick="nextStep(2)">Continuar</button>
+                    <button type="button" class="os-btn os-btn-primary" onclick="nextStep(2, false)">Continuar</button>
                 </div>
             </div>
 
@@ -855,7 +855,7 @@
         }
 
         event.preventDefault();
-        const optionalStep = currentStep === 3 || currentStep === 8;
+        const optionalStep = currentStep === 2 || currentStep === 3 || currentStep === 8;
         nextStep(currentStep, !optionalStep);
     });
 

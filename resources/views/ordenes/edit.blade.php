@@ -40,12 +40,16 @@
             </div>
 
             <div class="form-group">
-                <label>Teléfono principal *</label>
-                {{-- Se conecta con clientes.telefono_principal y conserva el dato del paso 2 de Nueva OS. --}}
+                <label>Teléfono principal (opcional)</label>
+                {{-- Conserva en clientes.telefono_principal el contacto opcional capturado en Nueva OS. --}}
                 <input
                     type="tel"
                     name="cliente_telefono"
-                    required
+                    inputmode="numeric"
+                    minlength="10"
+                    maxlength="10"
+                    pattern="[0-9]{10}"
+                    title="Si lo capturas, escribe exactamente 10 dígitos."
                     value="{{ old('cliente_telefono', $ordenServicio->cliente->telefono_principal ?? '') }}"
                 >
             </div>

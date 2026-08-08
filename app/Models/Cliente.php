@@ -35,7 +35,9 @@ class Cliente extends Model
     protected static function booted(): void
     {
         static::saving(function (Cliente $cliente) {
-            $cliente->telefono_normalizado = static::normalizarTelefono($cliente->telefono_principal);
+            // Sin teléfono conserva NULL para permitir varios clientes anónimos sin compartir una llave vacía.
+            $telefonoNormalizado = static::normalizarTelefono($cliente->telefono_principal);
+            $cliente->telefono_normalizado = $telefonoNormalizado !== '' ? $telefonoNormalizado : null;
         });
     }
 

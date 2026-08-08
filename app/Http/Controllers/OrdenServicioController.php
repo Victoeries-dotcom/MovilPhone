@@ -226,8 +226,10 @@ class OrdenServicioController extends Controller
     // Guardar nueva OS
     public function store(Request $request)
     {
-        // Crea la llave telefónica canónica que conecta la OS con un solo cliente.
-        $telefonoNormalizado = Cliente::normalizarTelefono($request->cliente_telefono);
+        // Crea la llave telefónica solo cuando el cliente proporciona un número de contacto.
+        $telefonoNormalizado = $request->filled('cliente_telefono')
+            ? Cliente::normalizarTelefono($request->cliente_telefono)
+            : null;
         $request->merge([
             'cliente_telefono_normalizado' => $telefonoNormalizado,
         ]);
@@ -246,9 +248,9 @@ class OrdenServicioController extends Controller
                 ),
             ],
             'cliente_nombre' => 'required|string|max:255',
-            // Los teléfonos funcionan como identificadores del cliente y deben contener exactamente 10 dígitos.
-            'cliente_telefono' => ['required', 'regex:/^[0-9]{10}$/'],
-            'cliente_telefono_normalizado' => ['required', 'regex:/^[0-9]{10}$/'],
+            // El contacto es opcional; cuando se captura conserva exactamente 10 dígitos.
+            'cliente_telefono' => ['nullable', 'regex:/^[0-9]{10}$/'],
+            'cliente_telefono_normalizado' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'cliente_telefono_extra' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'sucursal_id' => 'required|exists:sucursales,id',
             'tecnico_id' => [
@@ -284,6 +286,12 @@ class OrdenServicioController extends Controller
             // Si se eligió un cliente anterior, confirma dentro de la transacción que ID y teléfono coincidan.
             $cliente = null;
             if ($request->filled('cliente_id')) {
+                if ($telefonoNormalizado === null) {
+                    throw ValidationException::withMessages([
+                        'cliente_telefono' => 'El cliente anterior seleccionado debe conservar su teléfono.',
+                    ]);
+                }
+
                 $cliente = Cliente::whereKey($request->cliente_id)
                     ->where('telefono_normalizado', $telefonoNormalizado)
                     ->lockForUpdate()
@@ -296,10 +304,12 @@ class OrdenServicioController extends Controller
                 }
             }
 
-            // Reutiliza el cliente por su teléfono único o crea el registro conectado con esta sucursal.
-            $cliente ??= Cliente::where('telefono_normalizado', $telefonoNormalizado)
-                ->lockForUpdate()
-                ->first();
+            // Solo reutiliza por una llave telefónica real; sin teléfono crea un historial independiente.
+            if (! $cliente && $telefonoNormalizado !== null) {
+                $cliente = Cliente::where('telefono_normalizado', $telefonoNormalizado)
+                    ->lockForUpdate()
+                    ->first();
+            }
 
             if ($cliente) {
                 $cliente->update([
@@ -438,17 +448,19 @@ class OrdenServicioController extends Controller
     public function update(Request $request, OrdenServicio $ordenServicio)
     {
         $this->asegurarSucursalActiva($ordenServicio);
-        // Normaliza el teléfono editado para conservar la identidad única del cliente.
-        $telefonoNormalizado = Cliente::normalizarTelefono($request->cliente_telefono);
+        // Normaliza el teléfono editado únicamente cuando el cliente proporciona uno.
+        $telefonoNormalizado = $request->filled('cliente_telefono')
+            ? Cliente::normalizarTelefono($request->cliente_telefono)
+            : null;
         $request->merge([
             'cliente_telefono_normalizado' => $telefonoNormalizado,
         ]);
 
         $request->validate([
             'cliente_nombre' => 'required|string|max:255',
-            // Mantiene la misma identidad telefónica de 10 dígitos al editar la OS y su cliente relacionado.
-            'cliente_telefono' => ['required', 'regex:/^[0-9]{10}$/'],
-            'cliente_telefono_normalizado' => ['required', 'regex:/^[0-9]{10}$/'],
+            // El contacto sigue siendo opcional al editar; si existe, mantiene sus 10 dígitos.
+            'cliente_telefono' => ['nullable', 'regex:/^[0-9]{10}$/'],
+            'cliente_telefono_normalizado' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'marca' => 'required|string',
             'modelo' => 'required|string',
             'tipo_dispositivo' => 'required|string',
@@ -483,12 +495,10 @@ class OrdenServicioController extends Controller
         ]);
 
         // Impide asignar a este cliente el teléfono único que ya identifica a otro registro.
-        $telefonoPerteneceAOtroCliente = Cliente::where(
-            'telefono_normalizado',
-            $telefonoNormalizado
-        )
-            ->where('id', '!=', $ordenServicio->cliente_id)
-            ->exists();
+        $telefonoPerteneceAOtroCliente = $telefonoNormalizado !== null
+            && Cliente::where('telefono_normalizado', $telefonoNormalizado)
+                ->where('id', '!=', $ordenServicio->cliente_id)
+                ->exists();
 
         if ($telefonoPerteneceAOtroCliente) {
             throw ValidationException::withMessages([

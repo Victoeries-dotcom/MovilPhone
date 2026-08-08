@@ -42,6 +42,8 @@ class OrdenServicio extends Model
         // Guarda el anticipo recibido al crear la OS y se conecta con reportes/caja si luego se usa para cobros.
         'anticipo',
         'metodo_pago_anticipo',
+        // Conserva el dinero recibido al entregar sin sobrescribir el precio diagnosticado.
+        'pago_final',
         'presupuesto_total',
         'mano_obra',
         'fecha_entrega_estimada',
@@ -91,6 +93,27 @@ class OrdenServicio extends Model
     public function osOrigen()
     {
         return $this->belongsTo(OrdenServicio::class, 'os_origen_id');
+    }
+
+    /**
+     * Devuelve el precio autorizado: usa presupuesto_total y, si falta, el diagnóstico monetario.
+     */
+    public function precioServicio(): float
+    {
+        $presupuesto = (float) ($this->presupuesto_total ?? 0);
+
+        return max(0, $presupuesto > 0 ? $presupuesto : (float) ($this->cobro_diagnostico ?? 0));
+    }
+
+    /**
+     * Calcula únicamente dinero pendiente; diagnóstico es precio y no se cuenta como pago recibido.
+     */
+    public function saldoPendiente(): float
+    {
+        return max(
+            0,
+            $this->precioServicio() - (float) ($this->anticipo ?? 0) - (float) ($this->pago_final ?? 0)
+        );
     }
 
     public function puedeAvanzarA(string $nuevoEstado): bool

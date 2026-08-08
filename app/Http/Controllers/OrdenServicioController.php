@@ -359,6 +359,8 @@ class OrdenServicioController extends Controller
                 'cobro_diagnostico' => $request->cobro_diagnostico ?? 0,
                 'anticipo' => $request->anticipo ?? 0,
                 'metodo_pago_anticipo' => $request->metodo_pago_anticipo ?? 'efectivo',
+                // Al crear la OS, el diagnóstico monetario funciona como precio inicial del servicio.
+                'presupuesto_total' => $request->cobro_diagnostico ?? 0,
             ]);
 
             // Aprende la combinación capturada para ofrecerla en futuras órdenes, incluso si se escribió en "Otro".
@@ -523,6 +525,11 @@ class OrdenServicioController extends Controller
             : $estadoAnterior;
 
         // Actualiza el equipo con los mismos campos de Nueva OS y normaliza textos descriptivos en mayúsculas.
+        $cobroDiagnostico = (float) ($request->cobro_diagnostico ?? 0);
+        $presupuestoTotal = (float) ($request->presupuesto_total ?? 0);
+        // Si no escribieron otro presupuesto, conserva el diagnóstico como precio efectivo del servicio.
+        $presupuestoTotal = $presupuestoTotal > 0 ? $presupuestoTotal : $cobroDiagnostico;
+
         $ordenServicio->update([
             'tecnico_id' => $request->tecnico_id,
             'marca' => Str::upper($request->marca),
@@ -542,8 +549,8 @@ class OrdenServicioController extends Controller
             'estado_fisico' => Str::upper($request->estado_fisico),
             // La contraseña se conserva exactamente porque puede distinguir mayúsculas y minúsculas.
             'contrasena_dispositivo' => $request->contrasena_dispositivo,
-            'cobro_diagnostico' => $request->cobro_diagnostico ?? 0,
-            'presupuesto_total' => $request->presupuesto_total ?? 0,
+            'cobro_diagnostico' => $cobroDiagnostico,
+            'presupuesto_total' => $presupuestoTotal,
             'mano_obra' => $request->mano_obra ?? 0,
             'fecha_entrega_estimada' => $request->fecha_entrega_estimada,
             'anticipo' => $request->anticipo ?? 0,
@@ -639,6 +646,12 @@ class OrdenServicioController extends Controller
     public function entregar(Request $request, OrdenServicio $ordenServicio)
     {
         $this->asegurarSucursalActiva($ordenServicio);
+        if ($ordenServicio->estado !== 'TERMINADO') {
+            throw ValidationException::withMessages([
+                'cobro_final' => 'La orden debe estar lista para recoger antes de registrar el pago final.',
+            ]);
+        }
+
         $request->validate([
             // Valida en MySQL que el usuario sea técnico y pertenezca a la sucursal de la OS.
             'tecnico_entrega_id' => [
@@ -649,32 +662,52 @@ class OrdenServicioController extends Controller
                         ->where('sucursal_id', $ordenServicio->sucursal_id);
                 }),
             ],
-            'cobro_final' => 'nullable|numeric|min:0',
+            'cobro_final' => 'required|numeric|min:0',
         ]);
 
         $tecnicoEntrega = User::findOrFail($request->tecnico_entrega_id);
         $cobroFinal = (float) ($request->cobro_final ?? 0);
+        $precioServicio = $ordenServicio->precioServicio();
         $anticipo = (float) ($ordenServicio->anticipo ?? 0);
-        // cobro_final es el faltante pagado al entregar; junto con el anticipo forma el total del servicio.
-        $totalRegistrado = $anticipo + $cobroFinal;
 
-        // Guarda tecnico_id y conecta permanentemente la orden con el técnico seleccionado.
-        $ordenServicio->update([
-            'estado' => 'ENTREGADO',
-            'fecha_entrega_real' => now(),
-            'cobro_diagnostico' => $cobroFinal,
-            'tecnico_id' => $tecnicoEntrega->id,
-        ]);
+        if ($precioServicio <= 0) {
+            throw ValidationException::withMessages([
+                'cobro_final' => 'Registra el precio del servicio antes de entregar el equipo.',
+            ]);
+        }
 
-        // Guarda evidencia del técnico que realizó la reparación dentro del historial de la orden.
-        HistorialEstado::create([
-            'os_id' => $ordenServicio->id,
-            'estado' => 'ENTREGADO',
-            'nota' => 'Equipo entregado. Técnico que realizó la reparación: '.$tecnicoEntrega->name,
-        ]);
+        if ($anticipo - $precioServicio >= 0.01) {
+            throw ValidationException::withMessages([
+                'cobro_final' => 'El anticipo no puede superar el precio del servicio.',
+            ]);
+        }
 
-        // Actualiza una sola fila financiera para evitar contar dos veces el anticipo al entregar.
-        $this->sincronizarCobroOrdenEnCaja($ordenServicio->fresh());
+        $saldoEsperado = max(0, $precioServicio - $anticipo);
+        if (abs($cobroFinal - $saldoEsperado) >= 0.01) {
+            throw ValidationException::withMessages([
+                'cobro_final' => 'El pago final debe ser exactamente $'.number_format($saldoEsperado, 2).'.',
+            ]);
+        }
+
+        DB::transaction(function () use ($ordenServicio, $tecnicoEntrega, $cobroFinal): void {
+            // pago_final conserva la liquidación sin destruir ordenes_servicio.cobro_diagnostico.
+            $ordenServicio->update([
+                'estado' => 'ENTREGADO',
+                'fecha_entrega_real' => now(),
+                'pago_final' => $cobroFinal,
+                'tecnico_id' => $tecnicoEntrega->id,
+            ]);
+
+            // Guarda evidencia del técnico que realizó la reparación dentro del historial de la orden.
+            HistorialEstado::create([
+                'os_id' => $ordenServicio->id,
+                'estado' => 'ENTREGADO',
+                'nota' => 'Equipo entregado. Técnico que realizó la reparación: '.$tecnicoEntrega->name,
+            ]);
+
+            // Orden, historial y Caja quedan cerrados juntos o se revierten si alguna escritura falla.
+            $this->sincronizarCobroOrdenEnCaja($ordenServicio->fresh());
+        });
 
         // Registra la entrega para que el admin vea el cierre de la orden en el panel de actividad.
         AdminActivityLogger::registrar(
@@ -688,7 +721,7 @@ class OrdenServicioController extends Controller
         return redirect()->route('ordenes.ticketEntrega', $ordenServicio)
             ->with('tecnico_entrega', $tecnicoEntrega->name)
             ->with('cobro_final', $cobroFinal)
-            ->with('total_registrado', $totalRegistrado);
+            ->with('total_registrado', $precioServicio);
     }
 
     /**
@@ -700,12 +733,9 @@ class OrdenServicioController extends Controller
         $this->asegurarSucursalActiva($ordenServicio);
         $ordenServicio->load(['cliente', 'sucursal', 'tecnico']);
         $tecnicoEntrega = session('tecnico_entrega', $ordenServicio->tecnico->name ?? '—');
-        $cobroFinal = session('cobro_final', $ordenServicio->cobro_diagnostico ?? 0);
-        // Al reabrir el ticket, reconstruye el total con el anticipo y el faltante guardados en la orden.
-        $totalRegistrado = session(
-            'total_registrado',
-            (float) ($ordenServicio->anticipo ?? 0) + (float) ($ordenServicio->cobro_diagnostico ?? 0)
-        );
+        $cobroFinal = session('cobro_final', $ordenServicio->pago_final ?? 0);
+        // El ticket conserva el precio autorizado aunque se vuelva a abrir después de la entrega.
+        $totalRegistrado = session('total_registrado', $ordenServicio->precioServicio());
 
         // La política se conecta con ConfiguracionController y aparece al final del ticket.
         $politica = Schema::hasTable('configuraciones')
@@ -808,19 +838,19 @@ class OrdenServicioController extends Controller
 
     /**
      * Crea o actualiza el cobro acumulado de una orden en una sola fila de Caja.
-     * Se conecta con anticipo, cobro_diagnostico y metodo_pago_anticipo de ordenes_servicio.
+     * Se conecta con anticipo, pago_final y metodo_pago_anticipo de ordenes_servicio.
      */
     private function sincronizarCobroOrdenEnCaja(OrdenServicio $ordenServicio): void
     {
         $anticipo = (float) ($ordenServicio->anticipo ?? 0);
-        $diagnostico = (float) ($ordenServicio->cobro_diagnostico ?? 0);
-        $total = $anticipo + $diagnostico;
+        $pagoFinal = (float) ($ordenServicio->pago_final ?? 0);
+        $totalPagado = $anticipo + $pagoFinal;
 
         $movimiento = MovimientoCaja::where('os_id', $ordenServicio->id)
             ->where('categoria', 'Orden de Servicio')
             ->first();
 
-        if ($total <= 0) {
+        if ($totalPagado <= 0) {
             // Si la orden ya no tiene cobros, elimina únicamente su fila financiera vacía.
             $movimiento?->delete();
 
@@ -828,25 +858,25 @@ class OrdenServicioController extends Controller
         }
 
         // Construye una descripción legible igual a la mostrada en la tabla de Caja.
-        if ($anticipo > 0 && $diagnostico > 0) {
-            $descripcion = 'Anticipo $'.number_format($anticipo, 2).' + Diagnóstico $'.number_format($diagnostico, 2);
+        if ($anticipo > 0 && $pagoFinal > 0) {
+            $descripcion = 'Anticipo $'.number_format($anticipo, 2).' + Pago final $'.number_format($pagoFinal, 2);
         } elseif ($anticipo > 0) {
             $descripcion = 'Anticipo $'.number_format($anticipo, 2);
         } else {
-            $descripcion = 'Diagnóstico $'.number_format($diagnostico, 2);
+            $descripcion = 'Pago final $'.number_format($pagoFinal, 2);
         }
 
         $datos = [
             'sucursal_id' => $ordenServicio->sucursal_id,
             'tipo' => 'INGRESO',
             'categoria' => 'Orden de Servicio',
-            'monto' => $total,
+            'monto' => $totalPagado,
             'metodo_pago' => strtolower($ordenServicio->metodo_pago_anticipo ?: 'efectivo'),
             // Conserva el anticipo por separado para calcular la tarjeta Total Anticipos.
             'anticipo' => $anticipo,
-            'saldo_pendiente' => max(0, (float) ($ordenServicio->presupuesto_total ?? 0) - $total),
+            'saldo_pendiente' => $ordenServicio->saldoPendiente(),
             'es_anticipo' => $anticipo > 0,
-            'es_pago_final' => $ordenServicio->estado === 'ENTREGADO',
+            'es_pago_final' => $pagoFinal > 0 && $ordenServicio->estado === 'ENTREGADO',
             'descripcion' => $descripcion,
             'os_id' => $ordenServicio->id,
             'user_id' => auth()->id(),

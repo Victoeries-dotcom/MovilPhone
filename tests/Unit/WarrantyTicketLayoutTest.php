@@ -11,7 +11,7 @@ class WarrantyTicketLayoutTest extends TestCase
         // Protege la regla comercial: anticipo y faltante pagado forman el total cobrado del servicio.
         $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/ticket-entrega.blade.php');
 
-        $this->assertStringContainsString('$total = (float) ($totalRegistrado ?? ($anticipo + $faltante));', $template);
+        $this->assertStringContainsString('$total = (float) ($totalRegistrado ?? $ordenServicio->precioServicio());', $template);
         $this->assertStringContainsString('FALTANTE PAGADO:', $template);
         $this->assertStringContainsString('number_format($total, 2)', $template);
     }
@@ -25,7 +25,7 @@ class WarrantyTicketLayoutTest extends TestCase
         $this->assertStringContainsString('Anticipo pagado:', $template);
         $this->assertStringContainsString('Falta por pagar:', $template);
         $this->assertStringContainsString('Math.max(0, entregaPrecioServicio - entregaAnticipo)', $template);
-        $this->assertStringContainsString("faltanteEsperado.toFixed(2)", $template);
+        $this->assertStringContainsString('faltanteEsperado.toFixed(2)', $template);
     }
 
     public function test_warranty_policy_is_rendered_before_the_internal_ticket_number(): void

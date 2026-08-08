@@ -203,8 +203,8 @@
             </div>
 
             <div class="form-group">
-                <label>Cobro de diagnóstico ($)</label>
-                {{-- Se conecta con ordenes_servicio.cobro_diagnostico y con el total mostrado en Caja. --}}
+                <label>Diagnóstico del dispositivo ($)</label>
+                {{-- Es el precio diagnosticado y no se mezcla con el dinero recibido al entregar. --}}
                 <input type="number" name="cobro_diagnostico" value="{{ old('cobro_diagnostico', $ordenServicio->cobro_diagnostico ?? 0) }}" min="0" step="0.01">
             </div>
 

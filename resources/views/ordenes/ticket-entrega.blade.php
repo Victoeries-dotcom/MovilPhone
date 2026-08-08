@@ -12,8 +12,8 @@
 @php
     // Importes del ticket: el anticipo y el faltante cobrado al entregar forman el total del servicio.
     $anticipo = (float) ($ordenServicio->anticipo ?? 0);
-    $faltante = (float) ($cobroFinal ?? ($ordenServicio->cobro_diagnostico ?? 0));
-    $total = (float) ($totalRegistrado ?? ($anticipo + $faltante));
+    $faltante = (float) ($cobroFinal ?? ($ordenServicio->pago_final ?? 0));
+    $total = (float) ($totalRegistrado ?? $ordenServicio->precioServicio());
 
     // Contacto alternativo: primero usa el dato capturado en la OS y después el dato del cliente.
     $contactoAlternativo = $ordenServicio->cliente_telefono_extra ?: ($ordenServicio->cliente->telefono_alternativo ?? '—');

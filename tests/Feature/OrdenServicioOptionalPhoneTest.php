@@ -101,6 +101,7 @@ class OrdenServicioOptionalPhoneTest extends TestCase
 
         $this->assertDatabaseHas('ordenes_servicio', [
             'cobro_diagnostico' => 200.50,
+            'presupuesto_total' => 200.50,
         ]);
     }
 

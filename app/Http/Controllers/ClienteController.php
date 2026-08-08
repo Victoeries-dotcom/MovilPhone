@@ -24,10 +24,10 @@ class ClienteController extends Controller
                 },
             ])
             ->addSelect([
-                // Suma anticipo y cobro final de todas las OS conectadas por cliente_id, sin excluir ningún estado.
+                // Suma solo dinero recibido: anticipo y pago final, sin contar el precio diagnosticado.
                 'valor_ordenes_registrado' => DB::table('ordenes_servicio')
                     ->selectRaw(
-                        'COALESCE(SUM(COALESCE(anticipo, 0) + COALESCE(cobro_diagnostico, 0)), 0)'
+                        'COALESCE(SUM(COALESCE(anticipo, 0) + COALESCE(pago_final, 0)), 0)'
                     )
                     ->whereColumn('ordenes_servicio.cliente_id', 'clientes.id'),
             ]);

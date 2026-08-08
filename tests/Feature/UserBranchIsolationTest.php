@@ -120,18 +120,18 @@ class UserBranchIsolationTest extends TestCase
             'sucursal_habitual_id' => $buctzotz->id,
         ]);
 
-        // Cada OS usa la misma fórmula que Ticket y Caja: anticipo + cobro final o diagnóstico.
+        // Valor registrado suma solo dinero recibido; el diagnóstico conserva el precio cotizado.
         OrdenServicio::create(array_merge(
             $this->datosOrden('BUC-VALOR-0001', $cliente->id, $buctzotz->id, 'ORDEN ACTIVA'),
-            ['estado' => 'RECIBIDO', 'anticipo' => 100, 'cobro_diagnostico' => 25.50]
+            ['estado' => 'RECIBIDO', 'anticipo' => 100, 'cobro_diagnostico' => 25.50, 'pago_final' => 0]
         ));
         OrdenServicio::create(array_merge(
             $this->datosOrden('BUC-VALOR-0002', $cliente->id, $buctzotz->id, 'ORDEN ENTREGADA'),
-            ['estado' => 'ENTREGADO', 'anticipo' => 150, 'cobro_diagnostico' => 50]
+            ['estado' => 'ENTREGADO', 'anticipo' => 150, 'cobro_diagnostico' => 200, 'pago_final' => 50]
         ));
         OrdenServicio::create(array_merge(
             $this->datosOrden('BUC-VALOR-0003', $cliente->id, $buctzotz->id, 'ORDEN RECHAZADA'),
-            ['estado' => 'RECHAZADO', 'anticipo' => 75, 'cobro_diagnostico' => 50]
+            ['estado' => 'RECHAZADO', 'anticipo' => 75, 'cobro_diagnostico' => 50, 'pago_final' => 0]
         ));
 
         $this
@@ -143,7 +143,7 @@ class UserBranchIsolationTest extends TestCase
             ->get(route('clientes.index'))
             ->assertOk()
             ->assertSee('CLIENTE CON HISTORIAL COMPLETO')
-            ->assertSee('$450.50');
+            ->assertSee('$375.00');
     }
 
     /**

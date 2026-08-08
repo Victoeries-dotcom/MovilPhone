@@ -206,7 +206,7 @@
                 @if($orden->estado === 'TERMINADO')
                     {{-- Entregar abre el flujo que registra técnico, cobro final y movimiento de Caja. --}}
                     <button type="button" class="btn btn-success"
-                        onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ (float) ($orden->presupuesto_total ?? 0) }}, {{ (float) ($orden->anticipo ?? 0) }}, {{ (float) ($orden->cobro_diagnostico ?? 0) }}, {{ $orden->tecnico_id ?? 'null' }})">
+                        onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ $orden->precioServicio() }}, {{ (float) ($orden->anticipo ?? 0) }}, {{ (float) ($orden->pago_final ?? 0) }}, {{ $orden->tecnico_id ?? 'null' }})">
                         <i data-lucide="package-check" aria-hidden="true"></i><span>Entregar</span>
                     </button>
                 @endif

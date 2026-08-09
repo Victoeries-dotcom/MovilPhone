@@ -50,6 +50,16 @@ class WarrantyTicketLayoutTest extends TestCase
         $this->assertStringContainsString('const cobro = Math.max(0, entregaPrecioServicio - entregaAnticipo);', $template);
     }
 
+    public function test_delivery_modal_sends_a_separate_final_payment_method(): void
+    {
+        // Evita volver a heredar silenciosamente el método usado al registrar el anticipo.
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/index.blade.php');
+
+        $this->assertStringContainsString('Método del pago final', $template);
+        $this->assertStringContainsString('name="metodo_pago_final"', $template);
+        $this->assertStringContainsString('input[name="metodo_pago_entrega"]:checked', $template);
+    }
+
     public function test_new_order_places_device_diagnostic_before_advance(): void
     {
         // Conserva el orden visual solicitado sin cambiar los nombres enviados al controlador.

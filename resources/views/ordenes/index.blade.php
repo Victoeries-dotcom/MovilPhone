@@ -344,6 +344,13 @@
         {{-- El faltante se calcula con total menos anticipo; readonly evita capturar un importe distinto por error. --}}
         <input type="number" id="entrega-cobro" min="0" step="0.01" placeholder="0.00" readonly aria-describedby="entrega-cobro-ayuda" style="width:100%;padding:12px 14px;border:1px solid #dbe3ef;border-radius:8px;font-size:15px;background:#f8fafc;color:#0f1f3d;font-weight:800;cursor:not-allowed;">
         <p id="entrega-cobro-ayuda" style="margin:.5rem 0 0;color:#64748b;font-size:12px;line-height:1.4;">Este importe se calcula automáticamente: precio del servicio menos anticipo pagado.</p>
+        {{-- Este selector viaja separado del método del anticipo para registrar correctamente el ingreso final. --}}
+        <div style="margin-top:1rem;font-size:13px;font-weight:700;color:#334155;">Método del pago final</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.55rem;">
+            <label><input type="radio" name="metodo_pago_entrega" value="efectivo" checked> Efectivo</label>
+            <label><input type="radio" name="metodo_pago_entrega" value="transferencia"> Transferencia</label>
+            <label><input type="radio" name="metodo_pago_entrega" value="tarjeta"> Tarjeta</label>
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
             <button type="button" class="btn" onclick="volverATecnicoEntrega()">← Atrás</button>
             <button type="button" id="entrega-boton-siguiente" class="btn btn-primary" onclick="pasarAConfirmarEntrega()">Siguiente →</button>
@@ -359,6 +366,7 @@
         <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Técnico: <strong id="entrega-label-tecnico"></strong></p>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0;">Precio del servicio: <strong id="entrega-label-precio"></strong></p>
         <p style="font-size:14px;color:#64748b;margin:.35rem 0 1.25rem;">Faltante pagado: <strong id="entrega-label-cobro"></strong></p>
+        <p style="font-size:14px;color:#64748b;margin:.35rem 0 1.25rem;">Método de pago: <strong id="entrega-label-metodo"></strong></p>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.8rem;color:#1e3a8a;font-size:13px;">Al confirmar, la orden cambiará a ENTREGADO, se guardará en el historial y se generará el ticket.</div>
         <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
             <button type="button" class="btn" onclick="volverACobroEntrega()">← Atrás</button>
@@ -448,6 +456,8 @@
     {{-- Envía el precio al mismo campo presupuesto_total que usa el formulario Editar OS. --}}
     <input type="hidden" name="presupuesto_total" id="entrega-precio-hidden">
     <input type="hidden" name="cobro_final" id="entrega-cobro-hidden">
+    {{-- Laravel valida este valor y lo guarda tanto en la orden como en el movimiento final de Caja. --}}
+    <input type="hidden" name="metodo_pago_final" id="entrega-metodo-hidden">
 </form>
 
 {{-- Formularios ocultos: envían los accesos rápidos a MovimientoCajaController. --}}
@@ -629,13 +639,20 @@ function pasarAConfirmarEntrega() {
 
     // Recalcula el dato antes de enviarlo para proteger el flujo incluso si el HTML fue manipulado.
     const cobro = Math.max(0, entregaPrecioServicio - entregaAnticipo);
+    const metodoSeleccionado = document.querySelector('input[name="metodo_pago_entrega"]:checked');
+    if (!metodoSeleccionado) {
+        alert('Selecciona el método del pago final.');
+        return;
+    }
     document.getElementById('entrega-cobro').value = cobro.toFixed(2);
     document.getElementById('entrega-precio-hidden').value = entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-cobro-hidden').value = cobro.toFixed(2);
+    document.getElementById('entrega-metodo-hidden').value = metodoSeleccionado.value;
     document.getElementById('entrega-label-os').textContent = entregaNumeroOs;
     document.getElementById('entrega-label-tecnico').textContent = document.getElementById('entrega-tecnico-nombre-hidden').value;
     document.getElementById('entrega-label-precio').textContent = '$' + entregaPrecioServicio.toFixed(2);
     document.getElementById('entrega-label-cobro').textContent = '$' + cobro.toFixed(2);
+    document.getElementById('entrega-label-metodo').textContent = metodoSeleccionado.value.charAt(0).toUpperCase() + metodoSeleccionado.value.slice(1);
     document.getElementById('modal-entregar-cobro').style.display = 'none';
     document.getElementById('modal-entregar-confirmar').style.display = 'flex';
 }

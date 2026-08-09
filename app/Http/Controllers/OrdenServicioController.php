@@ -665,6 +665,8 @@ class OrdenServicioController extends Controller
             // presupuesto_total es el mismo campo que usa Editar OS; guardarlo aquí mantiene ambas pantallas sincronizadas.
             'presupuesto_total' => 'required|numeric|min:0.01|max:999999.99',
             'cobro_final' => 'required|numeric|min:0',
+            // El pago final guarda su propio método porque puede diferir del anticipo.
+            'metodo_pago_final' => 'required|in:efectivo,transferencia,tarjeta',
         ]);
 
         $tecnicoEntrega = User::findOrFail($request->tecnico_entrega_id);
@@ -685,7 +687,7 @@ class OrdenServicioController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($ordenServicio, $tecnicoEntrega, $cobroFinal, $precioServicio): void {
+        DB::transaction(function () use ($ordenServicio, $tecnicoEntrega, $cobroFinal, $precioServicio, $request): void {
             // pago_final conserva la liquidación sin destruir ordenes_servicio.cobro_diagnostico.
             $ordenServicio->update([
                 'estado' => 'ENTREGADO',
@@ -693,6 +695,7 @@ class OrdenServicioController extends Controller
                 // Este valor también alimenta Editar OS y el total impreso en el ticket.
                 'presupuesto_total' => $precioServicio,
                 'pago_final' => $cobroFinal,
+                'metodo_pago_final' => $request->metodo_pago_final,
                 'tecnico_id' => $tecnicoEntrega->id,
             ]);
 
@@ -835,55 +838,58 @@ class OrdenServicioController extends Controller
     }
 
     /**
-     * Crea o actualiza el cobro acumulado de una orden en una sola fila de Caja.
-     * Se conecta con anticipo, pago_final y metodo_pago_anticipo de ordenes_servicio.
+     * Mantiene el anticipo y el pago final como movimientos independientes en Caja.
+     * Se conecta con los importes y métodos de pago de ordenes_servicio.
      */
     private function sincronizarCobroOrdenEnCaja(OrdenServicio $ordenServicio): void
     {
         $anticipo = (float) ($ordenServicio->anticipo ?? 0);
         $pagoFinal = (float) ($ordenServicio->pago_final ?? 0);
-        $totalPagado = $anticipo + $pagoFinal;
-
-        $movimiento = MovimientoCaja::where('os_id', $ordenServicio->id)
-            ->where('categoria', 'Orden de Servicio')
-            ->first();
-
-        if ($totalPagado <= 0) {
-            // Si la orden ya no tiene cobros, elimina únicamente su fila financiera vacía.
-            $movimiento?->delete();
-
-            return;
-        }
-
-        // Construye una descripción legible igual a la mostrada en la tabla de Caja.
-        if ($anticipo > 0 && $pagoFinal > 0) {
-            $descripcion = 'Anticipo $'.number_format($anticipo, 2).' + Pago final $'.number_format($pagoFinal, 2);
-        } elseif ($anticipo > 0) {
-            $descripcion = 'Anticipo $'.number_format($anticipo, 2);
-        } else {
-            $descripcion = 'Pago final $'.number_format($pagoFinal, 2);
-        }
-
-        $datos = [
+        $datosComunes = [
             'sucursal_id' => $ordenServicio->sucursal_id,
             'tipo' => 'INGRESO',
-            'categoria' => 'Orden de Servicio',
-            'monto' => $totalPagado,
-            'metodo_pago' => strtolower($ordenServicio->metodo_pago_anticipo ?: 'efectivo'),
-            // Conserva el anticipo por separado para calcular la tarjeta Total Anticipos.
-            'anticipo' => $anticipo,
-            'saldo_pendiente' => $ordenServicio->saldoPendiente(),
-            'es_anticipo' => $anticipo > 0,
-            'es_pago_final' => $pagoFinal > 0 && $ordenServicio->estado === 'ENTREGADO',
-            'descripcion' => $descripcion,
             'os_id' => $ordenServicio->id,
             'user_id' => auth()->id(),
         ];
 
-        if ($movimiento) {
-            $movimiento->update($datos);
+        if ($anticipo > 0) {
+            // Esta fila conserva la fecha original y alimenta exclusivamente Total Anticipos.
+            MovimientoCaja::updateOrCreate(
+                ['os_id' => $ordenServicio->id, 'categoria' => 'Anticipo de Orden'],
+                $datosComunes + [
+                    'monto' => $anticipo,
+                    'metodo_pago' => strtolower($ordenServicio->metodo_pago_anticipo ?: 'efectivo'),
+                    'anticipo' => $anticipo,
+                    'saldo_pendiente' => max(0, (float) $ordenServicio->presupuesto_total - $anticipo),
+                    'es_anticipo' => true,
+                    'es_pago_final' => false,
+                    'descripcion' => 'Anticipo $'.number_format($anticipo, 2),
+                ]
+            );
         } else {
-            MovimientoCaja::create($datos);
+            MovimientoCaja::where('os_id', $ordenServicio->id)
+                ->where('categoria', 'Anticipo de Orden')
+                ->delete();
+        }
+
+        if ($pagoFinal > 0 && $ordenServicio->estado === 'ENTREGADO') {
+            // Esta segunda fila registra el ingreso recibido exactamente al entregar el equipo.
+            MovimientoCaja::updateOrCreate(
+                ['os_id' => $ordenServicio->id, 'categoria' => 'Pago final de Orden'],
+                $datosComunes + [
+                    'monto' => $pagoFinal,
+                    'metodo_pago' => strtolower($ordenServicio->metodo_pago_final ?: 'efectivo'),
+                    'anticipo' => 0,
+                    'saldo_pendiente' => 0,
+                    'es_anticipo' => false,
+                    'es_pago_final' => true,
+                    'descripcion' => 'Pago final $'.number_format($pagoFinal, 2),
+                ]
+            );
+        } else {
+            MovimientoCaja::where('os_id', $ordenServicio->id)
+                ->where('categoria', 'Pago final de Orden')
+                ->delete();
         }
     }
 

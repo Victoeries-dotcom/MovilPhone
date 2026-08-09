@@ -42,6 +42,8 @@ class OrdenServicio extends Model
         // Guarda el anticipo recibido al crear la OS y se conecta con reportes/caja si luego se usa para cobros.
         'anticipo',
         'metodo_pago_anticipo',
+        // Conserva el método usado al liquidar, que puede ser distinto al método del anticipo.
+        'metodo_pago_final',
         // Conserva el dinero recibido al entregar sin sobrescribir el precio diagnosticado.
         'pago_final',
         'presupuesto_total',

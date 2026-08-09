@@ -24,6 +24,7 @@ class OrdenServicioPaymentLogicTest extends TestCase
                 'tecnico_entrega_id' => $tecnico->id,
                 'presupuesto_total' => 650,
                 'cobro_final' => 450,
+                'metodo_pago_final' => 'transferencia',
             ])
             ->assertRedirect(route('ordenes.ticketEntrega', $orden))
             ->assertSessionHasNoErrors();
@@ -36,13 +37,28 @@ class OrdenServicioPaymentLogicTest extends TestCase
             'presupuesto_total' => 650,
             'anticipo' => 200,
             'pago_final' => 450,
+            'metodo_pago_final' => 'transferencia',
+        ]);
+        // Caja conserva dos ingresos auditables en lugar de reemplazar el anticipo con un total acumulado.
+        $this->assertDatabaseHas('movimientos_caja', [
+            'os_id' => $orden->id,
+            'categoria' => 'Anticipo de Orden',
+            'monto' => 200,
+            'anticipo' => 200,
+            'es_anticipo' => true,
+            'es_pago_final' => false,
         ]);
         $this->assertDatabaseHas('movimientos_caja', [
             'os_id' => $orden->id,
-            'monto' => 650,
-            'anticipo' => 200,
+            'categoria' => 'Pago final de Orden',
+            'monto' => 450,
+            'metodo_pago' => 'transferencia',
+            'anticipo' => 0,
             'saldo_pendiente' => 0,
+            'es_anticipo' => false,
+            'es_pago_final' => true,
         ]);
+        $this->assertDatabaseCount('movimientos_caja', 2);
     }
 
     public function test_delivery_rejects_a_payment_that_does_not_match_the_balance(): void
@@ -57,6 +73,7 @@ class OrdenServicioPaymentLogicTest extends TestCase
                 // Conserva el precio actual para probar únicamente el rechazo de un pago incorrecto.
                 'presupuesto_total' => 500,
                 'cobro_final' => 500,
+                'metodo_pago_final' => 'efectivo',
             ])
             ->assertSessionHasErrors([
                 'cobro_final' => 'El pago final debe ser exactamente $300.00.',

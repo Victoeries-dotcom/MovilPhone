@@ -849,23 +849,28 @@ class OrdenServicioController extends Controller
             'sucursal_id' => $ordenServicio->sucursal_id,
             'tipo' => 'INGRESO',
             'os_id' => $ordenServicio->id,
-            'user_id' => auth()->id(),
         ];
 
         if ($anticipo > 0) {
-            // Esta fila conserva la fecha original y alimenta exclusivamente Total Anticipos.
-            MovimientoCaja::updateOrCreate(
-                ['os_id' => $ordenServicio->id, 'categoria' => 'Anticipo de Orden'],
-                $datosComunes + [
-                    'monto' => $anticipo,
-                    'metodo_pago' => strtolower($ordenServicio->metodo_pago_anticipo ?: 'efectivo'),
-                    'anticipo' => $anticipo,
-                    'saldo_pendiente' => max(0, (float) $ordenServicio->presupuesto_total - $anticipo),
-                    'es_anticipo' => true,
-                    'es_pago_final' => false,
-                    'descripcion' => 'Anticipo $'.number_format($anticipo, 2),
-                ]
-            );
+            // firstOrNew permite actualizar el importe sin reemplazar la fecha ni el usuario que recibió el anticipo.
+            $movimientoAnticipo = MovimientoCaja::firstOrNew([
+                'os_id' => $ordenServicio->id,
+                'categoria' => 'Anticipo de Orden',
+            ]);
+            $movimientoAnticipo->fill($datosComunes + [
+                'monto' => $anticipo,
+                'metodo_pago' => strtolower($ordenServicio->metodo_pago_anticipo ?: 'efectivo'),
+                'anticipo' => $anticipo,
+                'saldo_pendiente' => max(0, (float) $ordenServicio->presupuesto_total - $anticipo),
+                'es_anticipo' => true,
+                'es_pago_final' => false,
+                'descripcion' => 'Anticipo $'.number_format($anticipo, 2),
+            ]);
+            if (! $movimientoAnticipo->exists) {
+                // Solo una fila nueva recibe al usuario autenticado; una fila existente conserva su autor original.
+                $movimientoAnticipo->user_id = auth()->id();
+            }
+            $movimientoAnticipo->save();
         } else {
             MovimientoCaja::where('os_id', $ordenServicio->id)
                 ->where('categoria', 'Anticipo de Orden')
@@ -873,19 +878,24 @@ class OrdenServicioController extends Controller
         }
 
         if ($pagoFinal > 0 && $ordenServicio->estado === 'ENTREGADO') {
-            // Esta segunda fila registra el ingreso recibido exactamente al entregar el equipo.
-            MovimientoCaja::updateOrCreate(
-                ['os_id' => $ordenServicio->id, 'categoria' => 'Pago final de Orden'],
-                $datosComunes + [
-                    'monto' => $pagoFinal,
-                    'metodo_pago' => strtolower($ordenServicio->metodo_pago_final ?: 'efectivo'),
-                    'anticipo' => 0,
-                    'saldo_pendiente' => 0,
-                    'es_anticipo' => false,
-                    'es_pago_final' => true,
-                    'descripcion' => 'Pago final $'.number_format($pagoFinal, 2),
-                ]
-            );
+            // La liquidación nace en la entrega y conserva después tanto esa fecha como ese usuario.
+            $movimientoFinal = MovimientoCaja::firstOrNew([
+                'os_id' => $ordenServicio->id,
+                'categoria' => 'Pago final de Orden',
+            ]);
+            $movimientoFinal->fill($datosComunes + [
+                'monto' => $pagoFinal,
+                'metodo_pago' => strtolower($ordenServicio->metodo_pago_final ?: 'efectivo'),
+                'anticipo' => 0,
+                'saldo_pendiente' => 0,
+                'es_anticipo' => false,
+                'es_pago_final' => true,
+                'descripcion' => 'Pago final $'.number_format($pagoFinal, 2),
+            ]);
+            if (! $movimientoFinal->exists) {
+                $movimientoFinal->user_id = auth()->id();
+            }
+            $movimientoFinal->save();
         } else {
             MovimientoCaja::where('os_id', $ordenServicio->id)
                 ->where('categoria', 'Pago final de Orden')

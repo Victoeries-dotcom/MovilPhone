@@ -565,6 +565,9 @@ function abrirModalEntregar(id, numeroOs, precioServicio, anticipo, cobroActual,
     const faltanteEsperado = Math.max(0, entregaPrecioServicio - entregaAnticipo);
     const tecnicoSelect = document.getElementById('entrega-tecnico');
     tecnicoSelect.value = tecnicoId ? String(tecnicoId) : '';
+    // Cada entrega inicia en Efectivo para no reutilizar por accidente el método elegido en otra orden.
+    const metodoEfectivo = document.querySelector('input[name="metodo_pago_entrega"][value="efectivo"]');
+    if (metodoEfectivo) metodoEfectivo.checked = true;
     // El cobro final siempre coincide con el faltante que el servidor valida para generar el ticket.
     document.getElementById('entrega-cobro').value = faltanteEsperado.toFixed(2);
     document.getElementById('entrega-precio-input').value = entregaPrecioServicio > 0 ? entregaPrecioServicio.toFixed(2) : '';

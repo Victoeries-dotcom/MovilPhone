@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cliente;
+use App\Models\MovimientoCaja;
 use App\Models\OrdenServicio;
 use App\Models\Sucursal;
 use App\Models\User;
@@ -16,6 +17,28 @@ class OrdenServicioPaymentLogicTest extends TestCase
     public function test_delivery_updates_service_price_and_saves_exact_final_payment(): void
     {
         [$usuario, $tecnico, $sucursal, $orden] = $this->contextoDeEntrega();
+
+        // Simula que otro usuario recibió el anticipo dos días antes de la entrega.
+        $usuarioAnticipo = User::factory()->create(['rol' => 'usuario', 'sucursal_id' => $sucursal->id]);
+        $fechaAnticipo = now()->subDays(2)->startOfSecond();
+        $movimientoAnticipoOriginal = MovimientoCaja::create([
+            'sucursal_id' => $sucursal->id,
+            'tipo' => 'INGRESO',
+            'categoria' => 'Anticipo de Orden',
+            'monto' => 200,
+            'metodo_pago' => 'efectivo',
+            'anticipo' => 200,
+            'saldo_pendiente' => 300,
+            'es_anticipo' => true,
+            'es_pago_final' => false,
+            'descripcion' => 'Anticipo $200.00',
+            'os_id' => $orden->id,
+            'user_id' => $usuarioAnticipo->id,
+        ]);
+        $movimientoAnticipoOriginal->forceFill([
+            'created_at' => $fechaAnticipo,
+            'updated_at' => $fechaAnticipo,
+        ])->save();
 
         // El panel cambia el precio de $500 a $650; con $200 de anticipo exige exactamente $450 al entregar.
         $this->actingAs($usuario)
@@ -47,6 +70,7 @@ class OrdenServicioPaymentLogicTest extends TestCase
             'anticipo' => 200,
             'es_anticipo' => true,
             'es_pago_final' => false,
+            'user_id' => $usuarioAnticipo->id,
         ]);
         $this->assertDatabaseHas('movimientos_caja', [
             'os_id' => $orden->id,
@@ -57,8 +81,14 @@ class OrdenServicioPaymentLogicTest extends TestCase
             'saldo_pendiente' => 0,
             'es_anticipo' => false,
             'es_pago_final' => true,
+            'user_id' => $usuario->id,
         ]);
         $this->assertDatabaseCount('movimientos_caja', 2);
+        // La entrega no debe atribuirse el anticipo ni cambiar el momento en que ese dinero entró.
+        $this->assertSame(
+            $fechaAnticipo->toDateTimeString(),
+            MovimientoCaja::findOrFail($movimientoAnticipoOriginal->id)->created_at->toDateTimeString()
+        );
     }
 
     public function test_delivery_rejects_a_payment_that_does_not_match_the_balance(): void

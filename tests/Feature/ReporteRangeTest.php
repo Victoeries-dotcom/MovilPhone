@@ -253,6 +253,7 @@ class ReporteRangeTest extends TestCase
             'tipo' => 'INGRESO',
             'categoria' => 'VENTA',
             'monto' => 100,
+            'anticipo' => 25,
             'descripcion' => 'INGRESO IZAMAL',
             'os_id' => $ordenIzamal->id,
             'created_at' => '2026-07-10 13:00:00',
@@ -266,6 +267,15 @@ class ReporteRangeTest extends TestCase
             'descripcion' => 'INGRESO BUCTZOTZ',
             'created_at' => '2026-07-11 13:00:00',
             'updated_at' => '2026-07-11 13:00:00',
+        ]);
+        MovimientoCaja::forceCreate([
+            'sucursal_id' => $buctzotz->id,
+            'tipo' => 'EGRESO',
+            'categoria' => 'GASTO',
+            'monto' => 50,
+            'descripcion' => 'EGRESO BUCTZOTZ',
+            'created_at' => '2026-07-12 13:00:00',
+            'updated_at' => '2026-07-12 13:00:00',
         ]);
 
         $respuesta = $this
@@ -286,6 +296,15 @@ class ReporteRangeTest extends TestCase
             ->assertSee('PRODUCTO BUCTZOTZ')
             ->assertSee('PROVEEDOR IZAMAL')
             ->assertSee('PROVEEDOR BUCTZOTZ')
+            // Las cinco tarjetas financieras se muestran debajo de los indicadores operativos.
+            ->assertSeeInOrder([
+                'Bajo stock',
+                'Total ingresos',
+                'Total egresos',
+                'Balance',
+                'Total anticipos',
+                'Total movimientos',
+            ])
             ->assertViewHas('todasSucursales', true)
             ->assertViewHas('alcanceReporte', 'Todas las sucursales')
             ->assertViewHas('ventas', fn ($ventas) => $ventas->count() === 2)
@@ -298,8 +317,11 @@ class ReporteRangeTest extends TestCase
                 && (float) $general['total_ventas'] === 350.0
                 && $general['ordenes'] === 2
                 && $general['clientes'] === 2
-                && $general['movimientos_caja'] === 2
+                && $general['movimientos_caja'] === 3
                 && (float) $general['ingresos_caja'] === 350.0
+                && (float) $general['egresos_caja'] === 50.0
+                && (float) $general['balance_caja'] === 300.0
+                && (float) $general['anticipos_caja'] === 25.0
                 && $general['productos_bajo_stock'] === 2
             )
             ->assertViewHas('graficas', fn (array $graficas) => (float) $graficas['productos']['cantidades']->sum() === 5.0

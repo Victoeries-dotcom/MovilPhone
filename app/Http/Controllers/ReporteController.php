@@ -255,14 +255,23 @@ class ReporteController extends Controller
             $todasSucursales
         );
 
+        /*
+         * El resumen financiero usa el mismo periodo y alcance que el resto de Reportes.
+         * Estos valores provienen de movimientos_caja y sustituyen las tarjetas retiradas de Caja.
+         */
+        $ingresosCaja = (clone $cajaQuery)->where('tipo', 'INGRESO')->sum('monto');
+        $egresosCaja = (clone $cajaQuery)->where('tipo', 'EGRESO')->sum('monto');
+
         $general = [
             'ordenes' => $ordenesQuery->count(),
             'clientes' => $clientesQuery->count(),
             'ventas' => $ventas->count(),
             'total_ventas' => $ventas->sum('total'),
             'movimientos_caja' => (clone $cajaQuery)->count(),
-            'ingresos_caja' => (clone $cajaQuery)->where('tipo', 'INGRESO')->sum('monto'),
-            'egresos_caja' => (clone $cajaQuery)->where('tipo', 'EGRESO')->sum('monto'),
+            'ingresos_caja' => $ingresosCaja,
+            'egresos_caja' => $egresosCaja,
+            'balance_caja' => $ingresosCaja - $egresosCaja,
+            'anticipos_caja' => (clone $cajaQuery)->sum('anticipo'),
             'productos_bajo_stock' => $stockBajoQuery->count(),
         ];
 

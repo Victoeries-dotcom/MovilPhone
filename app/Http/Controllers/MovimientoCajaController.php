@@ -31,17 +31,6 @@ class MovimientoCajaController extends Controller
                 fn ($query) => $query->whereRaw('1 = 0')
             );
 
-        // Los indicadores usan todos los movimientos de la sucursal, aunque la tabla tenga filtros activos.
-        $ingresos = (clone $consultaBase)->where('tipo', 'INGRESO')->sum('monto');
-        $egresos = (clone $consultaBase)->where('tipo', 'EGRESO')->sum('monto');
-        $stats = [
-            'ingresos' => $ingresos,
-            'egresos' => $egresos,
-            'balance' => $ingresos - $egresos,
-            'anticipos' => (clone $consultaBase)->sum('anticipo'),
-            'movimientos' => (clone $consultaBase)->count(),
-        ];
-
         // La tabla carga su orden y sucursal para mostrar el folio de OS y el origen del movimiento.
         $query = (clone $consultaBase)->with(['orden', 'sucursal']);
 
@@ -91,7 +80,7 @@ class MovimientoCajaController extends Controller
                 );
             });
 
-        return view('caja.index', compact('movimientos', 'stats', 'foliosManuales'));
+        return view('caja.index', compact('movimientos', 'foliosManuales'));
     }
 
     /**

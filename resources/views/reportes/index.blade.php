@@ -294,6 +294,37 @@
     </div>
 </div>
 
+{{-- Resumen financiero: reutiliza el mismo diseño y queda debajo de los cinco indicadores operativos. --}}
+<div class="stats-grid" aria-label="Resumen financiero del periodo">
+    <div class="stat-card">
+        <div class="stat-label">Total ingresos</div>
+        {{-- Suma únicamente ingresos del periodo y alcance seleccionados en Reportes. --}}
+        <div class="stat-num green">${{ number_format($general['ingresos_caja'], 2) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total egresos</div>
+        {{-- Suma únicamente egresos del periodo y alcance seleccionados en Reportes. --}}
+        <div class="stat-num red">${{ number_format($general['egresos_caja'], 2) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Balance</div>
+        {{-- El balance conserva el significado financiero: ingresos menos egresos. --}}
+        <div class="stat-num {{ $general['balance_caja'] >= 0 ? 'green' : 'red' }}">
+            ${{ number_format($general['balance_caja'], 2) }}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total anticipos</div>
+        {{-- Usa movimientos_caja.anticipo para conservar la cifra registrada por cada orden. --}}
+        <div class="stat-num amber">${{ number_format($general['anticipos_caja'], 2) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total movimientos</div>
+        {{-- Cuenta ingresos y egresos dentro del periodo y alcance actualmente visibles. --}}
+        <div class="stat-num blue">{{ $general['movimientos_caja'] }}</div>
+    </div>
+</div>
+
 {{-- Las gráficas usan el periodo y alcance elegidos; si no hay datos, muestran el acumulado identificado. --}}
 <section class="reporte-graficas" aria-label="Gráficas de resultados">
     {{-- Dona de unidades: consume productos.cantidades generado por ReporteController. --}}

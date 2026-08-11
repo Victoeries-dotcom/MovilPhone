@@ -42,9 +42,9 @@ class BranchlessAdministrationTest extends TestCase
 
     /**
      * Verifica que Caja no mezcle información cuando aún no se eligió una sucursal.
-     * Se conecta con MovimientoCajaController, sus indicadores y movimientos_caja.
+     * Se conecta con MovimientoCajaController y la tabla movimientos_caja sin duplicar el resumen de Reportes.
      */
-    public function test_caja_sin_sucursal_muestra_indicadores_en_cero_y_tabla_vacia(): void
+    public function test_caja_sin_sucursal_oculta_resumen_financiero_y_mantiene_tabla_vacia(): void
     {
         $sucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
         $admin = User::factory()->create([
@@ -65,13 +65,9 @@ class BranchlessAdministrationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('caja.index'))
             ->assertOk()
-            ->assertViewHas('stats', [
-                'ingresos' => 0,
-                'egresos' => 0,
-                'balance' => 0,
-                'anticipos' => 0,
-                'movimientos' => 0,
-            ])
+            // El resumen financiero ahora pertenece a Reportes y no debe duplicarse en Caja.
+            ->assertDontSee('Resumen de Caja')
+            ->assertDontSee('Total ingresos')
             ->assertViewHas('movimientos', fn ($movimientos) => $movimientos->isEmpty())
             ->assertDontSee('MOVIMIENTO EXCLUSIVO BUCTZOTZ')
             ->assertDontSee('$46,865.00');

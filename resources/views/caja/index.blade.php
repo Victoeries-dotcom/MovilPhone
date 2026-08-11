@@ -30,30 +30,6 @@
     </div>
 @endif
 
-{{-- Indicadores: resumen todos los movimientos de la sucursal activa sin depender de los filtros de la tabla. --}}
-<section class="cash-summary-grid" aria-label="Resumen de Caja">
-    <article class="cash-summary-card is-income">
-        <span>Total ingresos</span>
-        <strong>${{ number_format($stats['ingresos'], 2) }}</strong>
-    </article>
-    <article class="cash-summary-card is-expense">
-        <span>Total egresos</span>
-        <strong>${{ number_format($stats['egresos'], 2) }}</strong>
-    </article>
-    <article class="cash-summary-card {{ $stats['balance'] >= 0 ? 'is-income' : 'is-expense' }}">
-        <span>Balance</span>
-        <strong>${{ number_format($stats['balance'], 2) }}</strong>
-    </article>
-    <article class="cash-summary-card is-advance">
-        <span>Total anticipos</span>
-        <strong>${{ number_format($stats['anticipos'], 2) }}</strong>
-    </article>
-    <article class="cash-summary-card is-movements">
-        <span>Total movimientos</span>
-        <strong>{{ $stats['movimientos'] }}</strong>
-    </article>
-</section>
-
 {{-- Filtros: envían criterios GET al controlador sin modificar ningún movimiento almacenado. --}}
 <form method="GET" action="{{ route('caja.index') }}" class="cash-filter-panel">
     <label class="cash-filter-field is-search">

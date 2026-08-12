@@ -59,6 +59,12 @@
 .stat-alcance { display:block; margin-top:5px; color:#92400e; font-size:9px; font-weight:800; text-transform:uppercase; }
 /* Distingue datos actuales, como Bajo stock, de los valores acumulados del historial. */
 .stat-alcance-actual { color:#475569; }
+/* Identifica el bloque alimentado por movimientos_caja y lo separa de los indicadores operativos. */
+.reporte-finanzas-cabecera { display:flex; align-items:center; gap:.7rem; margin:-.25rem 0 .8rem; }
+.reporte-finanzas-icono { display:grid; place-items:center; width:36px; height:36px; border-radius:7px; color:#16a34a; background:rgba(22,163,74,.11); }
+.reporte-finanzas-icono svg { width:18px; height:18px; }
+.reporte-finanzas-cabecera h2 { margin:0; color:var(--ui-text,#0f1f3d); font-size:18px; line-height:1.2; }
+.reporte-finanzas-cabecera p { margin:3px 0 0; color:var(--ui-muted,#64748b); font-size:11px; }
 .grafica-pastel-wrap { position:relative; display:flex; align-items:center; justify-content:center; min-height:250px; }
 .grafica-pastel { display:block; width:250px; max-width:100%; height:250px; cursor:crosshair; }
 .grafica-leyenda { display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:6px 10px; margin-top:.75rem; }
@@ -293,6 +299,15 @@
         @endif
     </div>
 </div>
+
+{{-- Identifica las cifras que provienen de Caja y respetan el periodo y la sucursal seleccionados. --}}
+<header class="reporte-finanzas-cabecera">
+    <span class="reporte-finanzas-icono" aria-hidden="true"><i data-lucide="wallet-cards"></i></span>
+    <div>
+        <h2>Caja y Finanzas</h2>
+        <p>Movimientos registrados en el periodo y alcance seleccionados.</p>
+    </div>
+</header>
 
 {{-- Resumen financiero: reutiliza el mismo diseño y queda debajo de los cinco indicadores operativos. --}}
 <div class="stats-grid" aria-label="Resumen financiero del periodo">

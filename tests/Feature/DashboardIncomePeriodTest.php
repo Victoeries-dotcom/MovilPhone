@@ -13,6 +13,13 @@ class DashboardIncomePeriodTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function tearDown(): void
+    {
+        // Evita que la fecha simulada de estos indicadores afecte otras pruebas del sistema.
+        CarbonImmutable::setTestNow();
+        parent::tearDown();
+    }
+
     /**
      * Verifica que el recuadro separe día, semana y mes sin sumar egresos u otras sucursales.
      */
@@ -43,6 +50,41 @@ class DashboardIncomePeriodTest extends TestCase
                 'semana' => 300.0,
                 'mes' => 600.0,
             ]);
+    }
+
+    /**
+     * Confirma que un mismo ingreso de movimientos_caja alimenta Reportes y el Panel principal.
+     */
+    public function test_ingreso_registrado_se_refleja_en_reportes_y_panel_principal(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-12 15:00:00');
+        $sucursal = Sucursal::create(['nombre' => 'IZAMAL']);
+        $superusuario = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => $sucursal->id,
+        ]);
+        $sesionSucursal = [
+            'sucursal_id' => $sucursal->id,
+            'sucursal_nombre' => $sucursal->nombre,
+        ];
+
+        $this->movimiento($sucursal->id, 'INGRESO', 275, '2026-08-12 09:00:00');
+
+        $this->actingAs($superusuario)
+            ->withSession($sesionSucursal)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertViewHas('ingresosPorPeriodo', fn (array $ingresos) => $ingresos['dia'] === 275.0);
+
+        $this->actingAs($superusuario)
+            ->withSession($sesionSucursal)
+            ->get(route('reportes.index', ['periodo' => 'hoy']))
+            ->assertOk()
+            ->assertSee('Caja y Finanzas')
+            ->assertViewHas('general', fn (array $general) => (float) $general['ingresos_caja'] === 275.0
+                && (float) $general['balance_caja'] === 275.0
+                && $general['movimientos_caja'] === 1
+            );
     }
 
     /** Crea un movimiento fechado para comprobar cada límite del periodo. */

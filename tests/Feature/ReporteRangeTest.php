@@ -296,9 +296,10 @@ class ReporteRangeTest extends TestCase
             ->assertSee('PRODUCTO BUCTZOTZ')
             ->assertSee('PROVEEDOR IZAMAL')
             ->assertSee('PROVEEDOR BUCTZOTZ')
-            // Las cinco tarjetas financieras se muestran debajo de los indicadores operativos.
+            // El encabezado identifica las cinco tarjetas financieras debajo de los indicadores operativos.
             ->assertSeeInOrder([
                 'Bajo stock',
+                'Caja y Finanzas',
                 'Total ingresos',
                 'Total egresos',
                 'Balance',

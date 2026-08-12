@@ -28,29 +28,33 @@ class DashboardController extends Controller
 
         $ventasHoy = $this->ventasEnRango($sucursalId, $hoy, $hoy->endOfDay());
         $ventasAyer = $this->ventasEnRango($sucursalId, $ayer, $ayer->endOfDay());
-        $ingresosHoy = $this->movimientosEnRango($sucursalId, $hoy, $hoy->endOfDay())
+        // Las cifras de Caja comparten fecha y sucursal para que ingresos, egresos y balance sean consistentes.
+        $movimientosHoy = $this->movimientosEnRango($sucursalId, $hoy, $hoy->endOfDay());
+        $movimientosAyer = $this->movimientosEnRango($sucursalId, $ayer, $ayer->endOfDay());
+        $ingresosHoy = (clone $movimientosHoy)
             ->where('tipo', 'INGRESO')
             ->sum('monto');
-        $ingresosAyer = $this->movimientosEnRango($sucursalId, $ayer, $ayer->endOfDay())
+        $ingresosAyer = (clone $movimientosAyer)
             ->where('tipo', 'INGRESO')
             ->sum('monto');
-
-        // El recuadro por periodo suma exclusivamente INGRESOS de Caja de la sucursal activa.
-        $ingresosPorPeriodo = [
-            'dia' => (float) $ingresosHoy,
-            'semana' => (float) $this->movimientosEnRango($sucursalId, $hoy->startOfWeek(), $hoy->endOfDay())
-                ->where('tipo', 'INGRESO')
-                ->sum('monto'),
-            'mes' => (float) $this->movimientosEnRango($sucursalId, $hoy->startOfMonth(), $hoy->endOfDay())
-                ->where('tipo', 'INGRESO')
-                ->sum('monto'),
-        ];
+        $egresosHoy = (clone $movimientosHoy)
+            ->where('tipo', 'EGRESO')
+            ->sum('monto');
+        $egresosAyer = (clone $movimientosAyer)
+            ->where('tipo', 'EGRESO')
+            ->sum('monto');
 
         // Las tarjetas comparan hoy contra ayer y conservan el mismo filtro de sucursal.
         $indicadores = [
             'ventas' => $this->indicador($ventasHoy->count(), $ventasAyer->count()),
             'vendido' => $this->indicador((float) $ventasHoy->sum('total'), (float) $ventasAyer->sum('total')),
             'ingresos' => $this->indicador((float) $ingresosHoy, (float) $ingresosAyer),
+            'egresos' => $this->indicador((float) $egresosHoy, (float) $egresosAyer),
+            // El balance financiero siempre corresponde a ingresos menos egresos del mismo día.
+            'balance' => $this->indicador(
+                (float) $ingresosHoy - (float) $egresosHoy,
+                (float) $ingresosAyer - (float) $egresosAyer
+            ),
             'ordenes' => $this->indicador(
                 $this->ordenesEnRango($sucursalId, $hoy, $hoy->endOfDay())->count(),
                 $this->ordenesEnRango($sucursalId, $ayer, $ayer->endOfDay())->count()
@@ -116,7 +120,6 @@ class DashboardController extends Controller
         return view('home', compact(
             'sucursal',
             'indicadores',
-            'ingresosPorPeriodo',
             'operacion',
             'tendencia',
             'ordenesRecientes',

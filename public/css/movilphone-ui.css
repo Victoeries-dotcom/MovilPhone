@@ -1049,11 +1049,6 @@ body .dashboard-delta.is-negative { color:#ff7f8f; }
 body .dashboard-kpi-label { display:block; margin-top:15px; color:#8996ae; font-size:10px; font-weight:750; text-transform:uppercase; }
 body .dashboard-kpi strong { display:block; margin-top:3px; color:#f5f7ff; font-size:27px; }
 body .dashboard-kpi small { color:#66738d; font-size:9px; }
-/* Selector del recuadro adicional: alterna día, semana y mes dentro del mismo espacio. */
-body .dashboard-income-period { min-width:0; }
-body .dashboard-period-tabs { display:flex;align-items:center;gap:3px;padding:3px;border:1px solid #33405f;border-radius:7px;background:#11192d; }
-body .dashboard-period-tabs button { padding:4px 6px;border:0;border-radius:4px;background:transparent;color:#8996ae;font:inherit;font-size:8px;font-weight:800;cursor:pointer; }
-body .dashboard-period-tabs button.is-active { background:#8069f2;color:#fff; }
 body .dashboard-grid-main, body .dashboard-grid-lower { display:grid; gap:14px; margin-bottom:14px; }
 body .dashboard-grid-main { grid-template-columns:minmax(0,1.65fr) minmax(300px,.7fr); }
 body .dashboard-grid-lower { grid-template-columns:minmax(0,1.45fr) minmax(310px,.8fr); }
@@ -1294,9 +1289,6 @@ html[data-ui-theme="light"] body .dashboard-kpi small,
 html[data-ui-theme="light"] body .dashboard-order-main small,
 html[data-ui-theme="light"] body .dashboard-order-tech,
 html[data-ui-theme="light"] body .dashboard-activity-item p { color:#718096; }
-html[data-ui-theme="light"] body .dashboard-period-tabs { border-color:#dbe3ef;background:#f8fafc; }
-html[data-ui-theme="light"] body .dashboard-period-tabs button { color:#64748b; }
-html[data-ui-theme="light"] body .dashboard-period-tabs button.is-active { background:#1650c5;color:#fff; }
 html[data-ui-theme="light"] body .dashboard-pulse-row,
 html[data-ui-theme="light"] body .dashboard-order-row,
 html[data-ui-theme="light"] body .dashboard-activity-item { border-color:#e5eaf1; }

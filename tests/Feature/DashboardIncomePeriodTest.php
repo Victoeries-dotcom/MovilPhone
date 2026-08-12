@@ -20,10 +20,8 @@ class DashboardIncomePeriodTest extends TestCase
         parent::tearDown();
     }
 
-    /**
-     * Verifica que el recuadro separe día, semana y mes sin sumar egresos u otras sucursales.
-     */
-    public function test_panel_calcula_ingresos_de_dia_semana_y_mes_para_la_sucursal_activa(): void
+    /** Verifica que el resumen financiero diario no mezcle fechas, tipos u otras sucursales. */
+    public function test_panel_calcula_ingresos_egresos_y_balance_para_la_sucursal_activa(): void
     {
         CarbonImmutable::setTestNow('2026-08-12 15:00:00');
         $sucursal = Sucursal::create(['nombre' => 'IZAMAL']);
@@ -41,15 +39,15 @@ class DashboardIncomePeriodTest extends TestCase
             ->withSession(['sucursal_id' => $sucursal->id, 'sucursal_nombre' => $sucursal->nombre])
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('Ingresos por periodo')
-            ->assertSee('data-income-period="dia"', false)
-            ->assertSee('data-income-period="semana"', false)
-            ->assertSee('data-income-period="mes"', false)
-            ->assertViewHas('ingresosPorPeriodo', fn (array $ingresos) => $ingresos === [
-                'dia' => 100.0,
-                'semana' => 300.0,
-                'mes' => 600.0,
-            ]);
+            ->assertSee('Ingresos de caja')
+            ->assertSee('Total egresos')
+            ->assertSee('Balance')
+            ->assertDontSee('Ingresos por periodo')
+            ->assertDontSee('data-income-period', false)
+            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 100.0
+                && $indicadores['egresos']['actual'] === 900.0
+                && $indicadores['balance']['actual'] === -800.0
+            );
     }
 
     /**
@@ -69,12 +67,16 @@ class DashboardIncomePeriodTest extends TestCase
         ];
 
         $this->movimiento($sucursal->id, 'INGRESO', 275, '2026-08-12 09:00:00');
+        $this->movimiento($sucursal->id, 'EGRESO', 40, '2026-08-12 10:00:00');
 
         $this->actingAs($superusuario)
             ->withSession($sesionSucursal)
             ->get(route('home'))
             ->assertOk()
-            ->assertViewHas('ingresosPorPeriodo', fn (array $ingresos) => $ingresos['dia'] === 275.0);
+            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 275.0
+                && $indicadores['egresos']['actual'] === 40.0
+                && $indicadores['balance']['actual'] === 235.0
+            );
 
         $this->actingAs($superusuario)
             ->withSession($sesionSucursal)
@@ -82,8 +84,9 @@ class DashboardIncomePeriodTest extends TestCase
             ->assertOk()
             ->assertSee('Caja y Finanzas')
             ->assertViewHas('general', fn (array $general) => (float) $general['ingresos_caja'] === 275.0
-                && (float) $general['balance_caja'] === 275.0
-                && $general['movimientos_caja'] === 1
+                && (float) $general['egresos_caja'] === 40.0
+                && (float) $general['balance_caja'] === 235.0
+                && $general['movimientos_caja'] === 2
             );
     }
 

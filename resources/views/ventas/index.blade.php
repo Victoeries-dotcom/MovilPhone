@@ -48,6 +48,7 @@
                 {{-- Muestra por separado venta_detalles.cantidad y conserva el orden de cada producto. --}}
                 <th style="padding:12px 16px;text-align:center;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Cantidad vendida</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Vendedor</th>
+                <th style="padding:12px 16px;text-align:center;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Ticket</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Total</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Estado</th>
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Fecha</th>
@@ -75,6 +76,13 @@
                     @endforelse
                 </td>
                 <td style="padding:12px 16px;">{{ $venta->usuario->name ?? '—' }}</td>
+                <td style="padding:12px 16px;text-align:center;">
+                    {{-- Abre el comprobante de esta venta sin mezclar datos de clientes u órdenes. --}}
+                    <a href="{{ route('ventas.ticket', $venta) }}" class="btn btn-sm" title="Ver ticket de venta">
+                        <i data-lucide="receipt-text" aria-hidden="true"></i>
+                        Ticket
+                    </a>
+                </td>
                 <td style="padding:12px 16px;font-weight:600;">${{ number_format($venta->total, 2) }}</td>
                 <td style="padding:12px 16px;">
                     <span class="badge badge-autorizado">{{ $venta->estado }}</span>
@@ -93,7 +101,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:14px;">
+                <td colspan="9" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:14px;">
                     No hay ventas registradas para {{ $sucursalActiva?->nombre ?? 'la sucursal seleccionada' }}.
                 </td>
             </tr>

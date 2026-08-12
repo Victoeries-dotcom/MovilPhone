@@ -80,6 +80,8 @@ Route::middleware('auth')->group(function () {
 
     /* Ventas se conecta solo con vendedores, superusuarios y el rol "usuario". */
     Route::middleware('role:superusuario,vendedor,usuario')->group(function () {
+        // El ticket usa los datos ya guardados en ventas y venta_detalles.
+        Route::get('ventas/{venta}/ticket', [VentaController::class, 'ticket'])->name('ventas.ticket');
         Route::resource('ventas', VentaController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
     });
 

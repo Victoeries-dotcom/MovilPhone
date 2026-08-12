@@ -248,7 +248,7 @@ class MovimientoCajaController extends Controller
         abort_if(! $sucursalIdActivo || (int) $movimientoCaja->sucursal_id !== $sucursalIdActivo, 403);
 
         // Las operaciones automáticas se administran desde su módulo de origen para conservar inventario y totales.
-        if ($movimientoCaja->os_id || $movimientoCaja->categoria === 'Venta de productos') {
+        if ($movimientoCaja->os_id || in_array($movimientoCaja->categoria, ['Venta de productos', 'Venta'], true)) {
             return redirect()->route('caja.index')
                 ->with('error', 'Los movimientos ligados a una orden o venta se administran desde su módulo de origen.');
         }

@@ -13,7 +13,12 @@
     </div>
 </div>
 
-<div id="ticket" style="max-width:400px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:2rem;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+<div class="cash-ticket-copies">
+@foreach(['COPIA CLIENTE', 'COPIA CAJERO'] as $tipoCopia)
+<div class="cash-ticket" style="max-width:400px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:2rem;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+
+    {{-- Ambas copias conservan el mismo movimiento; esta etiqueta define quién guarda cada comprobante. --}}
+    <div style="text-align:center;font-size:11px;font-weight:800;letter-spacing:.12em;margin-bottom:1rem;">{{ $tipoCopia }}</div>
 
     {{-- Encabezado imprimible conectado con la fecha y sucursal reales del movimiento. --}}
     <div style="text-align:center;border-bottom:2px dashed #e2e8f0;padding-bottom:1.25rem;margin-bottom:1.25rem;">
@@ -131,13 +136,18 @@
         <div style="margin-top:2px;">{{ $configuracionGlobal['negocio_nombre'] ?? 'MovilPhone' }} — {{ $configuracionGlobal['negocio_subtitulo'] ?? 'Sistema de Taller' }}</div>
     </div>
 </div>
+@endforeach
+</div>
 
 <style>
+.cash-ticket-copies { display:flex;justify-content:center;align-items:flex-start;flex-wrap:wrap;gap:2rem; }
 @media print {
     nav, .page-header, footer, .btn, .sidebar, .topbar { display:none !important; }
     .main { margin-left:0 !important; }
     .content { padding:0 !important; }
-    #ticket { border:none !important; box-shadow:none !important; max-width:100% !important; }
+    .cash-ticket-copies { display:block !important; }
+    .cash-ticket { border:none !important; box-shadow:none !important; max-width:100% !important; page-break-after:always; break-after:page; }
+    .cash-ticket:last-child { page-break-after:auto; break-after:auto; }
     body { background:white !important; }
 }
 </style>

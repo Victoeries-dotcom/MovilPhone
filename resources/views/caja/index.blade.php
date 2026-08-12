@@ -105,7 +105,8 @@
                 @forelse($movimientos as $mov)
                     @php
                         // Clasifica cada registro sin cambiar sus datos para reproducir los colores del archivo externo.
-                        $esVenta = $mov->categoria === 'Venta de productos';
+                        // Reconoce ventas nuevas y registros históricos que usaban la categoría abreviada.
+                        $esVenta = in_array($mov->categoria, ['Venta de productos', 'Venta'], true);
                         $esRechazo = $mov->tipo === 'EGRESO'
                             && ($mov->categoria === 'DEVOLUCIÓN DE ANTICIPO'
                                 || str_starts_with((string) $mov->descripcion, 'RECHAZO '));
@@ -161,6 +162,14 @@
                         </td>
                         <td>
                             <div class="cash-actions">
+                                @if($mov->tipo === 'INGRESO')
+                                    {{-- Todo dinero recibido en Caja conserva un comprobante imprimible. --}}
+                                    <a href="{{ route('caja.ticket', $mov) }}" class="btn btn-sm" title="Ver ticket del ingreso">
+                                        <i data-lucide="receipt-text" aria-hidden="true"></i>
+                                        Ticket
+                                    </a>
+                                @endif
+
                                 @if($esManual || $esVenta || $esRechazo)
                                     {{-- Detalle presenta la información existente en un modal y no escribe en la base de datos. --}}
                                     <button

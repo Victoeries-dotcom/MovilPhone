@@ -150,12 +150,14 @@ class VentaController extends Controller
 
             MovimientoCaja::create([
                 'tipo' => 'INGRESO',
-                'categoria' => 'Venta',
+                // La categoría y referencia identifican el ingreso automático y protegen su registro en Caja.
+                'categoria' => 'Venta de productos',
                 'monto' => $total,
                 // Las ventas se registran inicialmente como efectivo y se conectan con el filtro de Caja.
                 'metodo_pago' => 'efectivo',
                 'sucursal_id' => $sucursalId,
                 'descripcion' => 'Venta #'.$venta->id,
+                'referencia_pago' => 'VEN-'.str_pad((string) $venta->id, 6, '0', STR_PAD_LEFT),
                 'os_id' => null,
                 'user_id' => Auth::id(),
             ]);
@@ -182,6 +184,20 @@ class VentaController extends Controller
         $venta->load(['cliente', 'sucursal', 'usuario', 'detalles.inventario']);
 
         return view('ventas.show', compact('venta'));
+    }
+
+    /**
+     * Muestra el comprobante imprimible con los datos originales de la venta.
+     * Se conecta con ventas, venta_detalles, users y sucursales sin solicitar cliente.
+     */
+    public function ticket(Venta $venta)
+    {
+        $sucursalActivaId = $this->sucursalActivaId();
+        abort_unless($sucursalActivaId && (int) $venta->sucursal_id === $sucursalActivaId, 404);
+
+        $venta->load(['sucursal', 'usuario', 'detalles']);
+
+        return view('ventas.ticket', compact('venta'));
     }
 
     public function destroy(Venta $venta)

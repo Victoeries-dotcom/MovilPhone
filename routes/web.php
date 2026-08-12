@@ -57,10 +57,17 @@ Route::middleware('auth')->group(function () {
             ->name('ordenes.sticker');
     });
 
-    /* Inventario y categorias quedan protegidos para captura y administracion. */
+    /* Usuario puede consultar y agregar inventario; Categorías conserva sus permisos actuales. */
     Route::middleware('role:superusuario,capturista,usuario')->group(function () {
-        Route::resource('inventario', InventarioController::class);
+        Route::resource('inventario', InventarioController::class)
+            ->only(['index', 'create', 'store', 'show']);
         Route::resource('categorias', CategoriaController::class);
+    });
+
+    /* Editar y eliminar productos queda reservado al personal administrador, incluso por URL directa. */
+    Route::middleware('role:superusuario,capturista')->group(function () {
+        Route::resource('inventario', InventarioController::class)
+            ->only(['edit', 'update', 'destroy']);
     });
 
     /* Corte se declara antes del resource para que "corte" no se interprete como un ID. */

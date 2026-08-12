@@ -82,7 +82,10 @@ class InventarioController extends Controller
             ->orderBy('categoria')
             ->pluck('categoria');
 
-        return view('inventario.index', compact('inventario', 'stats', 'sucursalActiva', 'categorias'));
+        // La vista usa esta autorización para retirar Editar y Eliminar al rol usuario.
+        $puedeAdministrarProductos = $this->puedeAdministrarProductos();
+
+        return view('inventario.index', compact('inventario', 'stats', 'sucursalActiva', 'categorias', 'puedeAdministrarProductos'));
     }
 
     public function create()
@@ -145,6 +148,7 @@ class InventarioController extends Controller
 
     public function edit(Inventario $inventario)
     {
+        $this->autorizarAdministracionProductos();
         $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
         abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
         // La edición conserva la sucursal original y no ofrece mover la pieza a otra sede.
@@ -155,6 +159,7 @@ class InventarioController extends Controller
 
     public function update(Request $request, Inventario $inventario)
     {
+        $this->autorizarAdministracionProductos();
         // Revalida la sede y sobrescribe cualquier sucursal manipulada desde el navegador.
         $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
         abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
@@ -191,12 +196,25 @@ class InventarioController extends Controller
 
     public function destroy(Inventario $inventario)
     {
+        $this->autorizarAdministracionProductos();
         $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
         abort_unless((int) $inventario->sucursal_id === (int) $sucursalActivaId, 404);
         AdminActivityLogger::registrar('INVENTARIO', 'ELIMINAR', 'Pieza '.$inventario->nombre.' eliminada.', $inventario->sucursal_id, $inventario);
         $inventario->delete();
 
         return redirect()->route('inventario.index')->with('success', 'Pieza eliminada.');
+    }
+
+    /** Comprueba el mismo permiso usado por las rutas y los controles del listado. */
+    private function puedeAdministrarProductos(): bool
+    {
+        return in_array(auth()->user()?->rol, ['superusuario', 'capturista'], true);
+    }
+
+    /** Bloquea edición y eliminación aunque se invoque directamente el controlador. */
+    private function autorizarAdministracionProductos(): void
+    {
+        abort_unless($this->puedeAdministrarProductos(), 403);
     }
 
     /**

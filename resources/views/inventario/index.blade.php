@@ -7,7 +7,8 @@
         <span class="inventory-eyebrow">Control de productos</span>
         <h1 id="inventory-title">Inventario</h1>
         <p>
-            Consulta existencias y administra los productos disponibles
+            {{-- El mensaje refleja si la sesión puede administrar o únicamente agregar productos. --}}
+            Consulta existencias y {{ $puedeAdministrarProductos ? 'administra' : 'agrega' }} los productos disponibles
             @if($sucursalActiva)
                 en {{ $sucursalActiva->nombre }}.
             @else
@@ -166,7 +167,10 @@
                     <th>Stock mínimo</th>
                     <th>Precio de venta</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    @if($puedeAdministrarProductos)
+                        {{-- La columna completa se oculta cuando el rol solo tiene permiso de alta. --}}
+                        <th>Acciones</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -209,30 +213,33 @@
                                 <span class="inventory-status is-available">Disponible</span>
                             @endif
                         </td>
-                        <td>
-                            <div class="inventory-actions">
-                                <a href="{{ route('inventario.edit', $pieza) }}" class="btn inventory-edit-button">
-                                    <i data-lucide="pencil" aria-hidden="true"></i>
-                                    <span>Editar</span>
-                                </a>
-                                <form
-                                    method="POST"
-                                    action="{{ route('inventario.destroy', $pieza) }}"
-                                    onsubmit="return confirmarEliminacionSistema(event, 'la pieza', '{{ addslashes($pieza->nombre) }}');"
-                                >
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger inventory-delete-button">
-                                        <i data-lucide="circle-x" aria-hidden="true"></i>
-                                        <span>Eliminar</span>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
+                        @if($puedeAdministrarProductos)
+                            <td>
+                                {{-- Estos controles coinciden con las rutas restringidas a superusuario y capturista. --}}
+                                <div class="inventory-actions">
+                                    <a href="{{ route('inventario.edit', $pieza) }}" class="btn inventory-edit-button">
+                                        <i data-lucide="pencil" aria-hidden="true"></i>
+                                        <span>Editar</span>
+                                    </a>
+                                    <form
+                                        method="POST"
+                                        action="{{ route('inventario.destroy', $pieza) }}"
+                                        onsubmit="return confirmarEliminacionSistema(event, 'la pieza', '{{ addslashes($pieza->nombre) }}');"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger inventory-delete-button">
+                                            <i data-lucide="circle-x" aria-hidden="true"></i>
+                                            <span>Eliminar</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        @endif
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7">
+                        <td colspan="{{ $puedeAdministrarProductos ? 7 : 6 }}">
                             <div class="inventory-empty-state">
                                 <i data-lucide="package-open" aria-hidden="true"></i>
                                 <strong>No hay productos para mostrar</strong>

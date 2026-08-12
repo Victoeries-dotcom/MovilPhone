@@ -86,6 +86,14 @@
             <strong>${{ number_format($venta->total, 2) }}</strong>
         </div>
 
+        @if($politica)
+            {{-- La garantía global aparece completa en ambas copias y antes del folio interno. --}}
+            <section class="ticket-warranty">
+                <div class="ticket-warranty-title">POLÍTICA DE GARANTÍA</div>
+                <div class="ticket-warranty-text">{{ $politica }}</div>
+            </section>
+        @endif
+
         {{-- El pie conserva el folio interno y los datos configurables del negocio. --}}
         <footer class="ticket-footer">
             <div>Folio: #{{ $venta->id }}</div>
@@ -127,6 +135,9 @@
 .ticket-total { border:3px solid #000;border-radius:4px;padding:14px 16px;margin:16px 0 14px;display:flex;justify-content:space-between;align-items:center;gap:1rem; }
 .ticket-total span { font-size:15px;font-weight:900; }
 .ticket-total strong { font-size:24px;font-weight:900; }
+.ticket-warranty { border-top:3px solid #000;padding-top:12px;margin-top:12px;font-size:11px;font-weight:700;line-height:1.6; }
+.ticket-warranty-title { font-size:12px;font-weight:900;margin-bottom:7px; }
+.ticket-warranty-text { white-space:pre-line; }
 .ticket-footer { text-align:center;margin-top:14px;padding-top:12px;border-top:3px solid #000;font-size:11px;font-weight:800;line-height:1.55; }
 /* Imprime solamente el recibo y elimina menú, botones y sombras de pantalla. */
 @media print {

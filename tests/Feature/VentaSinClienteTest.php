@@ -8,6 +8,7 @@ use App\Models\Sucursal;
 use App\Models\User;
 use App\Models\Venta;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class VentaSinClienteTest extends TestCase
@@ -200,6 +201,38 @@ class VentaSinClienteTest extends TestCase
             ->withSession($sesion)
             ->get(route('ventas.ticket', $ventaAjena))
             ->assertNotFound();
+    }
+
+    /**
+     * Confirma que la garantía configurada aparezca en ambas copias antes de cada folio.
+     */
+    public function test_ticket_de_venta_incluye_garantia_en_copia_cliente_y_cajero(): void
+    {
+        [$usuario, $sesion, $sucursal] = $this->usuarioConSucursal();
+        $politica = 'GARANTÍA PERSONALIZADA PARA PRODUCTOS Y SERVICIOS VENDIDOS.';
+        DB::table('configuraciones')->insert([
+            'clave' => 'politica_garantia',
+            'valor' => $politica,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $venta = Venta::create([
+            'usuario_id' => $usuario->id,
+            'sucursal_id' => $sucursal->id,
+            'total' => 150,
+            'estado' => 'completada',
+        ]);
+
+        $contenido = $this->actingAs($usuario)
+            ->withSession($sesion)
+            ->get(route('ventas.ticket', $venta))
+            ->assertOk()
+            ->assertSee('POLÍTICA DE GARANTÍA')
+            ->assertSee($politica)
+            ->getContent();
+
+        $this->assertSame(2, substr_count($contenido, $politica));
+        $this->assertLessThan(strpos($contenido, '<div>Folio: #'), strpos($contenido, $politica));
     }
 
     /**

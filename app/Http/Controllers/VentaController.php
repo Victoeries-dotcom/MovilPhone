@@ -10,6 +10,7 @@ use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class VentaController extends Controller
@@ -197,7 +198,13 @@ class VentaController extends Controller
 
         $venta->load(['sucursal', 'usuario', 'detalles']);
 
-        return view('ventas.ticket', compact('venta'));
+        // Reutiliza la misma política global configurada para los tickets de entrega.
+        $politica = Schema::hasTable('configuraciones')
+            ? DB::table('configuraciones')->where('clave', 'politica_garantia')->value('valor')
+            : null;
+        $politica = $politica ?: config('warranty.default_policy');
+
+        return view('ventas.ticket', compact('venta', 'politica'));
     }
 
     public function destroy(Venta $venta)

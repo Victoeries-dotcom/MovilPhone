@@ -166,7 +166,7 @@ class OrdenServicioController extends Controller
     }
 
     /**
-     * Busca un cliente anterior usando su teléfono como identificador único.
+     * Busca un cliente anterior usando su teléfono únicamente como referencia.
      * Se conecta con clientes.telefono_normalizado y devuelve los datos que
      * el asistente de Nueva OS usa para autocompletar sus primeros tres pasos.
      */
@@ -187,7 +187,7 @@ class OrdenServicioController extends Controller
 
         $cliente = Cliente::withCount('ordenes')
             ->where('telefono_normalizado', $telefonoNormalizado)
-            // El autocompletado solo consulta clientes visibles en la sucursal del usuario.
+            // El autocompletado solo consulta clientes visibles; no fusiona ni reconecta sus órdenes.
             ->when($sucursalId, fn ($clientes) => $clientes->where('sucursal_habitual_id', $sucursalId))
             ->first();
 
@@ -285,52 +285,14 @@ class OrdenServicioController extends Controller
          * La transacción evita datos incompletos si alguno de esos módulos falla.
          */
         [$orden, $cliente] = DB::transaction(function () use ($request, $telefonoNormalizado) {
-            // Si se eligió un cliente anterior, confirma dentro de la transacción que ID y teléfono coincidan.
-            $cliente = null;
-            if ($request->filled('cliente_id')) {
-                if ($telefonoNormalizado === null) {
-                    throw ValidationException::withMessages([
-                        'cliente_telefono' => 'El cliente anterior seleccionado debe conservar su teléfono.',
-                    ]);
-                }
-
-                $cliente = Cliente::whereKey($request->cliente_id)
-                    ->where('telefono_normalizado', $telefonoNormalizado)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (! $cliente) {
-                    throw ValidationException::withMessages([
-                        'cliente_telefono' => 'El teléfono fue modificado y ya no coincide con el cliente anterior seleccionado.',
-                    ]);
-                }
-            }
-
-            // Solo reutiliza por una llave telefónica real; sin teléfono crea un historial independiente.
-            if (! $cliente && $telefonoNormalizado !== null) {
-                $cliente = Cliente::where('telefono_normalizado', $telefonoNormalizado)
-                    ->lockForUpdate()
-                    ->first();
-            }
-
-            if ($cliente) {
-                $cliente->update([
-                    'nombre' => Str::upper($request->cliente_nombre),
-                    'telefono_principal' => $request->cliente_telefono,
-                    'telefono_alternativo' => $request->filled('cliente_telefono_extra')
-                        ? $request->cliente_telefono_extra
-                        : $cliente->telefono_alternativo,
-                    'sucursal_habitual_id' => $cliente->sucursal_habitual_id ?: $request->sucursal_id,
-                ]);
-            } else {
-                $cliente = Cliente::create([
-                    'nombre' => Str::upper($request->cliente_nombre),
-                    'telefono_principal' => $request->cliente_telefono,
-                    'telefono_normalizado' => $telefonoNormalizado,
-                    'telefono_alternativo' => $request->cliente_telefono_extra,
-                    'sucursal_habitual_id' => $request->sucursal_id,
-                ]);
-            }
+            // Cada OS crea su propio clientes.id, aunque nombre o teléfono coincidan con registros anteriores.
+            $cliente = Cliente::create([
+                'nombre' => Str::upper($request->cliente_nombre),
+                'telefono_principal' => $request->cliente_telefono,
+                'telefono_normalizado' => $telefonoNormalizado,
+                'telefono_alternativo' => $request->cliente_telefono_extra,
+                'sucursal_habitual_id' => $request->sucursal_id,
+            ]);
 
             /**
              * Bloquea brevemente la sucursal para que dos capturas simultáneas no reciban el mismo folio.
@@ -498,25 +460,27 @@ class OrdenServicioController extends Controller
             'cliente_telefono_extra.regex' => 'El teléfono extra debe contener exactamente 10 dígitos.',
         ]);
 
-        // Impide asignar a este cliente el teléfono único que ya identifica a otro registro.
-        $telefonoPerteneceAOtroCliente = $telefonoNormalizado !== null
-            && Cliente::where('telefono_normalizado', $telefonoNormalizado)
-                ->where('id', '!=', $ordenServicio->cliente_id)
+        DB::transaction(function () use ($ordenServicio, $request, $telefonoNormalizado) {
+            $cliente = $ordenServicio->cliente()->lockForUpdate()->firstOrFail();
+            $clienteCompartido = OrdenServicio::where('cliente_id', $cliente->id)
+                ->whereKeyNot($ordenServicio->id)
                 ->exists();
 
-        if ($telefonoPerteneceAOtroCliente) {
-            throw ValidationException::withMessages([
-                'cliente_telefono' => 'Ese teléfono ya identifica a otro cliente registrado.',
-            ]);
-        }
+            if ($clienteCompartido) {
+                // Protege datos antiguos: copia el cliente y conecta únicamente la OS que se está editando.
+                $cliente = $cliente->replicate();
+                $cliente->save();
+                $ordenServicio->update(['cliente_id' => $cliente->id]);
+            }
 
-        // Actualiza los datos personales en clientes; la relación se mantiene mediante cliente_id.
-        $ordenServicio->cliente->update([
-            'nombre' => Str::upper($request->cliente_nombre),
-            'telefono_principal' => $request->cliente_telefono,
-            'telefono_normalizado' => $telefonoNormalizado,
-            'telefono_alternativo' => $request->cliente_telefono_extra,
-        ]);
+            // Modifica únicamente el clientes.id exclusivo de esta orden.
+            $cliente->update([
+                'nombre' => Str::upper($request->cliente_nombre),
+                'telefono_principal' => $request->cliente_telefono,
+                'telefono_normalizado' => $telefonoNormalizado,
+                'telefono_alternativo' => $request->cliente_telefono_extra,
+            ]);
+        });
 
         $estadoAnterior = $ordenServicio->estado;
         // Los demás roles conservan el estado actual aunque manipulen manualmente la petición.

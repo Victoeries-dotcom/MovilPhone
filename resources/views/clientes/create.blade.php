@@ -46,7 +46,7 @@
                 <div class="registro-question">¿Cuál es su teléfono principal?</div>
                 <input class="registro-input" type="tel" name="telefono_principal"
                     value="{{ old('telefono_principal') }}" placeholder="999-000-0000" required>
-                <div class="registro-help">Este número identifica al cliente y evita registros duplicados.</div>
+                <div class="registro-help">Este número sirve como contacto y búsqueda; cada cliente conserva un registro independiente.</div>
                 <div class="registro-actions">
                     <button type="button" class="registro-prev" data-prev>Anterior</button>
                     <button type="button" class="registro-next" data-next>Siguiente</button>

@@ -378,13 +378,13 @@
             >
             @csrf
 
-            {{-- Conserva el cliente anterior seleccionado y lo conecta con ordenes_servicio.cliente_id. --}}
+            {{-- Conserva la selección solo como referencia de autocompletado; la nueva OS recibe un clientes.id independiente. --}}
             <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}">
 
             {{-- La sucursal activa conecta la OS con reportes, caja y filtros por sucursal. --}}
             <input type="hidden" name="sucursal_id" value="{{ session('sucursal_id') ?? old('sucursal_id') ?? ($sucursales->first()->id ?? '') }}">
 
-            {{-- Paso 1: guarda cliente_nombre para crear o localizar al cliente. --}}
+            {{-- Paso 1: guarda cliente_nombre dentro del registro independiente de esta OS. --}}
             <div class="os-step active" id="step-1">
                 <div class="os-step-label">Paso 1 de 9</div>
                 <div class="os-step-title">¿Cuál es el nombre del cliente?</div>
@@ -423,7 +423,7 @@
                 </div>
             </div>
 
-            {{-- Paso 2: el contacto es opcional; si se captura, identifica al cliente por teléfono. --}}
+            {{-- Paso 2: el contacto es opcional y permite buscar, pero nunca fusiona clientes por teléfono. --}}
             <div class="os-step" id="step-2">
                 <div class="os-step-label">Paso 2 de 9</div>
                 <div class="os-step-title">¿Cuál es su teléfono? <span style="font-size:16px;font-weight:600;color:#64748b;">(opcional)</span></div>

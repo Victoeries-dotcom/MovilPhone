@@ -6,7 +6,6 @@ use App\Models\Cliente;
 use App\Support\AdminActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class ClienteController extends Controller
 {
@@ -60,7 +59,7 @@ class ClienteController extends Controller
 
     public function store(Request $request)
     {
-        // Normaliza el teléfono antes de validar para impedir duplicados con guiones o espacios.
+        // Normaliza el teléfono solo para búsquedas; clientes distintos pueden compartir el mismo número.
         $request->merge([
             'telefono_normalizado' => Cliente::normalizarTelefono($request->telefono_principal),
         ]);
@@ -68,7 +67,7 @@ class ClienteController extends Controller
         $request->validate([
             'nombre' => 'required|string',
             'telefono_principal' => 'required|string|max:50',
-            'telefono_normalizado' => 'required|string|max:80|unique:clientes,telefono_normalizado',
+            'telefono_normalizado' => 'required|string|max:80',
         ]);
 
         // Obliga el alta a la sucursal activa; el formulario no puede enviar otra sede manualmente.
@@ -125,7 +124,7 @@ class ClienteController extends Controller
         // Valida la sucursal antes de aceptar cualquier modificación del cliente.
         $this->asegurarSucursalActiva($cliente);
 
-        // Usa el mismo identificador normalizado y permite conservar el teléfono del cliente editado.
+        // El ID de la ruta identifica al único cliente editado; el teléfono no fusiona otros registros.
         $request->merge([
             'telefono_normalizado' => Cliente::normalizarTelefono($request->telefono_principal),
         ]);
@@ -133,12 +132,7 @@ class ClienteController extends Controller
         $request->validate([
             'nombre' => 'required|string',
             'telefono_principal' => 'required|string|max:50',
-            'telefono_normalizado' => [
-                'required',
-                'string',
-                'max:80',
-                Rule::unique('clientes', 'telefono_normalizado')->ignore($cliente->id),
-            ],
+            'telefono_normalizado' => 'required|string|max:80',
         ]);
 
         // Actualiza únicamente los campos visibles; dirección y sucursal habitual conservan su valor actual.

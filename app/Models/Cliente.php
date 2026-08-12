@@ -19,9 +19,9 @@ class Cliente extends Model
     ];
 
     /**
-     * Genera el identificador único del cliente a partir de su teléfono.
+     * Genera una versión comparable del teléfono para facilitar búsquedas.
      * Se conecta con clientes.telefono_normalizado y elimina espacios,
-     * guiones o paréntesis para evitar registros duplicados por formato.
+     * guiones o paréntesis sin convertir el teléfono en la identidad del cliente.
      */
     public static function normalizarTelefono(?string $telefono): string
     {
@@ -30,7 +30,7 @@ class Cliente extends Model
 
     /**
      * Mantiene telefono_normalizado actualizado en cualquier alta o edición.
-     * Se conecta con Clientes, Ventas y Órdenes de Servicio.
+     * Los registros continúan separados por clientes.id aunque compartan el número.
      */
     protected static function booted(): void
     {

@@ -43,7 +43,6 @@
         <thead>
             <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">#</th>
-                <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Cliente</th>
                 {{-- Sustituye Sucursal por el contenido comercial proveniente de venta_detalles. --}}
                 <th style="padding:12px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Producto / servicio vendido</th>
                 {{-- Muestra por separado venta_detalles.cantidad y conserva el orden de cada producto. --}}
@@ -61,7 +60,6 @@
                 onmouseover="this.style.background='#f8fafc'"
                 onmouseout="this.style.background=''">
                 <td style="padding:12px 16px;font-weight:700;color:#0f1f3d;">#{{ $venta->id }}</td>
-                <td style="padding:12px 16px;">{{ $venta->cliente->nombre ?? 'Sin cliente' }}</td>
                 <td style="padding:12px 16px;">
                     @forelse($venta->detalles as $detalle)
                         <div class="sales-detail-line sales-product-name">{{ $detalle->nombre_producto }}</div>
@@ -95,7 +93,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="9" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:14px;">
+                <td colspan="8" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:14px;">
                     No hay ventas registradas para {{ $sucursalActiva?->nombre ?? 'la sucursal seleccionada' }}.
                 </td>
             </tr>

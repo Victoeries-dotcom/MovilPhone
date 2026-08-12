@@ -80,9 +80,6 @@ Route::middleware('auth')->group(function () {
 
     /* Ventas se conecta solo con vendedores, superusuarios y el rol "usuario". */
     Route::middleware('role:superusuario,vendedor,usuario')->group(function () {
-        // Busca clientes anteriores por teléfono y comparte el resultado con el asistente de Nueva venta.
-        Route::get('ventas/cliente-por-telefono', [VentaController::class, 'buscarClientePorTelefono'])
-            ->name('ventas.buscarClientePorTelefono');
         Route::resource('ventas', VentaController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
     });
 

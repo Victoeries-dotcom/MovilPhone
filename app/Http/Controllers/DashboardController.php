@@ -35,6 +35,17 @@ class DashboardController extends Controller
             ->where('tipo', 'INGRESO')
             ->sum('monto');
 
+        // El recuadro por periodo suma exclusivamente INGRESOS de Caja de la sucursal activa.
+        $ingresosPorPeriodo = [
+            'dia' => (float) $ingresosHoy,
+            'semana' => (float) $this->movimientosEnRango($sucursalId, $hoy->startOfWeek(), $hoy->endOfDay())
+                ->where('tipo', 'INGRESO')
+                ->sum('monto'),
+            'mes' => (float) $this->movimientosEnRango($sucursalId, $hoy->startOfMonth(), $hoy->endOfDay())
+                ->where('tipo', 'INGRESO')
+                ->sum('monto'),
+        ];
+
         // Las tarjetas comparan hoy contra ayer y conservan el mismo filtro de sucursal.
         $indicadores = [
             'ventas' => $this->indicador($ventasHoy->count(), $ventasAyer->count()),
@@ -53,7 +64,7 @@ class DashboardController extends Controller
         // Los estados alimentan el resumen de carga de trabajo del taller.
         $estados = OrdenServicio::query()
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->select('estado')
             ->selectRaw('COUNT(*) AS total')
             ->groupBy('estado')
@@ -67,7 +78,7 @@ class DashboardController extends Controller
             'entregados' => (int) ($estados['ENTREGADO'] ?? 0),
             'stock_bajo' => Inventario::query()
                 ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
-                ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+                ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
                 ->whereColumn('cantidad_disponible', '<=', 'stock_minimo')
                 ->count(),
         ];
@@ -86,7 +97,7 @@ class DashboardController extends Controller
 
         $ordenesRecientes = OrdenServicio::with(['cliente', 'tecnico'])
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->latest()
             ->limit(6)
             ->get();
@@ -105,6 +116,7 @@ class DashboardController extends Controller
         return view('home', compact(
             'sucursal',
             'indicadores',
+            'ingresosPorPeriodo',
             'operacion',
             'tendencia',
             'ordenesRecientes',
@@ -128,7 +140,7 @@ class DashboardController extends Controller
     {
         return Venta::query()
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->whereBetween('created_at', [$inicio, $fin]);
     }
 
@@ -137,7 +149,7 @@ class DashboardController extends Controller
     {
         return MovimientoCaja::query()
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->whereBetween('created_at', [$inicio, $fin]);
     }
 
@@ -146,7 +158,7 @@ class DashboardController extends Controller
     {
         return OrdenServicio::query()
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
-            ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->whereBetween('created_at', [$inicio, $fin]);
     }
 
@@ -155,7 +167,7 @@ class DashboardController extends Controller
     {
         return Cliente::query()
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_habitual_id', $sucursalId))
-            ->when(!$sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->whereBetween('created_at', [$inicio, $fin]);
     }
 
@@ -163,6 +175,7 @@ class DashboardController extends Controller
     private function sucursalActivaId(): ?int
     {
         $id = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+
         return $id ? (int) $id : null;
     }
 }

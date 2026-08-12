@@ -62,6 +62,21 @@
                 <small>Comparado con ayer</small>
             </article>
         @endforeach
+
+        {{-- Recuadro adicional: cambia entre ingresos del día, semana y mes sin recargar la página. --}}
+        <article class="dashboard-kpi dashboard-kpi-cyan dashboard-income-period" id="dashboardIncomePeriod">
+            <div class="dashboard-kpi-top">
+                <span class="dashboard-kpi-icon"><i data-lucide="calendar-range"></i></span>
+                <div class="dashboard-period-tabs" role="group" aria-label="Periodo de ingresos">
+                    <button type="button" class="is-active" data-income-period="dia" aria-pressed="true">Día</button>
+                    <button type="button" data-income-period="semana" aria-pressed="false">Semana</button>
+                    <button type="button" data-income-period="mes" aria-pressed="false">Mes</button>
+                </div>
+            </div>
+            <span class="dashboard-kpi-label">Ingresos por periodo</span>
+            <strong id="dashboardIncomePeriodAmount">${{ number_format($ingresosPorPeriodo['dia'], 2) }}</strong>
+            <small id="dashboardIncomePeriodLabel">Total recibido hoy</small>
+        </article>
     </section>
 
     <div class="dashboard-grid-main">
@@ -169,5 +184,36 @@
             </div>
         </section>
     </div>
+@endif
+
+@if($sucursal)
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Los importes vienen calculados por sucursal desde DashboardController; JavaScript solo cambia su presentación.
+    const ingresos = @json($ingresosPorPeriodo);
+    const etiquetas = {
+        dia: 'Total recibido hoy',
+        semana: 'Total recibido esta semana',
+        mes: 'Total recibido este mes',
+    };
+    const formatoMoneda = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    const monto = document.getElementById('dashboardIncomePeriodAmount');
+    const etiqueta = document.getElementById('dashboardIncomePeriodLabel');
+
+    document.querySelectorAll('[data-income-period]').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            const periodo = boton.dataset.incomePeriod;
+            monto.textContent = formatoMoneda.format(Number(ingresos[periodo] || 0));
+            etiqueta.textContent = etiquetas[periodo];
+
+            document.querySelectorAll('[data-income-period]').forEach(function (opcion) {
+                const activa = opcion === boton;
+                opcion.classList.toggle('is-active', activa);
+                opcion.setAttribute('aria-pressed', String(activa));
+            });
+        });
+    });
+});
+</script>
 @endif
 @endsection

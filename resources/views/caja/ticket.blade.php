@@ -143,7 +143,8 @@
 <style>
 .cash-ticket-copies { display:flex;justify-content:center;align-items:flex-start;flex-wrap:wrap;gap:2rem; }
 .cash-ticket-print-page { display:flex;justify-content:center;width:min(400px,100%); }
-.cash-ticket { width:100%;box-sizing:border-box; }
+/* La tipografía en negrita mejora la lectura del comprobante en pantalla y en papel. */
+.cash-ticket { width:100%;box-sizing:border-box;font-weight:700; }
 @media print {
     /* La hoja conserva márgenes uniformes; solamente el comprobante se reduce al 50%. */
     @page { margin:8mm; }

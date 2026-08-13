@@ -2117,6 +2117,26 @@ body .cash-page-eyebrow {
     text-transform:uppercase;
 }
 body .cash-page-header h1 { margin:0; color:var(--ui-ink); font-size:24px; }
+body .cash-header-actions { display:flex; align-items:center; justify-content:flex-end; gap:9px; }
+body .cash-manual-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:40px;
+    padding:0 16px;
+    border:1px solid transparent;
+    border-radius:7px;
+    color:#fff;
+    font-size:11px;
+    font-weight:800;
+    cursor:pointer;
+    transition:transform .16s ease, box-shadow .16s ease;
+}
+body .cash-manual-button:hover { transform:translateY(-1px); box-shadow:var(--ui-shadow-sm); }
+body .cash-manual-button.is-income { background:#15803d; }
+body .cash-manual-button.is-expense { background:#dc2626; }
+body .cash-manual-button svg { width:16px; height:16px; }
 body .cash-cut-button {
     display:inline-flex;
     align-items:center;
@@ -2382,8 +2402,28 @@ body .cash-modal-icon {
     color:var(--ui-accent);
 }
 body .cash-modal-icon svg { width:19px; height:19px; }
+body .cash-modal-icon.is-income { background:rgba(34,197,94,.12); color:#15803d; }
+body .cash-modal-icon.is-expense { background:rgba(239,68,68,.12); color:#dc2626; }
 body .cash-modal-heading span { color:var(--ui-muted); font-size:9px; text-transform:uppercase; }
 body .cash-modal-heading h2 { margin:2px 0 0; color:var(--ui-ink); font-size:17px; }
+/* La captura comparte los mismos estilos de campo que los filtros para mantener consistencia visual. */
+body .cash-manual-form { display:grid; gap:14px; }
+body .cash-manual-form label { display:flex; flex-direction:column; gap:7px; }
+body .cash-manual-form label > span { color:var(--ui-muted); font-size:10px; font-weight:850; text-transform:uppercase; }
+body .cash-manual-form input,
+body .cash-manual-form select,
+body .cash-manual-form textarea {
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--ui-border);
+    border-radius:7px;
+    background:var(--ui-surface-soft);
+    color:var(--ui-ink);
+    font:inherit;
+    font-size:12px;
+    box-sizing:border-box;
+}
+body .cash-manual-form textarea { resize:vertical; }
 body .cash-detail-panel {
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -2425,7 +2465,8 @@ html[data-ui-theme="light"] body .cash-movement-row.is-expense:hover td { backgr
 }
 @media (max-width:700px) {
     body .cash-page-header { align-items:flex-start; flex-direction:column; }
-    body .cash-cut-button { width:100%; }
+    body .cash-header-actions { width:100%; flex-wrap:wrap; justify-content:flex-start; }
+    body .cash-header-actions > * { flex:1 1 125px; }
     body .cash-summary-grid { grid-template-columns:1fr 1fr; }
     body .cash-summary-card { min-height:100px; padding:17px; }
     body .cash-filter-panel { grid-template-columns:1fr; padding:14px; }

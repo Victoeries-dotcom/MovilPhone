@@ -1,19 +1,43 @@
 @extends('layout')
 
 @section('content')
-{{-- Encabezado financiero: identifica Caja y conserva únicamente el acceso autorizado al Corte de caja. --}}
+{{-- Encabezado financiero: reúne la captura manual y el Corte de caja en un solo punto de trabajo. --}}
 <header class="cash-page-header">
     <div>
         <span class="cash-page-eyebrow">Control financiero</span>
         <h1>Caja y Finanzas</h1>
     </div>
 
-    @if(auth()->user()?->rol === 'superusuario')
-        <a href="{{ route('caja.corte') }}" class="cash-cut-button">
-            <i data-lucide="calendar-check" aria-hidden="true"></i>
-            <span>Corte de caja</span>
-        </a>
-    @endif
+    <div class="cash-header-actions">
+        {{-- Estos botones abren una captura manual; el servidor asigna la sucursal activa y el usuario responsable. --}}
+        <button
+            type="button"
+            class="cash-manual-button is-income"
+            data-cash-movement-open
+            data-type="INGRESO"
+            data-action="{{ route('caja.ingreso') }}"
+        >
+            <i data-lucide="circle-plus" aria-hidden="true"></i>
+            <span>Ingreso</span>
+        </button>
+        <button
+            type="button"
+            class="cash-manual-button is-expense"
+            data-cash-movement-open
+            data-type="EGRESO"
+            data-action="{{ route('caja.egreso') }}"
+        >
+            <i data-lucide="circle-minus" aria-hidden="true"></i>
+            <span>Egreso</span>
+        </button>
+
+        @if(auth()->user()?->rol === 'superusuario')
+            <a href="{{ route('caja.corte') }}" class="cash-cut-button">
+                <i data-lucide="calendar-check" aria-hidden="true"></i>
+                <span>Corte de caja</span>
+            </a>
+        @endif
+    </div>
 </header>
 
 {{-- Mensajes del servidor: comunican operaciones realizadas por MovimientoCajaController. --}}
@@ -27,6 +51,12 @@
     <div class="alert alert-error cash-alert">
         <i data-lucide="circle-alert" aria-hidden="true"></i>
         <span>{{ session('error') }}</span>
+    </div>
+@endif
+@if($errors->any())
+    <div class="alert alert-error cash-alert">
+        <i data-lucide="circle-alert" aria-hidden="true"></i>
+        <span>{{ $errors->first() }}</span>
     </div>
 @endif
 
@@ -216,6 +246,46 @@
     </div>
 </section>
 
+{{-- Captura manual: un mismo formulario cambia entre ingreso y egreso sin duplicar reglas financieras. --}}
+<div id="cash-movement-modal" class="cash-modal" role="dialog" aria-modal="true" aria-labelledby="cash-movement-title">
+    <form id="cash-movement-form" method="POST" class="cash-modal-card">
+        @csrf
+        <input type="hidden" name="origen" value="caja">
+
+        <div class="cash-modal-heading">
+            <span id="cash-movement-icon" class="cash-modal-icon"><i data-lucide="circle-plus" aria-hidden="true"></i></span>
+            <div>
+                <span>Movimiento manual</span>
+                <h2 id="cash-movement-title">Registrar ingreso</h2>
+            </div>
+        </div>
+
+        <div class="cash-manual-form">
+            <label>
+                <span>Concepto o descripción *</span>
+                <textarea name="concepto" id="cash-movement-concept" rows="3" maxlength="500" required>{{ old('concepto') }}</textarea>
+            </label>
+            <label>
+                <span>Monto ($) *</span>
+                <input type="number" name="monto" value="{{ old('monto') }}" min="0.01" step="0.01" inputmode="decimal" required>
+            </label>
+            <label>
+                <span>Método de pago *</span>
+                <select name="metodo_pago" required>
+                    <option value="efectivo" @selected(old('metodo_pago', 'efectivo') === 'efectivo')>Efectivo</option>
+                    <option value="transferencia" @selected(old('metodo_pago') === 'transferencia')>Transferencia</option>
+                    <option value="tarjeta" @selected(old('metodo_pago') === 'tarjeta')>Tarjeta</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="cash-modal-actions">
+            <button type="button" class="btn" id="cash-movement-close">Cancelar</button>
+            <button type="submit" class="btn btn-success" id="cash-movement-submit">Registrar ingreso</button>
+        </div>
+    </form>
+</div>
+
 {{-- Modal de detalle: muestra fecha, monto y concepto del movimiento seleccionado. --}}
 <div id="cash-detail-modal" class="cash-modal" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
     <div class="cash-modal-card">
@@ -238,6 +308,38 @@
 </div>
 
 <script>
+    /*
+     * Configura el formulario con la ruta y el estilo del tipo elegido.
+     * El servidor vuelve a validar concepto, monto, método y sucursal antes de guardar.
+     */
+    function openCashMovement(type, action) {
+        const isIncome = type === 'INGRESO';
+        const modal = document.getElementById('cash-movement-modal');
+        const form = document.getElementById('cash-movement-form');
+        const icon = document.getElementById('cash-movement-icon');
+        form.action = action;
+        document.getElementById('cash-movement-title').textContent = isIncome ? 'Registrar ingreso' : 'Registrar egreso';
+        document.getElementById('cash-movement-submit').textContent = isIncome ? 'Registrar ingreso' : 'Registrar egreso';
+        icon.className = 'cash-modal-icon ' + (isIncome ? 'is-income' : 'is-expense');
+        icon.innerHTML = `<i data-lucide="${isIncome ? 'circle-plus' : 'circle-minus'}" aria-hidden="true"></i>`;
+        modal.classList.add('is-open');
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => document.getElementById('cash-movement-concept').focus(), 50);
+    }
+
+    document.querySelectorAll('[data-cash-movement-open]').forEach((button) => {
+        button.addEventListener('click', () => openCashMovement(button.dataset.type, button.dataset.action));
+    });
+
+    function closeCashMovement() {
+        document.getElementById('cash-movement-modal').classList.remove('is-open');
+    }
+
+    document.getElementById('cash-movement-close').addEventListener('click', closeCashMovement);
+    document.getElementById('cash-movement-modal').addEventListener('click', (event) => {
+        if (event.target.id === 'cash-movement-modal') closeCashMovement();
+    });
+
     /*
      * Abre el modal con los atributos del movimiento seleccionado.
      * Se conecta únicamente con la tabla renderizada por Laravel y no modifica registros.

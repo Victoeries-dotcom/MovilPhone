@@ -275,20 +275,24 @@ class MovimientoCajaController extends Controller
     public function update(Request $request, MovimientoCaja $movimientoCaja) {}
 
     /**
-     * Centraliza la validación y creación de ingresos/egresos rápidos.
-     * Se conecta con el modal de ordenes.index y con el panel de actividad.
+     * Centraliza la validación y creación de ingresos/egresos manuales.
+     * Se conecta con los accesos de Caja y Órdenes, y conserva la pantalla que originó el registro.
      */
     private function registrarMovimientoRapido(Request $request, string $tipo)
     {
-        $request->validate([
+        $datos = $request->validate([
             'concepto' => 'required|string|max:500',
             'monto' => 'required|numeric|min:0.01',
             'metodo_pago' => 'required|in:efectivo,transferencia,tarjeta',
+            'origen' => 'nullable|in:caja,ordenes',
         ]);
+
+        // El origen evita enviar al usuario a Órdenes cuando capturó el movimiento desde Caja.
+        $rutaRetorno = ($datos['origen'] ?? null) === 'caja' ? 'caja.index' : 'ordenes.index';
 
         $sucursalId = $this->sucursalActivaId();
         if (! $sucursalId) {
-            return redirect()->route('ordenes.index')
+            return redirect()->route($rutaRetorno)
                 ->with('error', 'Selecciona una sucursal antes de registrar el movimiento.');
         }
 
@@ -296,13 +300,13 @@ class MovimientoCajaController extends Controller
             'sucursal_id' => $sucursalId,
             'tipo' => $tipo,
             'categoria' => $tipo.' MANUAL',
-            'monto' => $request->monto,
-            'metodo_pago' => $request->metodo_pago,
+            'monto' => $datos['monto'],
+            'metodo_pago' => $datos['metodo_pago'],
             'anticipo' => 0,
             'saldo_pendiente' => 0,
             'es_anticipo' => false,
             'es_pago_final' => false,
-            'descripcion' => Str::upper(trim($request->concepto)),
+            'descripcion' => Str::upper(trim($datos['concepto'])),
             'user_id' => auth()->id(),
         ]);
 
@@ -314,7 +318,7 @@ class MovimientoCajaController extends Controller
             $movimiento
         );
 
-        return redirect()->route('ordenes.index')
+        return redirect()->route($rutaRetorno)
             ->with('success', ucfirst(strtolower($tipo)).' registrado correctamente en Caja.');
     }
 

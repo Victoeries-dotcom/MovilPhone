@@ -73,9 +73,11 @@
 @php
     // Ambos selectores usan los valores exactos almacenados en ordenes_servicio.estado.
     $estadosDisponibles = [
+        'RECIBIDO' => 'En espera',
         'EN DIAGNÓSTICO' => 'Diagnóstico',
         'EN REPARACIÓN' => 'Reparación',
         'TERMINADO' => 'Listo para recoger',
+        'ENTREGADO' => 'Entregado',
         'RECHAZADO' => 'No quedó / Rechazado',
         'GARANTÍA' => 'Garantía',
     ];

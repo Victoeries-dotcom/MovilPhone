@@ -142,6 +142,12 @@ class VentaSinClienteTest extends TestCase
 
         // Una sola tarjeta imprimible garantiza que la venta entregue únicamente el ticket del cliente.
         $this->assertSame(1, substr_count($ticket->getContent(), 'class="ticket-card"'));
+
+        // La configuración de impresión centra el único ticket y evita dividirlo entre hojas A4.
+        $ticket->assertSee('@page { size:A4 portrait;margin:8mm; }', false);
+        $ticket->assertSee('max-width:180mm !important', false);
+        $ticket->assertSee('margin:0 auto !important', false);
+        $ticket->assertSee('page-break-inside:avoid !important', false);
     }
 
     /**
@@ -212,9 +218,9 @@ class VentaSinClienteTest extends TestCase
     }
 
     /**
-     * Confirma que la garantía configurada aparezca en ambas copias antes de cada folio.
+     * Confirma que la garantía configurada aparezca una sola vez en la copia del cliente.
      */
-    public function test_ticket_de_venta_incluye_garantia_en_copia_cliente_y_cajero(): void
+    public function test_ticket_de_venta_incluye_garantia_en_copia_cliente(): void
     {
         [$usuario, $sesion, $sucursal] = $this->usuarioConSucursal();
         $politica = 'GARANTÍA PERSONALIZADA PARA PRODUCTOS Y SERVICIOS VENDIDOS.';
@@ -239,7 +245,7 @@ class VentaSinClienteTest extends TestCase
             ->assertSee($politica)
             ->getContent();
 
-        $this->assertSame(2, substr_count($contenido, $politica));
+        $this->assertSame(1, substr_count($contenido, $politica));
         $this->assertLessThan(strpos($contenido, '<div>Folio: #'), strpos($contenido, $politica));
     }
 

@@ -137,15 +137,15 @@
 .ticket-warranty-title { font-size:12px;font-weight:900;margin-bottom:7px; }
 .ticket-warranty-text { white-space:pre-line; }
 .ticket-footer { text-align:center;margin-top:14px;padding-top:12px;border-top:3px solid #000;font-size:11px;font-weight:800;line-height:1.55; }
-/* Imprime solamente el recibo y elimina menú, botones y sombras de pantalla. */
+/* Define una hoja A4 exclusiva para que el ticket se imprima completo y centrado. */
 @media print {
+    @page { size:A4 portrait;margin:8mm; }
     nav,.ticket-actions,footer:not(.ticket-footer),.btn,.sidebar,.topbar { display:none !important; }
     .main { margin-left:0 !important; }
     .content { padding:0 !important; }
-    .ticket-page { min-height:auto !important;padding:0 !important;background:#fff !important; }
-    .ticket-card { border:0 !important;box-shadow:none !important;max-width:100% !important;border-radius:0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-after:always;break-after:page; }
-    .ticket-card:last-child { page-break-after:auto;break-after:auto; }
-    body { background:#fff !important; }
+    html,body { width:100% !important;min-height:0 !important;margin:0 !important;padding:0 !important;background:#fff !important; }
+    .ticket-page { display:flex !important;justify-content:center !important;align-items:flex-start !important;width:100% !important;min-height:0 !important;margin:0 !important;padding:0 !important;background:#fff !important; }
+    .ticket-card { width:100% !important;max-width:180mm !important;margin:0 auto !important;padding:6mm !important;box-sizing:border-box !important;border:0 !important;box-shadow:none !important;border-radius:0 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;page-break-after:auto !important;break-after:auto !important;-webkit-print-color-adjust:exact;print-color-adjust:exact; }
 }
 </style>
 @endsection

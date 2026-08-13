@@ -302,7 +302,7 @@
 
 /* Impresión del ticket: oculta la interfaz del sistema y deja solo el recibo. */
 @media print {
-    /* El navegador recibe dos hojas centradas; únicamente la tarjeta del ticket usa escala de 50%. */
+    /* El navegador recibe dos hojas centradas y aplica una sola vez la escala elegida en Imprimir. */
     @page { margin: 8mm; }
     nav, .ticket-actions, footer, .btn, .sidebar, .topbar { display: none !important; }
     .main { margin-left: 0 !important; }
@@ -321,11 +321,12 @@
         width: 450px !important;
         max-width: 450px !important;
         margin: 0 !important;
+        box-sizing: border-box !important;
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         font-family: Arial, Helvetica, sans-serif !important;
-        zoom: 50%;
+        /* No aplica zoom adicional: evita convertir la escala 50 del navegador en un 25% real. */
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

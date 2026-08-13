@@ -93,11 +93,10 @@ class WarrantyPolicyTest extends TestCase
         $this->assertLessThan(strpos($contenido, 'Folio: #'), strpos($contenido, $politica));
         // Una sola envoltura garantiza que Imprimir genere únicamente el comprobante del cliente.
         $this->assertSame(1, substr_count($contenido, 'class="ticket-print-copy"'));
-        // El ticket conserva un formato POS propio de 58 x 210 mm que no comparte con el sticker.
-        $ticket->assertSee('@page { size: 58mm 210mm; margin: 2mm; }', false);
-        $ticket->assertSee('width: 54mm !important', false);
+        // El ticket ocupa la hoja sin zoom fijo, por lo que Escala sigue bajo control del usuario.
+        $ticket->assertSee('@page { size: A4 portrait; margin: 8mm; }', false);
+        $ticket->assertSee('max-width: none !important', false);
         $ticket->assertDontSee('zoom: 200%', false);
-        $ticket->assertDontSee('size: 55mm 91mm', false);
         $ticket->assertSee('flex-direction: column', false);
     }
 

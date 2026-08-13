@@ -243,6 +243,9 @@ class MovimientoCajaController extends Controller
      */
     public function destroy(MovimientoCaja $movimientoCaja)
     {
+        // Repite la autorización en el controlador para impedir eliminaciones directas del rol Usuario.
+        abort_unless(in_array(auth()->user()?->rol, ['superusuario', 'tecnico'], true), 403);
+
         // Protege la eliminación manual para que Caja solo opere sobre la sucursal activa.
         $sucursalIdActivo = $this->sucursalActivaId();
         abort_if(! $sucursalIdActivo || (int) $movimientoCaja->sucursal_id !== $sucursalIdActivo, 403);

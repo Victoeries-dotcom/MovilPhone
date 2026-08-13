@@ -215,8 +215,8 @@
                                     </button>
                                 @endif
 
-                                @if($esManual)
-                                    {{-- La confirmación doble se conecta con destroy y protege ventas y cobros automáticos. --}}
+                                @if($esManual && in_array(auth()->user()?->rol, ['superusuario', 'tecnico'], true))
+                                    {{-- Solo el personal autorizado recibe la acción; el rol Usuario no puede eliminar movimientos financieros. --}}
                                     <form
                                         method="POST"
                                         action="{{ route('caja.destroy', $mov) }}"

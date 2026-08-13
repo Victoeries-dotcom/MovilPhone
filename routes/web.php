@@ -84,12 +84,18 @@ Route::middleware('auth')->group(function () {
         Route::post('caja/hora-corte', [MovimientoCajaController::class, 'guardarHoraCorte'])->name('caja.horaCorte');
     });
 
+    /* Eliminar movimientos de Caja queda fuera del rol Usuario, incluso al intentar la URL directa. */
+    Route::middleware('role:superusuario,tecnico')->group(function () {
+        Route::delete('caja/{movimientoCaja}', [MovimientoCajaController::class, 'destroy'])->name('caja.destroy');
+    });
+
     /* Caja se conecta con usuarios del taller y mantiene el corte exclusivo para admin. */
     Route::middleware('role:superusuario,usuario,tecnico')->group(function () {
         Route::post('caja/egreso-rapido', [MovimientoCajaController::class, 'registrarEgreso'])->name('caja.egreso');
         Route::post('caja/ingreso-rapido', [MovimientoCajaController::class, 'registrarIngreso'])->name('caja.ingreso');
         Route::get('caja/{movimientoCaja}/ticket', [MovimientoCajaController::class, 'ticket'])->name('caja.ticket');
         Route::resource('caja', MovimientoCajaController::class)
+            ->except(['destroy'])
             ->parameters(['caja' => 'movimientoCaja']);
     });
 

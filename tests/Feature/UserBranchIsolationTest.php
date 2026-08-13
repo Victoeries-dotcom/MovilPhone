@@ -172,12 +172,80 @@ class UserBranchIsolationTest extends TestCase
     }
 
     /**
+     * Impide que el rol Usuario vea o ejecute la eliminación de ingresos y egresos manuales.
+     * Se conecta con caja.index y caja.destroy para proteger la interfaz y la petición directa.
+     */
+    public function test_usuario_no_puede_eliminar_ingresos_ni_egresos_manuales(): void
+    {
+        [$buctzotz, , $usuario] = $this->crearContextoDeSucursales();
+        $ingreso = MovimientoCaja::create(array_merge(
+            $this->datosMovimiento('INGRESO MANUAL PROTEGIDO', $buctzotz->id, $usuario->id),
+            ['categoria' => 'INGRESO MANUAL']
+        ));
+        $egreso = MovimientoCaja::create(array_merge(
+            $this->datosMovimiento('EGRESO MANUAL PROTEGIDO', $buctzotz->id, $usuario->id),
+            ['tipo' => 'EGRESO', 'categoria' => 'EGRESO MANUAL']
+        ));
+        $sesion = [
+            'sucursal_id' => $buctzotz->id,
+            'sucursal_nombre' => $buctzotz->nombre,
+        ];
+
+        $this->actingAs($usuario)->withSession($sesion)->get(route('caja.index'))
+            ->assertOk()
+            ->assertDontSee('action="'.route('caja.destroy', $ingreso).'"', false)
+            ->assertDontSee('action="'.route('caja.destroy', $egreso).'"', false);
+
+        $this->actingAs($usuario)->withSession($sesion)
+            ->delete(route('caja.destroy', $ingreso))
+            ->assertForbidden();
+        $this->actingAs($usuario)->withSession($sesion)
+            ->delete(route('caja.destroy', $egreso))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('movimientos_caja', ['id' => $ingreso->id]);
+        $this->assertDatabaseHas('movimientos_caja', ['id' => $egreso->id]);
+    }
+
+    /**
+     * Confirma que el Super Usuario conserve la eliminación de movimientos manuales de su sucursal.
+     */
+    public function test_superusuario_conserva_eliminacion_de_movimientos_manuales(): void
+    {
+        $sucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
+        $superusuario = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => $sucursal->id,
+        ]);
+        $movimiento = MovimientoCaja::create(array_merge(
+            $this->datosMovimiento('INGRESO MANUAL ADMINISTRABLE', $sucursal->id, $superusuario->id),
+            ['categoria' => 'INGRESO MANUAL']
+        ));
+        $sesion = [
+            'sucursal_id' => $sucursal->id,
+            'sucursal_nombre' => $sucursal->nombre,
+        ];
+
+        $this->actingAs($superusuario)->withSession($sesion)->get(route('caja.index'))
+            ->assertOk()
+            ->assertSee('action="'.route('caja.destroy', $movimiento).'"', false);
+
+        $this->actingAs($superusuario)->withSession($sesion)
+            ->delete(route('caja.destroy', $movimiento))
+            ->assertRedirect(route('caja.index'));
+
+        $this->assertDatabaseMissing('movimientos_caja', ['id' => $movimiento->id]);
+    }
+
+    /**
      * Impide borrar desde Caja un cobro automático generado por una venta.
      * Se conecta con MovimientoCajaController::destroy y protege la consistencia con Ventas.
      */
     public function test_caja_no_elimina_movimientos_ligados_a_ventas(): void
     {
         [$buctzotz, , $usuario] = $this->crearContextoDeSucursales();
+        // Usa Super Usuario para alcanzar destroy y comprobar la protección propia de ventas automáticas.
+        $usuario->forceFill(['rol' => 'superusuario'])->save();
         $movimiento = MovimientoCaja::create(array_merge(
             $this->datosMovimiento('VENTA PROTEGIDA', $buctzotz->id, $usuario->id),
             ['categoria' => 'Venta de productos']

@@ -80,14 +80,20 @@ class WarrantyPolicyTest extends TestCase
             'estado_fisico' => 'BUENO',
         ]);
 
-        $contenido = $this->actingAs($superusuario)
+        $ticket = $this->actingAs($superusuario)
             ->withSession(['sucursal_id' => $sucursal->id])
             ->get(route('ordenes.ticketEntrega', $orden))
             ->assertOk()
             ->assertSee($politica)
-            ->getContent();
+            ->assertSee('COPIA CLIENTE')
+            ->assertSee('COPIA CAJERA');
+
+        $contenido = $ticket->getContent();
 
         $this->assertLessThan(strpos($contenido, 'Folio: #'), strpos($contenido, $politica));
+        // Dos envolturas con salto de página garantizan dos tickets completos en la vista de impresión.
+        $this->assertSame(2, substr_count($contenido, 'class="ticket-print-copy"'));
+        $ticket->assertSee('zoom: 50%', false);
     }
 
     public function test_regular_user_can_edit_policy_and_future_branches_use_the_same_value(): void

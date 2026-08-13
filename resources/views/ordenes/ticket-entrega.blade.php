@@ -27,10 +27,17 @@
     $politica = $politica ?? null;
 @endphp
 
+{{-- Las dos copias repiten exactamente los datos cerrados de la orden para Cliente y Cajera. --}}
+<div class="ticket-copies">
+@foreach(['COPIA CLIENTE', 'COPIA CAJERA'] as $tipoCopia)
+<div class="ticket-print-copy">
 {{-- Contenedor visual: centra el ticket y le da el tamaño del recibo mostrado en el archivo de referencia. --}}
 <div class="ticket-page">
     {{-- Ticket final: formato tipo recibo conectado con la orden entregada, cliente, dispositivo y caja. --}}
-    <div id="ticket" class="ticket-card">
+    <div class="ticket-card">
+
+        {{-- Esta etiqueta identifica a quién corresponde cada comprobante sin cambiar sus datos. --}}
+        <div class="ticket-copy-label">{{ $tipoCopia }}</div>
 
         {{-- Encabezado del taller: identifica el comprobante impreso con marca y subtítulo. --}}
         <div class="ticket-header">
@@ -133,8 +140,22 @@
         </div>
     </div>
 </div>
+</div>
+@endforeach
+</div>
 
 <style>
+/* Vista previa: presenta ambas copias centradas y permite revisarlas antes de imprimir. */
+.ticket-copies {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.ticket-print-copy { width: min(520px, 100%); }
+
 /* Pantalla del ticket: crea el fondo gris y centra el recibo como en el archivo de referencia. */
 .ticket-page {
     min-height: calc(100vh - 150px);
@@ -156,6 +177,14 @@
     box-shadow: 0 2px 10px rgba(15, 23, 42, .10);
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
+}
+
+.ticket-copy-label {
+    margin-bottom: 14px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .12em;
 }
 
 /* Encabezado del negocio: conecta visualmente el ticket con MovilPhone. */
@@ -273,16 +302,30 @@
 
 /* Impresión del ticket: oculta la interfaz del sistema y deja solo el recibo. */
 @media print {
+    /* El navegador recibe dos hojas centradas; únicamente la tarjeta del ticket usa escala de 50%. */
+    @page { margin: 8mm; }
     nav, .ticket-actions, footer, .btn, .sidebar, .topbar { display: none !important; }
     .main { margin-left: 0 !important; }
     .content { padding: 0 !important; }
-    .ticket-page { min-height: auto !important; padding: 0 !important; background: #fff !important; }
-    #ticket {
+    .ticket-copies { display: block !important; }
+    .ticket-print-copy {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+        page-break-after: always;
+        break-after: page;
+    }
+    .ticket-print-copy:last-child { page-break-after: auto; break-after: auto; }
+    .ticket-page { width: 100% !important; min-height: auto !important; padding: 0 !important; background: #fff !important; }
+    .ticket-card {
+        width: 450px !important;
+        max-width: 450px !important;
+        margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
-        max-width: 100% !important;
         border-radius: 0 !important;
         font-family: Arial, Helvetica, sans-serif !important;
+        zoom: 50%;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

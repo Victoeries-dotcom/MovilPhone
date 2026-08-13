@@ -14,7 +14,9 @@
 </div>
 
 <div class="cash-ticket-copies">
-@foreach(['COPIA CLIENTE', 'COPIA CAJERO'] as $tipoCopia)
+{{-- Genera dos comprobantes completos en la misma impresión: uno para el cliente y otro para la cajera. --}}
+@foreach(['COPIA CLIENTE', 'COPIA CAJERA'] as $tipoCopia)
+<div class="cash-ticket-print-page">
 <div class="cash-ticket" style="max-width:400px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:2rem;box-shadow:0 2px 8px rgba(0,0,0,.08);">
 
     {{-- Ambas copias conservan el mismo movimiento; esta etiqueta define quién guarda cada comprobante. --}}
@@ -136,19 +138,26 @@
         <div style="margin-top:2px;">{{ $configuracionGlobal['negocio_nombre'] ?? 'MovilPhone' }} — {{ $configuracionGlobal['negocio_subtitulo'] ?? 'Sistema de Taller' }}</div>
     </div>
 </div>
+</div>
 @endforeach
 </div>
 
 <style>
 .cash-ticket-copies { display:flex;justify-content:center;align-items:flex-start;flex-wrap:wrap;gap:2rem; }
+.cash-ticket-print-page { display:flex;justify-content:center;width:min(400px,100%); }
+.cash-ticket { width:100%;box-sizing:border-box; }
 @media print {
+    /* La hoja conserva márgenes uniformes; solamente el comprobante se reduce al 50%. */
+    @page { margin:8mm; }
     nav, .page-header, footer, .btn, .sidebar, .topbar { display:none !important; }
     .main { margin-left:0 !important; }
     .content { padding:0 !important; }
-    .cash-ticket-copies { display:block !important; }
-    .cash-ticket { border:none !important; box-shadow:none !important; max-width:100% !important; page-break-after:always; break-after:page; }
-    .cash-ticket:last-child { page-break-after:auto; break-after:auto; }
-    body { background:white !important; }
+    .cash-ticket-copies { display:block !important;gap:0 !important; }
+    /* Cada envoltura centra una copia y fuerza que Cliente y Cajera salgan en hojas distintas. */
+    .cash-ticket-print-page { display:flex !important;justify-content:center !important;width:100% !important;page-break-after:always;break-after:page; }
+    .cash-ticket-print-page:last-child { page-break-after:auto;break-after:auto; }
+    .cash-ticket { width:400px !important;max-width:400px !important;margin:0 !important;border:none !important;box-shadow:none !important;zoom:50%; }
+    body { background:white !important;print-color-adjust:exact;-webkit-print-color-adjust:exact; }
 }
 </style>
 @endsection

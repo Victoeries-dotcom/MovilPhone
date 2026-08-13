@@ -149,8 +149,9 @@
 .ticket-copies {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
+    flex-direction: column;
+    flex-wrap: nowrap;
     gap: 2rem;
 }
 
@@ -302,7 +303,7 @@
 
 /* Impresión del ticket: oculta la interfaz del sistema y deja solo el recibo. */
 @media print {
-    /* El navegador recibe dos hojas centradas y aplica una sola vez la escala elegida en Imprimir. */
+    /* El navegador recibe dos hojas centradas; el diseño compensa la escala 50 elegida en Imprimir. */
     @page { margin: 8mm; }
     nav, .ticket-actions, footer, .btn, .sidebar, .topbar { display: none !important; }
     .main { margin-left: 0 !important; }
@@ -312,6 +313,8 @@
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
+        page-break-inside: avoid;
+        break-inside: avoid-page;
         page-break-after: always;
         break-after: page;
     }
@@ -326,7 +329,8 @@
         box-shadow: none !important;
         border-radius: 0 !important;
         font-family: Arial, Helvetica, sans-serif !important;
-        /* No aplica zoom adicional: evita convertir la escala 50 del navegador en un 25% real. */
+        /* Duplica el diseño antes de imprimir para que la escala 50 produzca un ticket legible. */
+        zoom: 200%;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

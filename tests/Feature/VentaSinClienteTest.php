@@ -126,7 +126,7 @@ class VentaSinClienteTest extends TestCase
         $this->assertLessThan(strpos($html, '>Ticket</th>'), strpos($html, '>Vendedor</th>'));
         $this->assertLessThan(strpos($html, '>Total</th>'), strpos($html, '>Ticket</th>'));
 
-        $this->actingAs($usuario)
+        $ticket = $this->actingAs($usuario)
             ->withSession($sesion)
             ->get(route('ventas.ticket', $venta))
             ->assertOk()
@@ -136,9 +136,12 @@ class VentaSinClienteTest extends TestCase
             ->assertSee('$240.00')
             ->assertSee('ENTREGA EN MOSTRADOR')
             ->assertSee('COPIA CLIENTE')
-            ->assertSee('COPIA CAJERO')
+            ->assertDontSee('COPIA CAJERO')
             ->assertDontSee('---CLIENTE---')
             ->assertDontSee('NOMBRE DEL CLIENTE');
+
+        // Una sola tarjeta imprimible garantiza que la venta entregue únicamente el ticket del cliente.
+        $this->assertSame(1, substr_count($ticket->getContent(), 'class="ticket-card"'));
     }
 
     /**

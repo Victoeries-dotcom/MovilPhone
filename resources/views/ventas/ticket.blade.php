@@ -16,10 +16,9 @@
 
 {{-- Mantiene la proporción visual del ticket de entrega mostrado como referencia. --}}
 <div class="ticket-page">
-    @foreach(['COPIA CLIENTE', 'COPIA CAJERO'] as $tipoCopia)
     <div class="ticket-card">
-        {{-- Las dos copias repiten exactamente la misma venta y solo cambia su destinatario. --}}
-        <div class="ticket-copy-label">{{ $tipoCopia }}</div>
+        {{-- La venta genera únicamente el comprobante que se entrega al cliente. --}}
+        <div class="ticket-copy-label">COPIA CLIENTE</div>
         {{-- Identidad comercial compartida por ConfiguracionController y AppServiceProvider. --}}
         <header class="ticket-header">
             <div class="ticket-brand"><span class="ticket-icon">📱</span><span>{{ $configuracionGlobal['negocio_nombre'] ?? 'MovilPhone' }}</span></div>
@@ -103,7 +102,6 @@
             <div>{{ $configuracionGlobal['negocio_nombre'] ?? 'MovilPhone' }} — {{ $configuracionGlobal['negocio_subtitulo'] ?? 'Sistema de Taller' }}</div>
         </footer>
     </div>
-    @endforeach
 </div>
 
 <style>

@@ -42,11 +42,21 @@
 
     /* Ajustes de impresión: ocultan el sistema y dejan solo la etiqueta del equipo. */
     @media print {
+        /* Configuración exclusiva del sticker: tarjeta de 55 x 91 mm, sin heredar el rollo del ticket. */
+        @page { size: 55mm 91mm; margin: 2mm; }
         .sidebar, .topbar, .page-header, .btn { display: none !important; }
         .main { margin-left: 0 !important; }
         .content { padding: 0 !important; }
         body { background: white !important; }
-        #sticker { margin: 0 !important; box-shadow: none !important; }
+        #sticker {
+            width: 51mm !important;
+            max-width: 51mm !important;
+            margin: 0 !important;
+            padding: 2mm !important;
+            box-sizing: border-box !important;
+            box-shadow: none !important;
+            break-inside: avoid-page;
+        }
     }
 </style>
 @endsection

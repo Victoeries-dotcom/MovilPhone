@@ -301,8 +301,8 @@
 
 /* Impresión del ticket: oculta la interfaz del sistema y deja solo el recibo. */
 @media print {
-    /* A4 sirve como formato inicial; el usuario conserva el control manual de Escala en Imprimir. */
-    @page { size: A4 portrait; margin: 8mm; }
+    /* Configuración exclusiva del ticket: rollo POS de 58 mm, independiente del sticker. */
+    @page { size: 58mm 210mm; margin: 2mm; }
     nav, .ticket-actions, footer, .btn, .sidebar, .topbar { display: none !important; }
     .main { margin-left: 0 !important; }
     .content { padding: 0 !important; }
@@ -324,10 +324,11 @@
         background: #fff !important;
     }
     .ticket-card {
-        /* Ocupa todo el ancho imprimible y permite que Escala cambie letras y contenido proporcionalmente. */
-        width: 100% !important;
-        max-width: none !important;
+        /* Los 54 mm útiles llenan el rollo después de descontar los márgenes físicos. */
+        width: 54mm !important;
+        max-width: 54mm !important;
         margin: 0 !important;
+        padding: 1.5mm !important;
         box-sizing: border-box !important;
         border: none !important;
         box-shadow: none !important;
@@ -336,6 +337,8 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+    /* Elimina mínimos pensados para pantalla para que las columnas se adapten al rollo angosto. */
+    .ticket-row { grid-template-columns: minmax(0, 1fr) auto !important; gap: 2mm !important; }
     body { background: white !important; }
     * { color: #000 !important; }
 }

@@ -33,4 +33,14 @@ class OrderStickerLayoutTest extends TestCase
         $this->assertStringContainsString('font-size: 15px', $template);
         $this->assertStringContainsString('overflow-wrap: anywhere', $template);
     }
+
+    public function test_sticker_has_its_own_physical_print_size(): void
+    {
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/sticker.blade.php');
+
+        // La tarjeta mantiene 55 x 91 mm y nunca hereda el rollo POS del ticket de entrega.
+        $this->assertStringContainsString('@page { size: 55mm 91mm; margin: 2mm; }', $template);
+        $this->assertStringContainsString('width: 51mm !important', $template);
+        $this->assertStringNotContainsString('size: 58mm 210mm', $template);
+    }
 }

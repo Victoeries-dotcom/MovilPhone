@@ -86,13 +86,13 @@ class WarrantyPolicyTest extends TestCase
             ->assertOk()
             ->assertSee($politica)
             ->assertSee('COPIA CLIENTE')
-            ->assertSee('COPIA CAJERA');
+            ->assertDontSee('COPIA CAJERA');
 
         $contenido = $ticket->getContent();
 
         $this->assertLessThan(strpos($contenido, 'Folio: #'), strpos($contenido, $politica));
-        // Dos envolturas con salto de página garantizan dos tickets completos en la vista de impresión.
-        $this->assertSame(2, substr_count($contenido, 'class="ticket-print-copy"'));
+        // Una sola envoltura garantiza que Imprimir genere únicamente el comprobante del cliente.
+        $this->assertSame(1, substr_count($contenido, 'class="ticket-print-copy"'));
         // El ticket ocupa la hoja sin zoom fijo, por lo que Escala sigue bajo control del usuario.
         $ticket->assertSee('@page { size: A4 portrait; margin: 8mm; }', false);
         $ticket->assertSee('max-width: none !important', false);

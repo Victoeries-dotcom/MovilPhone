@@ -27,17 +27,16 @@
     $politica = $politica ?? null;
 @endphp
 
-{{-- Las dos copias repiten exactamente los datos cerrados de la orden para Cliente y Cajera. --}}
+{{-- El comprobante de entrega pertenece únicamente al cliente y genera una sola hoja de impresión. --}}
 <div class="ticket-copies">
-@foreach(['COPIA CLIENTE', 'COPIA CAJERA'] as $tipoCopia)
 <div class="ticket-print-copy">
 {{-- Contenedor visual: centra el ticket y le da el tamaño del recibo mostrado en el archivo de referencia. --}}
 <div class="ticket-page">
     {{-- Ticket final: formato tipo recibo conectado con la orden entregada, cliente, dispositivo y caja. --}}
     <div class="ticket-card">
 
-        {{-- Esta etiqueta identifica a quién corresponde cada comprobante sin cambiar sus datos. --}}
-        <div class="ticket-copy-label">{{ $tipoCopia }}</div>
+        {{-- La etiqueta deja explícito que esta es la única copia autorizada del comprobante. --}}
+        <div class="ticket-copy-label">COPIA CLIENTE</div>
 
         {{-- Encabezado del taller: identifica el comprobante impreso con marca y subtítulo. --}}
         <div class="ticket-header">
@@ -141,11 +140,10 @@
     </div>
 </div>
 </div>
-@endforeach
 </div>
 
 <style>
-/* Vista previa: presenta ambas copias centradas y permite revisarlas antes de imprimir. */
+/* Vista previa: presenta la única copia del cliente centrada antes de imprimir. */
 .ticket-copies {
     display: flex;
     justify-content: center;

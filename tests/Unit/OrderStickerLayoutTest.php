@@ -21,4 +21,16 @@ class OrderStickerLayoutTest extends TestCase
         $this->assertLessThan($contactPosition, $folioPosition);
         $this->assertLessThan($headerEndPosition, $contactPosition);
     }
+
+    public function test_sticker_uses_larger_readable_text_without_clipping_long_values(): void
+    {
+        $template = file_get_contents(__DIR__.'/../../resources/views/ordenes/sticker.blade.php');
+
+        // Protege los tamaños solicitados y el ajuste de palabras dentro del ancho físico de 300 px.
+        $this->assertStringContainsString('font-size:22px', $template);
+        $this->assertStringContainsString('font-size:19px', $template);
+        $this->assertStringContainsString('font-size:14px', $template);
+        $this->assertStringContainsString('font-size: 15px', $template);
+        $this->assertStringContainsString('overflow-wrap: anywhere', $template);
+    }
 }

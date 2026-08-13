@@ -189,11 +189,12 @@ class VentaSinClienteTest extends TestCase
             ->assertSee('ABONO EXTRA')
             ->assertSee('$300.00')
             ->assertSee('COPIA CLIENTE')
-            ->assertSee('COPIA CAJERA');
+            ->assertDontSee('COPIA CAJERA');
 
-        // Cada bloque cash-ticket representa una hoja completa enviada a la impresora.
-        $this->assertSame(2, substr_count($ticket->getContent(), 'class="cash-ticket"'));
-        $this->assertSame(2, substr_count($ticket->getContent(), 'class="cash-ticket-print-page"'));
+        // Un solo bloque imprimible garantiza que Caja entregue únicamente el ticket del cliente.
+        $this->assertSame(1, substr_count($ticket->getContent(), 'class="cash-ticket"'));
+        $this->assertSame(1, substr_count($ticket->getContent(), 'class="cash-ticket-print-page"'));
+        $ticket->assertSee('page-break-after:auto;break-after:auto;', false);
         $ticket->assertSee('zoom:50%', false);
     }
 

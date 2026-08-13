@@ -14,13 +14,12 @@
 </div>
 
 <div class="cash-ticket-copies">
-{{-- Genera dos comprobantes completos en la misma impresión: uno para el cliente y otro para la cajera. --}}
-@foreach(['COPIA CLIENTE', 'COPIA CAJERA'] as $tipoCopia)
+{{-- Genera un único comprobante para el cliente, tanto en pantalla como al imprimir. --}}
 <div class="cash-ticket-print-page">
 <div class="cash-ticket" style="max-width:400px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:2rem;box-shadow:0 2px 8px rgba(0,0,0,.08);">
 
-    {{-- Ambas copias conservan el mismo movimiento; esta etiqueta define quién guarda cada comprobante. --}}
-    <div style="text-align:center;font-size:11px;font-weight:800;letter-spacing:.12em;margin-bottom:1rem;">{{ $tipoCopia }}</div>
+    {{-- Identifica el único comprobante que se entrega al cliente. --}}
+    <div style="text-align:center;font-size:11px;font-weight:800;letter-spacing:.12em;margin-bottom:1rem;">COPIA CLIENTE</div>
 
     {{-- Encabezado imprimible conectado con la fecha y sucursal reales del movimiento. --}}
     <div style="text-align:center;border-bottom:2px dashed #e2e8f0;padding-bottom:1.25rem;margin-bottom:1.25rem;">
@@ -139,7 +138,6 @@
     </div>
 </div>
 </div>
-@endforeach
 </div>
 
 <style>
@@ -153,9 +151,8 @@
     .main { margin-left:0 !important; }
     .content { padding:0 !important; }
     .cash-ticket-copies { display:block !important;gap:0 !important; }
-    /* Cada envoltura centra una copia y fuerza que Cliente y Cajera salgan en hojas distintas. */
-    .cash-ticket-print-page { display:flex !important;justify-content:center !important;width:100% !important;page-break-after:always;break-after:page; }
-    .cash-ticket-print-page:last-child { page-break-after:auto;break-after:auto; }
+    /* La única envoltura centra el comprobante del cliente sin generar una segunda hoja. */
+    .cash-ticket-print-page { display:flex !important;justify-content:center !important;width:100% !important;page-break-after:auto;break-after:auto; }
     .cash-ticket { width:400px !important;max-width:400px !important;margin:0 !important;border:none !important;box-shadow:none !important;zoom:50%; }
     body { background:white !important;print-color-adjust:exact;-webkit-print-color-adjust:exact; }
 }

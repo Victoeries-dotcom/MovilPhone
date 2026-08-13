@@ -303,15 +303,14 @@
 
 /* Impresión del ticket: oculta la interfaz del sistema y deja solo el recibo. */
 @media print {
-    /* El navegador recibe dos hojas centradas; el diseño compensa la escala 50 elegida en Imprimir. */
-    @page { margin: 8mm; }
+    /* A4 sirve como formato inicial; el usuario conserva el control manual de Escala en Imprimir. */
+    @page { size: A4 portrait; margin: 8mm; }
     nav, .ticket-actions, footer, .btn, .sidebar, .topbar { display: none !important; }
     .main { margin-left: 0 !important; }
     .content { padding: 0 !important; }
     .ticket-copies { display: block !important; }
     .ticket-print-copy {
-        display: flex !important;
-        justify-content: center !important;
+        display: block !important;
         width: 100% !important;
         page-break-inside: avoid;
         break-inside: avoid-page;
@@ -319,18 +318,23 @@
         break-after: page;
     }
     .ticket-print-copy:last-child { page-break-after: auto; break-after: auto; }
-    .ticket-page { width: 100% !important; min-height: auto !important; padding: 0 !important; background: #fff !important; }
+    .ticket-page {
+        display: block !important;
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
     .ticket-card {
-        width: 450px !important;
-        max-width: 450px !important;
+        /* Ocupa todo el ancho imprimible y permite que Escala cambie letras y contenido proporcionalmente. */
+        width: 100% !important;
+        max-width: none !important;
         margin: 0 !important;
         box-sizing: border-box !important;
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         font-family: Arial, Helvetica, sans-serif !important;
-        /* Duplica el diseño antes de imprimir para que la escala 50 produzca un ticket legible. */
-        zoom: 200%;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

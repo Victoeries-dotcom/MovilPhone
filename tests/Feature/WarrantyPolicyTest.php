@@ -93,8 +93,10 @@ class WarrantyPolicyTest extends TestCase
         $this->assertLessThan(strpos($contenido, 'Folio: #'), strpos($contenido, $politica));
         // Dos envolturas con salto de página garantizan dos tickets completos en la vista de impresión.
         $this->assertSame(2, substr_count($contenido, 'class="ticket-print-copy"'));
-        // El diseño duplica su tamaño para compensar la escala 50 del diálogo y conservar legibilidad.
-        $ticket->assertSee('zoom: 200%', false);
+        // El ticket ocupa la hoja sin zoom fijo, por lo que Escala sigue bajo control del usuario.
+        $ticket->assertSee('@page { size: A4 portrait; margin: 8mm; }', false);
+        $ticket->assertSee('max-width: none !important', false);
+        $ticket->assertDontSee('zoom: 200%', false);
         $ticket->assertSee('flex-direction: column', false);
     }
 

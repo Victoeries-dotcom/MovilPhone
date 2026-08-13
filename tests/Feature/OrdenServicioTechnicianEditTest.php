@@ -15,10 +15,10 @@ class OrdenServicioTechnicianEditTest extends TestCase
 
     public function test_edit_only_lists_technicians_from_the_orders_branch(): void
     {
-        [$usuario, $orden, $tecnicoLocal, $tecnicoExterno, $vendedorLocal] = $this->crearEscenario();
+        [$editor, $orden, $tecnicoLocal, $tecnicoExterno, $vendedorLocal] = $this->crearEscenario();
 
         // La respuesta HTML representa las opciones que el usuario puede elegir en el formulario.
-        $this->actingAs($usuario)
+        $this->actingAs($editor)
             ->withSession(['sucursal_id' => $orden->sucursal_id])
             ->get(route('ordenes.edit', $orden))
             ->assertOk()
@@ -31,10 +31,10 @@ class OrdenServicioTechnicianEditTest extends TestCase
 
     public function test_update_rejects_a_technician_from_another_branch(): void
     {
-        [$usuario, $orden, , $tecnicoExterno] = $this->crearEscenario();
+        [$editor, $orden, , $tecnicoExterno] = $this->crearEscenario();
 
         // Todos los campos son validos salvo el tecnico externo, que debe rechazarse en el servidor.
-        $this->actingAs($usuario)
+        $this->actingAs($editor)
             ->withSession(['sucursal_id' => $orden->sucursal_id])
             ->from(route('ordenes.edit', $orden))
             ->put(route('ordenes.update', $orden), [
@@ -56,9 +56,9 @@ class OrdenServicioTechnicianEditTest extends TestCase
 
     public function test_update_changes_the_order_status_and_records_history(): void
     {
-        [$usuario, $orden] = $this->crearEscenario();
+        [$editor, $orden] = $this->crearEscenario();
 
-        $this->actingAs($usuario)
+        $this->actingAs($editor)
             ->withSession(['sucursal_id' => $orden->sucursal_id])
             ->put(route('ordenes.update', $orden), $this->datosValidos($orden, [
                 'estado' => 'EN DIAGNÓSTICO',
@@ -74,9 +74,9 @@ class OrdenServicioTechnicianEditTest extends TestCase
 
     public function test_update_rejects_an_unknown_order_status(): void
     {
-        [$usuario, $orden] = $this->crearEscenario();
+        [$editor, $orden] = $this->crearEscenario();
 
-        $this->actingAs($usuario)
+        $this->actingAs($editor)
             ->withSession(['sucursal_id' => $orden->sucursal_id])
             ->from(route('ordenes.edit', $orden))
             ->put(route('ordenes.update', $orden), $this->datosValidos($orden, [
@@ -140,7 +140,8 @@ class OrdenServicioTechnicianEditTest extends TestCase
     {
         $sucursalOrden = Sucursal::create(['nombre' => 'SUCURSAL ORDEN']);
         $otraSucursal = Sucursal::create(['nombre' => 'SUCURSAL EXTERNA']);
-        $usuario = User::factory()->create(['rol' => 'usuario', 'sucursal_id' => $sucursalOrden->id]);
+        // Super Usuario conserva la edición general; el rol usuario se cubre como denegado en su prueba dedicada.
+        $editor = User::factory()->create(['rol' => 'superusuario', 'sucursal_id' => $sucursalOrden->id]);
         $tecnicoLocal = User::factory()->create([
             'name' => 'TECNICO LOCAL VISIBLE',
             'rol' => 'tecnico',
@@ -173,6 +174,6 @@ class OrdenServicioTechnicianEditTest extends TestCase
             'estado_fisico' => 'BUENO',
         ]);
 
-        return [$usuario, $orden, $tecnicoLocal, $tecnicoExterno, $vendedorLocal];
+        return [$editor, $orden, $tecnicoLocal, $tecnicoExterno, $vendedorLocal];
     }
 }

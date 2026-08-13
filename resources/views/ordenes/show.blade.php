@@ -156,7 +156,10 @@ $anticipoDisponible = (float) ($ordenServicio->anticipo ?? 0);
 </div>
 
 <div style="display:flex;gap:8px">
-    <a href="{{ route('ordenes.edit', $ordenServicio) }}" class="btn btn-primary">Editar</a>
+    {{-- El detalle refleja el permiso backend de edit/update y no ofrece edición al rol usuario. --}}
+    @if(in_array(auth()->user()?->rol, ['superusuario', 'tecnico'], true))
+        <a href="{{ route('ordenes.edit', $ordenServicio) }}" class="btn btn-primary">Editar</a>
+    @endif
     {{-- El detalle replica la misma autorización visual basada en users.rol. --}}
     @if(auth()->user()?->rol === 'superusuario')
         <form method="POST" action="{{ route('ordenes.destroy', $ordenServicio) }}" data-order-delete-form

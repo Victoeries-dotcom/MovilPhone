@@ -229,9 +229,12 @@
                         </span>
                     </form>
                 @endif
-                <a href="{{ route('ordenes.edit', $orden) }}" class="btn">
-                    <i data-lucide="pencil" aria-hidden="true"></i><span>Editar</span>
-                </a>
+                {{-- La interfaz refleja el mismo permiso de las rutas edit/update protegido por users.rol. --}}
+                @if(in_array(auth()->user()?->rol, ['superusuario', 'tecnico'], true))
+                    <a href="{{ route('ordenes.edit', $orden) }}" class="btn">
+                        <i data-lucide="pencil" aria-hidden="true"></i><span>Editar</span>
+                    </a>
+                @endif
                 {{-- users.rol limita la acción destructiva visible exclusivamente al Super Usuario. --}}
                 @if(auth()->user()?->rol === 'superusuario')
                     <form method="POST" action="{{ route('ordenes.destroy', $orden) }}" data-order-delete-form

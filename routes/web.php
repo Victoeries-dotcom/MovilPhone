@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
         Route::get('ordenes/cliente-por-telefono', [OrdenServicioController::class, 'buscarClientePorTelefono'])
             ->name('ordenes.buscarClientePorTelefono');
         Route::resource('ordenes', OrdenServicioController::class)
+            ->except(['edit', 'update'])
             ->parameters(['ordenes' => 'ordenServicio']);
         Route::post('ordenes/{ordenServicio}/estado', [OrdenServicioController::class, 'avanzarEstado'])
             ->name('ordenes.avanzarEstado');
@@ -55,6 +56,13 @@ Route::middleware('auth')->group(function () {
             ->name('ordenes.ticketEntrega');
         Route::get('ordenes/{ordenServicio}/sticker', [OrdenServicioController::class, 'sticker'])
             ->name('ordenes.sticker');
+    });
+
+    /* Editar una OS queda fuera del rol usuario; el middleware protege formulario y actualización por URL directa. */
+    Route::middleware('role:superusuario,tecnico')->group(function () {
+        Route::resource('ordenes', OrdenServicioController::class)
+            ->only(['edit', 'update'])
+            ->parameters(['ordenes' => 'ordenServicio']);
     });
 
     /* Usuario puede consultar y agregar inventario; Categorías conserva sus permisos actuales. */

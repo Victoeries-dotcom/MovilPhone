@@ -14,6 +14,8 @@
     <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;">
         <div style="font-size:18px;font-weight:900;">MovilPhone</div>
         <div style="font-size:15px;font-weight:900;">{{ $ordenServicio->numero_os }}</div>
+        {{-- Contacto del local: queda debajo del folio dinámico para que el cliente pueda comunicarse desde la etiqueta. --}}
+        <div style="font-size:11px;font-weight:800;margin-top:2px;">CONTÁCTANOS: 9911098036</div>
     </div>
 
     <div style="font-size:12px;margin-bottom:4px;"><strong>Cliente:</strong> {{ $ordenServicio->cliente->nombre ?? '—' }}</div>

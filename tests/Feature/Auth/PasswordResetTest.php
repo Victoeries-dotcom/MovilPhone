@@ -16,7 +16,12 @@ class PasswordResetTest extends TestCase
     {
         $response = $this->get('/forgot-password');
 
-        $response->assertStatus(200);
+        // La recuperación debe orientar al usuario completamente en español.
+        $response->assertStatus(200)
+            ->assertSee('¿Olvidaste tu contraseña?')
+            ->assertSee('Correo electrónico')
+            ->assertSee('Enviar enlace para restablecer contraseña')
+            ->assertDontSee('Forgot your password?');
     }
 
     public function test_reset_password_link_can_be_requested(): void

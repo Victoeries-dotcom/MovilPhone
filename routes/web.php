@@ -58,8 +58,8 @@ Route::middleware('auth')->group(function () {
             ->name('ordenes.sticker');
     });
 
-    /* Editar una OS queda fuera del rol usuario; el middleware protege formulario y actualización por URL directa. */
-    Route::middleware('role:superusuario,tecnico')->group(function () {
+    /* Usuario también edita las OS de su sucursal; el controlador mantiene el aislamiento por sede. */
+    Route::middleware('role:superusuario,usuario,tecnico')->group(function () {
         Route::resource('ordenes', OrdenServicioController::class)
             ->only(['edit', 'update'])
             ->parameters(['ordenes' => 'ordenServicio']);
@@ -72,10 +72,16 @@ Route::middleware('auth')->group(function () {
         Route::resource('categorias', CategoriaController::class);
     });
 
-    /* Editar y eliminar productos queda reservado al personal administrador, incluso por URL directa. */
+    /* Usuario puede editar productos de su sucursal, pero no eliminarlos. */
+    Route::middleware('role:superusuario,capturista,usuario')->group(function () {
+        Route::resource('inventario', InventarioController::class)
+            ->only(['edit', 'update']);
+    });
+
+    /* Eliminar productos sigue reservado al personal administrador, incluso por URL directa. */
     Route::middleware('role:superusuario,capturista')->group(function () {
         Route::resource('inventario', InventarioController::class)
-            ->only(['edit', 'update', 'destroy']);
+            ->only(['destroy']);
     });
 
     /* Corte se declara antes del resource para que "corte" no se interprete como un ID. */

@@ -230,7 +230,7 @@
                     </form>
                 @endif
                 {{-- La interfaz refleja el mismo permiso de las rutas edit/update protegido por users.rol. --}}
-                @if(in_array(auth()->user()?->rol, ['superusuario', 'tecnico'], true))
+                @if(in_array(auth()->user()?->rol, ['superusuario', 'usuario', 'tecnico'], true))
                     <a href="{{ route('ordenes.edit', $orden) }}" class="btn">
                         <i data-lucide="pencil" aria-hidden="true"></i><span>Editar</span>
                     </a>

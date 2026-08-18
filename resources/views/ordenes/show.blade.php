@@ -156,8 +156,8 @@ $anticipoDisponible = (float) ($ordenServicio->anticipo ?? 0);
 </div>
 
 <div style="display:flex;gap:8px">
-    {{-- El detalle refleja el permiso backend de edit/update y no ofrece edición al rol usuario. --}}
-    @if(in_array(auth()->user()?->rol, ['superusuario', 'tecnico'], true))
+    {{-- El detalle refleja el permiso backend de edit/update para los tres roles del taller. --}}
+    @if(in_array(auth()->user()?->rol, ['superusuario', 'usuario', 'tecnico'], true))
         <a href="{{ route('ordenes.edit', $ordenServicio) }}" class="btn btn-primary">Editar</a>
     @endif
     {{-- El detalle replica la misma autorización visual basada en users.rol. --}}

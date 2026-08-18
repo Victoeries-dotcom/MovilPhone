@@ -12,10 +12,8 @@ class InventoryAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * El rol usuario puede consultar y agregar, pero no modificar ni eliminar productos existentes.
-     */
-    public function test_usuario_solo_puede_consultar_y_agregar_productos(): void
+    /** El rol usuario puede consultar, agregar y editar productos, pero no eliminarlos. */
+    public function test_usuario_puede_editar_productos_sin_eliminarlos(): void
     {
         $sucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
         $usuario = User::factory()->create(['rol' => 'usuario', 'sucursal_id' => $sucursal->id]);
@@ -26,22 +24,30 @@ class InventoryAuthorizationTest extends TestCase
             ->assertOk()
             ->assertSee('Agregar producto')
             ->assertSee(route('inventario.create'), false)
-            // Busca los controles reales para no confundirlos con textos del JavaScript global.
-            ->assertDontSee('inventory-edit-button', false)
+            // Busca los controles reales para distinguir Editar de la acción destructiva.
+            ->assertSee(route('inventario.edit', $producto), false)
+            ->assertSee('inventory-edit-button', false)
             ->assertDontSee('inventory-delete-button', false);
 
-        // Las rutas directas también deben rechazar intentos manipulados fuera de la interfaz.
+        // El formulario y la actualización directa quedan autorizados para la sucursal activa.
         $this->actingAs($usuario)->withSession($sesion)->get(route('inventario.edit', $producto))
-            ->assertForbidden();
+            ->assertOk();
         $this->actingAs($usuario)->withSession($sesion)->put(route('inventario.update', $producto), [
-            ...$this->datosProducto('PRODUCTO ALTERADO', $sucursal->id),
-        ])->assertForbidden();
+            ...$this->datosProducto('PRODUCTO EDITADO', $sucursal->id),
+        ])->assertRedirect(route('inventario.index'));
+
+        $this->assertDatabaseHas('inventario', [
+            'id' => $producto->id,
+            'nombre' => 'PRODUCTO EDITADO',
+        ]);
+
+        // El backend conserva la eliminación fuera del permiso de Usuario.
         $this->actingAs($usuario)->withSession($sesion)->delete(route('inventario.destroy', $producto))
             ->assertForbidden();
 
         $this->assertDatabaseHas('inventario', [
             'id' => $producto->id,
-            'nombre' => 'PRODUCTO PROTEGIDO',
+            'nombre' => 'PRODUCTO EDITADO',
         ]);
 
         // El alta permanece habilitada y el servidor conserva la sucursal activa del usuario.
@@ -52,6 +58,29 @@ class InventoryAuthorizationTest extends TestCase
         $this->assertDatabaseHas('inventario', [
             'nombre' => 'PRODUCTO NUEVO',
             'sucursal_id' => $sucursal->id,
+        ]);
+    }
+
+    /** La edición de Usuario conserva el aislamiento entre inventarios de sucursales distintas. */
+    public function test_usuario_no_puede_editar_productos_de_otra_sucursal(): void
+    {
+        $sucursalUsuario = Sucursal::create(['nombre' => 'BUCTZOTZ']);
+        $sucursalExterna = Sucursal::create(['nombre' => 'IZAMAL']);
+        $usuario = User::factory()->create(['rol' => 'usuario', 'sucursal_id' => $sucursalUsuario->id]);
+        $productoExterno = Inventario::create($this->datosProducto('PRODUCTO DE IZAMAL', $sucursalExterna->id));
+        $sesion = ['sucursal_id' => $sucursalUsuario->id, 'sucursal_nombre' => $sucursalUsuario->nombre];
+
+        // El controlador responde como registro inexistente para no revelar inventario de otra sucursal.
+        $this->actingAs($usuario)->withSession($sesion)->get(route('inventario.edit', $productoExterno))
+            ->assertNotFound();
+        $this->actingAs($usuario)->withSession($sesion)->put(route('inventario.update', $productoExterno), [
+            ...$this->datosProducto('CAMBIO ENTRE SUCURSALES', $sucursalExterna->id),
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('inventario', [
+            'id' => $productoExterno->id,
+            'nombre' => 'PRODUCTO DE IZAMAL',
+            'sucursal_id' => $sucursalExterna->id,
         ]);
     }
 

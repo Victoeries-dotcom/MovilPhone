@@ -25,6 +25,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /*
+     * Construye un esqueleto reutilizable para búsquedas y notificaciones.
+     * La forma anticipa el contenido real y evita que los paneles cambien de tamaño durante la carga.
+     */
+    function loadingSkeletonMarkup(label, rows) {
+        const safeRows = Math.max(1, Math.min(Number(rows) || 3, 5));
+        const items = Array.from({ length: safeRows }, function () {
+            return '<span class="ui-skeleton-row"><i></i><b></b><small></small></span>';
+        }).join('');
+
+        return '<div class="ui-skeleton-list" aria-label="' + label + '" aria-busy="true">' + items + '</div>';
+    }
+
+    /*
      * Alterna el tema claro u oscuro y conserva la eleccion en este navegador.
      * Se conecta con #themeToggle, layout.blade.php y las reglas data-ui-theme del CSS global.
      */
@@ -706,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             controller?.abort();
             controller = new AbortController();
-            results.innerHTML = '<div class="global-search-state">Buscando...</div>';
+            results.innerHTML = loadingSkeletonMarkup('Buscando coincidencias', 3);
             results.classList.add('is-open');
             input.setAttribute('aria-expanded', 'true');
 
@@ -799,6 +812,28 @@ document.addEventListener('DOMContentLoaded', function () {
         document.addEventListener('click', function () { panel.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); });
         loadNotifications();
         window.setInterval(loadNotifications, 15000);
+    }
+
+    /*
+     * Mantiene el menú de perfil abierto solo mientras el usuario interactúa con él.
+     * Se conecta con el elemento nativo details para conservar teclado, foco y cierre con Escape.
+     */
+    function initializeProfileMenu() {
+        const menu = document.getElementById('profileMenu');
+        const trigger = menu?.querySelector('.profile-trigger');
+        if (!menu || !trigger) return;
+
+        menu.addEventListener('toggle', function () {
+            trigger.setAttribute('aria-expanded', menu.open ? 'true' : 'false');
+        });
+        document.addEventListener('click', function (event) {
+            if (menu.open && !menu.contains(event.target)) menu.removeAttribute('open');
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape' || !menu.open) return;
+            menu.removeAttribute('open');
+            trigger.focus();
+        });
     }
 
     /* Crea el botón móvil y el fondo que abren el menú lateral sin cambiar sus enlaces. */
@@ -999,5 +1034,6 @@ document.addEventListener('DOMContentLoaded', function () {
     enhanceEmptyStates();
     initializeGlobalSearch();
     initializeNotifications();
+    initializeProfileMenu();
     refreshIcons();
 });

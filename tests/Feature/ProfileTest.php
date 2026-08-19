@@ -18,7 +18,14 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->get('/profile');
 
-        $response->assertOk();
+        $response
+            ->assertOk()
+            // La cuenta usa la plantilla global y presenta sus secciones principales en español.
+            ->assertSee('id="profileMenu"', false)
+            ->assertSee('Mi perfil')
+            ->assertSee('Datos personales')
+            ->assertSee('Cambiar contraseña')
+            ->assertSee('Eliminar mi cuenta');
     }
 
     public function test_profile_information_can_be_updated(): void

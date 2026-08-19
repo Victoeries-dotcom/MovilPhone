@@ -1,21 +1,37 @@
 @extends('layout')
 
 @section('content')
-{{-- Cabecera operativa: resume la sucursal activa y conecta las acciones con los modulos autorizados. --}}
+@php
+    /*
+     * Saludo contextual: adapta el mensaje a la hora configurada por Laravel y usa solamente
+     * el primer nombre para que la bienvenida sea personal sin ocupar demasiado espacio.
+     */
+    $saludoPanel = match (true) {
+        now()->hour < 12 => 'Buenos días',
+        now()->hour < 19 => 'Buenas tardes',
+        default => 'Buenas noches',
+    };
+    $primerNombre = \Illuminate\Support\Str::before(trim(auth()->user()->name), ' ');
+    $fechaPanel = ucfirst(now()->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY'));
+@endphp
+{{-- Cabecera operativa: recibe al usuario, identifica la sucursal y conserva las acciones autorizadas. --}}
 <div class="dashboard-header">
-    <div>
-        <span class="dashboard-eyebrow">RESUMEN OPERATIVO</span>
-        <h1 id="dashboardGreeting">Panel de {{ $sucursal->nombre ?? 'MovilPhone' }}</h1>
-        <p>{{ now()->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY') }}</p>
+    <div class="dashboard-welcome">
+        <span class="dashboard-eyebrow">RESUMEN OPERATIVO · {{ mb_strtoupper($sucursal->nombre ?? 'MOVILPHONE') }}</span>
+        <h1 id="dashboardGreeting">{{ $saludoPanel }}, {{ $primerNombre }}</h1>
+        <p>Aquí tienes el resumen operativo de {{ $sucursal ? 'la sucursal '.$sucursal->nombre : 'MovilPhone' }}.</p>
     </div>
-    <div class="dashboard-actions">
-        @if(in_array(auth()->user()->rol, ['superusuario', 'usuario', 'tecnico']))
-            <a href="{{ route('ordenes.create') }}" class="btn btn-primary"><i data-lucide="plus"></i><span>Nueva OS</span></a>
-        @endif
-        {{-- Nueva venta: conecta el panel con Ventas para los tres roles autorizados por routes/web.php. --}}
-        @if(in_array(auth()->user()->rol, ['superusuario', 'vendedor', 'usuario']))
-            <a href="{{ route('ventas.create') }}" class="btn"><i data-lucide="shopping-cart"></i><span>Nueva venta</span></a>
-        @endif
+    <div class="dashboard-header-side">
+        <span class="dashboard-date"><i data-lucide="calendar-days"></i>{{ $fechaPanel }}</span>
+        <div class="dashboard-actions">
+            @if(in_array(auth()->user()->rol, ['superusuario', 'usuario', 'tecnico']))
+                <a href="{{ route('ordenes.create') }}" class="btn btn-primary"><i data-lucide="plus"></i><span>Nueva OS</span></a>
+            @endif
+            {{-- Nueva venta: conecta el panel con Ventas para los tres roles autorizados por routes/web.php. --}}
+            @if(in_array(auth()->user()->rol, ['superusuario', 'vendedor', 'usuario']))
+                <a href="{{ route('ventas.create') }}" class="btn"><i data-lucide="shopping-cart"></i><span>Nueva venta</span></a>
+            @endif
+        </div>
     </div>
 </div>
 

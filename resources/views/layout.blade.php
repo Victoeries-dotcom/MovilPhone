@@ -294,23 +294,6 @@
         @endif
     @endauth
 
-    <div class="sidebar-footer">
-        @auth
-        <div class="user-info">
-            <div class="user-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
-            <div>
-                <div class="user-name">{{ auth()->user()->name }}</div>
-                {{-- Identidad lateral: muestra el rol real guardado en users.rol para evitar permisos aparentes. --}}
-                <div class="user-rol">{{ auth()->user()->rol }}</div>
-            </div>
-        </div>
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            {{-- Cierre de sesión: conserva la ruta logout y presenta su acción con iconografía consistente. --}}
-            <button type="submit" class="logout-btn"><i data-lucide="log-out"></i><span>Cerrar sesión</span></button>
-        </form>
-        @endauth
-    </div>
 </div>
 
 <div class="main">
@@ -329,6 +312,7 @@
                 request()->is('actividad*') => ['Actividad', 'bell-ring'],
                 request()->is('reportes*') => ['Reportes', 'chart-no-axes-combined'],
                 request()->is('configuracion*') => ['Configuracion', 'settings-2'],
+                request()->is('profile*') => ['Mi perfil', 'circle-user-round'],
                 default => ['Panel principal', 'layout-dashboard'],
             };
         @endphp
@@ -364,7 +348,14 @@
                     </button>
                     <div class="notification-panel" id="notificationPanel">
                         <div class="notification-header"><div><strong>Notificaciones</strong><small>Actividad de {{ $sucursalUiNombre }}</small></div><a href="{{ route('actividad.index') }}">Ver todo</a></div>
-                        <div class="notification-list" id="notificationList"><div class="notification-loading">Consultando actividad...</div></div>
+                        <div class="notification-list" id="notificationList">
+                            {{-- Esqueleto inicial: comunica carga sin saltos mientras llega la actividad autorizada. --}}
+                            <div class="ui-skeleton-list" aria-label="Consultando actividad" aria-busy="true">
+                                @for($skeleton = 0; $skeleton < 3; $skeleton++)
+                                    <span class="ui-skeleton-row"><i></i><b></b><small></small></span>
+                                @endfor
+                            </div>
+                        </div>
                     </div>
                 </div>
             @endif
@@ -375,19 +366,59 @@
                 </button>
             @endif
             <span class="topbar-branch"><i data-lucide="map-pin"></i>{{ $sucursalUiNombre }}</span>
-            <span class="topbar-badge {{ $rol === 'superusuario' ? 'super' : ($rol === 'capturista' ? 'capturista' : ($rol === 'vendedor' ? 'vendedor' : 'user')) }}">
-                @if($rol === 'superusuario')
-                    <i data-lucide="shield-check"></i> Super Usuario
-                @elseif($rol === 'capturista')
-                    <i data-lucide="clipboard-list"></i> Capturista
-                @elseif($rol === 'vendedor')
-                    <i data-lucide="shopping-cart"></i> Vendedor
-                @elseif($rol === 'tecnico')
-                    <i data-lucide="wrench"></i> Técnico
-                @else
-                    <i data-lucide="user"></i> Usuario
-                @endif
-            </span>
+            @php
+                /*
+                 * Identidad profesional: traduce el rol almacenado sin modificarlo y prepara
+                 * las iniciales que conectan el disparador con el menú de cuenta global.
+                 */
+                $rolEtiqueta = match ($rol) {
+                    'superusuario' => 'Super Usuario',
+                    'capturista' => 'Capturista',
+                    'vendedor' => 'Vendedor',
+                    'tecnico' => 'Técnico',
+                    default => 'Usuario',
+                };
+                $inicialesUsuario = collect(preg_split('/\s+/', trim(auth()->user()->name)))
+                    ->filter()
+                    ->take(2)
+                    ->map(fn ($parte) => mb_strtoupper(mb_substr($parte, 0, 1)))
+                    ->implode('');
+            @endphp
+            {{--
+                Menú de cuenta: reemplaza la insignia aislada por una identidad completa.
+                Mantiene Perfil, Configuración autorizada y Cerrar sesión disponibles en todas las vistas.
+            --}}
+            <details class="profile-menu" id="profileMenu">
+                <summary class="profile-trigger" aria-label="Abrir menú de {{ auth()->user()->name }}">
+                    <span class="profile-avatar" aria-hidden="true">{{ $inicialesUsuario ?: 'MP' }}</span>
+                    <span class="profile-identity">
+                        <strong>{{ auth()->user()->name }}</strong>
+                        <small>{{ $rolEtiqueta }}</small>
+                    </span>
+                    <i data-lucide="chevron-down" class="profile-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="profile-dropdown">
+                    <div class="profile-dropdown-header">
+                        <span class="profile-avatar profile-avatar-large" aria-hidden="true">{{ $inicialesUsuario ?: 'MP' }}</span>
+                        <div>
+                            <strong>{{ auth()->user()->name }}</strong>
+                            <small>{{ auth()->user()->email }}</small>
+                            <span>{{ $rolEtiqueta }} · {{ $sucursalUiNombre }}</span>
+                        </div>
+                    </div>
+                    <nav class="profile-dropdown-links" aria-label="Opciones de la cuenta">
+                        <a href="{{ route('profile.edit') }}"><i data-lucide="circle-user-round"></i><span><strong>Mi perfil</strong><small>Datos personales y contraseña</small></span></a>
+                        <a href="{{ route('home') }}"><i data-lucide="layout-dashboard"></i><span><strong>Panel principal</strong><small>Volver al resumen operativo</small></span></a>
+                        @if($rol === 'superusuario')
+                            <a href="{{ route('configuracion.edit') }}"><i data-lucide="settings-2"></i><span><strong>Configuración</strong><small>Ajustes generales del sistema</small></span></a>
+                        @endif
+                    </nav>
+                    <form method="POST" action="{{ route('logout') }}" class="profile-logout-form">
+                        @csrf
+                        <button type="submit"><i data-lucide="log-out"></i><span>Cerrar sesión</span></button>
+                    </form>
+                </div>
+            </details>
         </div>
         @endauth
     </div>
@@ -528,6 +559,6 @@
 </script>
 {{-- Interacciones globales: conectan Lucide y la UI al mismo servidor que entrega la vista actual. --}}
 <script src="/js/lucide.min.js?v=1.25.0" defer></script>
-<script src="/js/movilphone-ui.js?v=20260723-company-brand-theme" defer></script>
+<script src="/js/movilphone-ui.js?v=20260818-professional-shell" defer></script>
 </body>
 </html>

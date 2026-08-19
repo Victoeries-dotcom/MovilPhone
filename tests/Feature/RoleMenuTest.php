@@ -40,6 +40,11 @@ class RoleMenuTest extends TestCase
             // El atributo identifica el rol y el botón conecta su preferencia con movilphone-ui.js.
             ->assertSee('data-user-role="usuario"', false)
             ->assertSee('id="themeToggle"', false)
+            // El perfil global reúne identidad y acciones de cuenta sin conceder enlaces administrativos.
+            ->assertSee('id="profileMenu"', false)
+            ->assertSee(route('profile.edit'), false)
+            ->assertSee('Mi perfil')
+            ->assertSee('Cerrar sesión')
             ->assertSee('images/movilphone-logo-final.png', false)
             ->assertSee(route('home'), false)
             ->assertSee(route('ordenes.index'), false)
@@ -96,6 +101,9 @@ class RoleMenuTest extends TestCase
             ->actingAs($superusuario)
             ->get(route('home'))
             ->assertOk()
+            // La bienvenida contextual sustituye el encabezado genérico sin depender de una sucursal activa.
+            ->assertSee('id="dashboardGreeting"', false)
+            ->assertSee('Aquí tienes el resumen operativo de MovilPhone.')
             ->assertSee('dashboard-branch-empty', false)
             ->assertSee('Selecciona una sucursal')
             ->assertSee('images/dashboard-heron.jpg', false);

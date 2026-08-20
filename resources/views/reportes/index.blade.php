@@ -36,9 +36,32 @@
 .reporte-grafica {
     position:relative; min-width:0; overflow:hidden; padding:0; border:1px solid #e2e8f0;
     border-radius:8px; background:#fff; box-shadow:0 10px 30px rgba(15,31,61,.06);
-    break-inside:avoid; transition:box-shadow .22s ease, transform .22s ease;
+    break-inside:avoid; cursor:pointer; outline:none;
+    transition:border-color .22s ease, box-shadow .22s ease, transform .22s ease;
 }
-.reporte-grafica:hover { transform:translateY(-2px); box-shadow:0 18px 42px rgba(15,31,61,.1); }
+.reporte-grafica:hover {
+    border-color:#60a5fa; transform:translateY(-3px);
+    box-shadow:0 0 0 2px rgba(37,99,235,.18),0 18px 42px rgba(37,99,235,.28);
+}
+.reporte-grafica:focus-visible {
+    border-color:#2563eb;
+    box-shadow:0 0 0 3px rgba(37,99,235,.24),0 18px 42px rgba(37,99,235,.22);
+}
+/* La clase is-selected reemplaza el azul temporal por una confirmación verde persistente. */
+.reporte-grafica.is-selected,
+.reporte-grafica.is-selected:hover,
+.reporte-grafica.is-selected:focus-visible {
+    --grafica-acento:#16a34a; border-color:#22c55e; transform:translateY(-2px);
+    box-shadow:0 0 0 3px rgba(34,197,94,.22),0 18px 44px rgba(22,163,74,.30);
+}
+/* La etiqueta confirma visualmente la selección sin modificar el contenido de la gráfica. */
+.reporte-grafica::after {
+    content:'Seleccionado'; position:absolute; z-index:6; top:.7rem; left:50%;
+    padding:.3rem .55rem; border-radius:999px; background:#16a34a; color:#fff;
+    font-size:8px; font-weight:850; letter-spacing:.06em; text-transform:uppercase;
+    opacity:0; pointer-events:none; transform:translate(-50%,-6px); transition:opacity .18s ease,transform .18s ease;
+}
+.reporte-grafica.is-selected::after { opacity:1; transform:translate(-50%,0); }
 .reporte-grafica::before { content:''; position:absolute; inset:0 0 auto; height:3px; background:var(--grafica-acento,#2563eb); }
 .reporte-grafica-ventas { --grafica-acento:#2563eb; }
 .reporte-grafica-ingresos { --grafica-acento:#16a34a; }
@@ -107,6 +130,8 @@
     .reporte-grafica-cabecera { padding:1rem; }
     .reporte-grafica-cuerpo { padding:.85rem 1rem 1rem; }
     .reporte-grafica-resumen strong { font-size:14px; }
+    .reporte-grafica::after { content:'✓'; left:auto; right:.65rem; transform:translateY(-6px); }
+    .reporte-grafica.is-selected::after { transform:translateY(0); }
     .radial-canvas-wrap { min-height:280px; }
     .radial-canvas { width:280px; height:280px; }
     .radial-leyenda { grid-template-columns:1fr; }
@@ -118,7 +143,10 @@
     body { background: white !important; }
     table, .card, .stat-card { box-shadow: none !important; }
     .reporte-graficas { grid-template-columns:1fr 1fr; gap:.65rem; }
-    .reporte-grafica { box-shadow:none; }
+    .reporte-grafica,
+    .reporte-grafica:hover,
+    .reporte-grafica.is-selected { border-color:#e2e8f0; box-shadow:none; transform:none; }
+    .reporte-grafica::after { display:none; }
     .reporte-grafica-ordenes { grid-column:1 / -1; }
     .grafica-barras-scroll { overflow:visible; }
 }
@@ -343,7 +371,7 @@
 {{-- Las gráficas usan el periodo y alcance elegidos; si no hay datos, muestran el acumulado identificado. --}}
 <section class="reporte-graficas" aria-label="Gráficas de resultados">
     {{-- Dona de unidades: consume productos.cantidades generado por ReporteController. --}}
-    <article class="reporte-grafica reporte-grafica-ventas">
+    <article class="reporte-grafica reporte-grafica-ventas" data-reporte-seleccionable tabindex="0" role="button" aria-pressed="false" aria-label="Seleccionar gráfica Ventas por producto">
         <header class="reporte-grafica-cabecera">
             <div class="reporte-grafica-titulo">
                 <span class="reporte-grafica-icono"><i data-lucide="shopping-bag"></i></span>
@@ -379,7 +407,7 @@
     </article>
 
     {{-- Dona de ingresos: reutiliza los mismos productos y conecta cada segmento con su subtotal. --}}
-    <article class="reporte-grafica reporte-grafica-ingresos">
+    <article class="reporte-grafica reporte-grafica-ingresos" data-reporte-seleccionable tabindex="0" role="button" aria-pressed="false" aria-label="Seleccionar gráfica Total vendido por producto">
         <header class="reporte-grafica-cabecera">
             <div class="reporte-grafica-titulo">
                 <span class="reporte-grafica-icono"><i data-lucide="circle-dollar-sign"></i></span>
@@ -415,7 +443,7 @@
     </article>
 
     {{-- Barras de OS: cada barra representa un grupo de estados calculado en ReporteController. --}}
-    <article class="reporte-grafica reporte-grafica-ordenes">
+    <article class="reporte-grafica reporte-grafica-ordenes" data-reporte-seleccionable tabindex="0" role="button" aria-pressed="false" aria-label="Seleccionar gráfica Órdenes por estado">
         <header class="reporte-grafica-cabecera">
             <div class="reporte-grafica-titulo">
                 <span class="reporte-grafica-icono"><i data-lucide="chart-column-big"></i></span>
@@ -451,7 +479,7 @@
 </section>
 
 {{-- Resumen radial: conecta Ventas, Órdenes y Caja del mismo periodo y sucursal. --}}
-<article class="reporte-grafica reporte-grafica-general">
+<article class="reporte-grafica reporte-grafica-general" data-reporte-seleccionable tabindex="0" role="button" aria-pressed="false" aria-label="Seleccionar gráfica Reporte general por periodo">
     <header class="reporte-grafica-cabecera">
         <div class="reporte-grafica-titulo">
             <span class="reporte-grafica-icono"><i data-lucide="gauge"></i></span>
@@ -1151,6 +1179,33 @@ function renderizarGraficasReporte() {
     dibujarBarrasOrdenes(ordenes.etiquetas, ordenes.cantidades, animate);
     graficasReporteAnimadas = true;
 }
+
+/*
+ * Mantiene una sola gráfica seleccionada y comunica el mismo estado a mouse, teclado y lectores de pantalla.
+ * La selección es únicamente visual: no modifica filtros, consultas ni datos del reporte.
+ */
+const tarjetasReporteSeleccionables = Array.from(document.querySelectorAll('[data-reporte-seleccionable]'));
+
+function seleccionarTarjetaReporte(tarjetaActiva) {
+    tarjetasReporteSeleccionables.forEach(function(tarjeta) {
+        const seleccionada = tarjeta === tarjetaActiva;
+        tarjeta.classList.toggle('is-selected', seleccionada);
+        tarjeta.setAttribute('aria-pressed', String(seleccionada));
+    });
+}
+
+tarjetasReporteSeleccionables.forEach(function(tarjeta) {
+    tarjeta.addEventListener('click', function() {
+        seleccionarTarjetaReporte(tarjeta);
+    });
+
+    tarjeta.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            seleccionarTarjetaReporte(tarjeta);
+        }
+    });
+});
 
 let temporizadorGraficasReporte;
 window.addEventListener('resize', function() {

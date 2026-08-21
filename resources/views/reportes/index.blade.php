@@ -28,6 +28,30 @@
 .reporte-rango-submit { min-height:42px; white-space:nowrap; }
 .reporte-rango-error { margin:0; color:#dc2626; font-size:11px; font-weight:700; }
 .reporte-sucursal { margin-top:4px; font-size:12px; color:#2563eb; font-weight:700; }
+/* Pestaña modal: permite elegir varias sucursales sin perder el periodo visible del reporte. */
+.reporte-selector-panel { width:min(100%,680px) !important; max-height:min(760px,calc(100vh - 2rem)); padding:0 !important; overflow:hidden; }
+.reporte-selector-cabecera { padding:1.4rem 4rem 1.15rem 1.4rem; border-bottom:1px solid var(--ui-border,#dfe6ef); }
+.reporte-selector-cabecera span { color:#6d4bf2; font-size:10px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.reporte-selector-cabecera h2 { margin:.25rem 0 0; font-size:20px !important; }
+.reporte-selector-cabecera p { margin:.4rem 0 0 !important; font-size:12px !important; line-height:1.5 !important; }
+.reporte-selector-cuerpo { display:grid; gap:.9rem; padding:1.15rem 1.4rem; overflow-y:auto; }
+.reporte-selector-herramientas { display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+.reporte-selector-contador { color:var(--ui-muted,#64748b); font-size:11px; font-weight:750; }
+.reporte-selector-acciones-rapidas { display:flex; gap:.45rem; }
+.reporte-selector-lista { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; }
+.reporte-selector-opcion { display:flex; align-items:center; gap:.75rem; min-height:58px; padding:.8rem .9rem; border:1px solid var(--ui-border,#dfe6ef); border-radius:8px; background:var(--ui-surface-soft,#f8fafc); color:var(--ui-text,#0f1f3d); cursor:pointer; transition:border-color .16s ease,background .16s ease,box-shadow .16s ease; }
+.reporte-selector-opcion:hover { border-color:#8b7cf6; box-shadow:0 0 0 3px rgba(109,75,242,.10); }
+.reporte-selector-opcion.is-selected { border-color:#6d4bf2; background:rgba(109,75,242,.10); box-shadow:0 0 0 2px rgba(109,75,242,.12); }
+.reporte-selector-opcion input { width:18px; height:18px; margin:0; accent-color:#6d4bf2; }
+.reporte-selector-opcion-texto { min-width:0; }
+.reporte-selector-opcion strong { display:block; overflow:hidden; color:#f4f6fc; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.reporte-selector-opcion small { display:block; margin-top:2px; color:#9ca8be; font-size:10px; }
+html[data-ui-theme="light"] .reporte-selector-opcion strong { color:#17213d; }
+html[data-ui-theme="light"] .reporte-selector-opcion small { color:#64748b; }
+.reporte-selector-vacio { padding:1.2rem; border:1px dashed var(--ui-border,#dfe6ef); border-radius:8px; color:var(--ui-muted,#64748b); font-size:12px; text-align:center; }
+.reporte-selector-pie { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.4rem; border-top:1px solid var(--ui-border,#dfe6ef); background:var(--ui-surface-soft,#f8fafc); }
+.reporte-selector-pie p { margin:0 !important; font-size:11px !important; }
+.reporte-selector-botones { display:flex; gap:.55rem; }
 /*
  * Panel analítico de Reportes.
  * Organiza las gráficas conectadas con $graficas y $general sin modificar sus consultas.
@@ -135,6 +159,10 @@
     .radial-canvas-wrap { min-height:280px; }
     .radial-canvas { width:280px; height:280px; }
     .radial-leyenda { grid-template-columns:1fr; }
+    .reporte-selector-lista { grid-template-columns:1fr; }
+    .reporte-selector-pie { align-items:stretch; flex-direction:column; }
+    .reporte-selector-botones { flex-direction:column-reverse; }
+    .reporte-selector-botones .btn { width:100%; }
 }
 @media print {
     .sidebar, .topbar, .no-print { display: none !important; }
@@ -153,13 +181,16 @@
 </style>
 
 @php
-    /*
-     * Conserva el alcance global al cambiar de periodo o aplicar un rango.
-     * Estos parámetros se conectan con todas_sucursales de ReporteController.
-     */
-    $parametrosAlcance = $todasSucursales ? ['todas_sucursales' => 1] : [];
+    /* Conserva el alcance global o múltiple al cambiar el periodo del reporte. */
+    $parametrosAlcance = match (true) {
+        $seleccionPersonalizada => ['sucursales' => $sucursalesSeleccionadasIds],
+        $todasSucursales => ['todas_sucursales' => 1],
+        default => [],
+    };
     $parametrosCambioAlcance = request()->query();
 
+    // El botón global elimina una selección múltiple anterior para evitar dos alcances simultáneos.
+    unset($parametrosCambioAlcance['sucursales']);
     if ($todasSucursales) {
         unset($parametrosCambioAlcance['todas_sucursales']);
     } else {
@@ -195,6 +226,14 @@
         <a href="{{ route('reportes.index', array_merge(['periodo' => 'semana'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'semana' ? 'btn-primary' : '' }}">Últimos 7 días</a>
         <a href="{{ route('reportes.index', array_merge(['periodo' => 'mes'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'mes' ? 'btn-primary' : '' }}">Mes actual</a>
         <a href="{{ route('reportes.index', array_merge(['periodo' => 'acumulado'], $parametrosAlcance)) }}" class="btn {{ $periodo === 'acumulado' ? 'btn-primary' : '' }}">Acumulado</a>
+        {{-- Abre la pestaña que permite combinar las sucursales disponibles en un mismo reporte. --}}
+        <button
+            type="button"
+            class="btn {{ $seleccionPersonalizada ? 'btn-primary' : '' }}"
+            data-abrir-selector-sucursales
+            aria-haspopup="dialog"
+            aria-controls="selector-sucursales-reporte"
+        >Seleccionar sucursales para generar el reporte</button>
         {{-- Activa la suma de todas las sucursales y, al pulsarlo otra vez, regresa a la sede seleccionada. --}}
         <a
             href="{{ route('reportes.index', $parametrosCambioAlcance) }}"
@@ -207,8 +246,12 @@
     <form method="GET" action="{{ route('reportes.index') }}" class="reporte-rango" id="form-rango-reportes">
         <input type="hidden" name="periodo" value="rango">
         <input type="hidden" name="tipo_rango" id="tipo-rango-reportes" value="{{ $tipoRango }}">
-        {{-- Mantiene la suma global al consultar días, semanas o meses personalizados. --}}
-        @if($todasSucursales)
+        {{-- Mantiene el alcance global o múltiple al consultar días, semanas o meses personalizados. --}}
+        @if($seleccionPersonalizada)
+            @foreach($sucursalesSeleccionadasIds as $sucursalId)
+                <input type="hidden" name="sucursales[]" value="{{ $sucursalId }}">
+            @endforeach
+        @elseif($todasSucursales)
             <input type="hidden" name="todas_sucursales" value="1">
         @endif
 
@@ -274,6 +317,85 @@
 
         @error('desde') <p class="reporte-rango-error">{{ $message }}</p> @enderror
         @error('hasta') <p class="reporte-rango-error">{{ $message }}</p> @enderror
+    </form>
+</div>
+
+{{-- La pestaña consulta la tabla sucursales en cada carga, por eso incluye altas presentes y futuras. --}}
+<div id="selector-sucursales-reporte" class="ui-dialog no-print" aria-hidden="true">
+    <form
+        method="GET"
+        action="{{ route('reportes.index') }}"
+        class="ui-dialog-panel reporte-selector-panel"
+        id="form-selector-sucursales"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="selector-sucursales-titulo"
+        aria-describedby="selector-sucursales-ayuda"
+    >
+        {{-- Conserva el periodo actual mientras cambia únicamente el alcance de sucursales. --}}
+        @foreach(['periodo', 'fecha', 'tipo_rango', 'desde', 'hasta'] as $parametro)
+            @if(request()->filled($parametro))
+                <input type="hidden" name="{{ $parametro }}" value="{{ request($parametro) }}">
+            @endif
+        @endforeach
+
+        <button type="button" class="ui-dialog-close" data-cerrar-selector-sucursales aria-label="Cerrar selector">
+            <i data-lucide="x"></i>
+        </button>
+
+        <header class="reporte-selector-cabecera">
+            <span>Alcance del reporte</span>
+            <h2 id="selector-sucursales-titulo">Seleccionar sucursales</h2>
+            <p id="selector-sucursales-ayuda">Marca una o varias sucursales. Todas las cantidades y el PDF mostrarán únicamente la selección aplicada.</p>
+        </header>
+
+        <div class="reporte-selector-cuerpo">
+            <div class="reporte-selector-herramientas">
+                <span class="reporte-selector-contador" data-contador-sucursales aria-live="polite"></span>
+                <div class="reporte-selector-acciones-rapidas">
+                    <button type="button" class="btn btn-sm" data-marcar-sucursales>Marcar todas</button>
+                    <button type="button" class="btn btn-sm" data-limpiar-sucursales>Limpiar</button>
+                </div>
+            </div>
+
+            @if($sucursalesDisponibles->isEmpty())
+                <div class="reporte-selector-vacio">Todavía no hay sucursales registradas.</div>
+            @else
+                <div class="reporte-selector-lista">
+                    @foreach($sucursalesDisponibles as $sucursal)
+                        @php
+                            // Al abrir por primera vez, propone la sucursal activa para facilitar agregar otra sede.
+                            $sucursalMarcada = $seleccionPersonalizada
+                                ? in_array((int) $sucursal->id, $sucursalesSeleccionadasIds, true)
+                                : (! $todasSucursales && (int) $sucursalActiva?->id === (int) $sucursal->id);
+                        @endphp
+                        <label class="reporte-selector-opcion {{ $sucursalMarcada ? 'is-selected' : '' }}">
+                            <input
+                                type="checkbox"
+                                name="sucursales[]"
+                                value="{{ $sucursal->id }}"
+                                @checked($sucursalMarcada)
+                            >
+                            <span class="reporte-selector-opcion-texto">
+                                <strong>{{ $sucursal->nombre }}</strong>
+                                <small>{{ $sucursal->ubicacion ?: 'Sucursal disponible para reportes' }}</small>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <footer class="reporte-selector-pie">
+            <p data-mensaje-selector-sucursales>Selecciona al menos una sucursal para aplicar el reporte.</p>
+            <div class="reporte-selector-botones">
+                <button type="button" class="btn" data-cerrar-selector-sucursales>Cancelar</button>
+                <button type="submit" class="btn btn-primary" data-aplicar-sucursales>
+                    <i data-lucide="check"></i>
+                    Aplicar selección
+                </button>
+            </div>
+        </footer>
     </form>
 </div>
 
@@ -642,6 +764,84 @@
 </div>
 
 <script>
+/*
+ * Controla la pestaña de sucursales y mantiene accesible el foco del teclado.
+ * Los checkboxes enviados por GET se conectan con sucursales[] de ReporteController.
+ */
+const selectorSucursalesReporte = document.getElementById('selector-sucursales-reporte');
+const formularioSelectorSucursales = document.getElementById('form-selector-sucursales');
+const botonAbrirSelectorSucursales = document.querySelector('[data-abrir-selector-sucursales]');
+let focoAnteriorSelectorSucursales = null;
+
+if (selectorSucursalesReporte && formularioSelectorSucursales && botonAbrirSelectorSucursales) {
+    const checkboxesSucursales = Array.from(formularioSelectorSucursales.querySelectorAll('input[name="sucursales[]"]'));
+    const contadorSucursales = formularioSelectorSucursales.querySelector('[data-contador-sucursales]');
+    const mensajeSucursales = formularioSelectorSucursales.querySelector('[data-mensaje-selector-sucursales]');
+    const botonAplicarSucursales = formularioSelectorSucursales.querySelector('[data-aplicar-sucursales]');
+
+    // Refleja visualmente la selección y evita enviar un alcance vacío.
+    function actualizarSelectorSucursales() {
+        const totalSeleccionadas = checkboxesSucursales.filter(checkbox => checkbox.checked).length;
+
+        checkboxesSucursales.forEach(function(checkbox) {
+            checkbox.closest('.reporte-selector-opcion')?.classList.toggle('is-selected', checkbox.checked);
+        });
+
+        contadorSucursales.textContent = totalSeleccionadas === 1
+            ? '1 sucursal seleccionada'
+            : totalSeleccionadas + ' sucursales seleccionadas';
+        mensajeSucursales.textContent = totalSeleccionadas > 0
+            ? 'El reporte conservará el periodo actual y actualizará todas sus cantidades.'
+            : 'Selecciona al menos una sucursal para aplicar el reporte.';
+        botonAplicarSucursales.disabled = totalSeleccionadas === 0;
+    }
+
+    function abrirSelectorSucursales() {
+        focoAnteriorSelectorSucursales = document.activeElement;
+        selectorSucursalesReporte.classList.add('is-open');
+        selectorSucursalesReporte.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('ui-dialog-open');
+        (checkboxesSucursales.find(checkbox => checkbox.checked) || checkboxesSucursales[0] || botonAplicarSucursales).focus();
+    }
+
+    function cerrarSelectorSucursales() {
+        selectorSucursalesReporte.classList.remove('is-open');
+        selectorSucursalesReporte.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('ui-dialog-open');
+        focoAnteriorSelectorSucursales?.focus();
+    }
+
+    botonAbrirSelectorSucursales.addEventListener('click', abrirSelectorSucursales);
+    formularioSelectorSucursales.querySelectorAll('[data-cerrar-selector-sucursales]').forEach(function(boton) {
+        boton.addEventListener('click', cerrarSelectorSucursales);
+    });
+    formularioSelectorSucursales.querySelector('[data-marcar-sucursales]')?.addEventListener('click', function() {
+        checkboxesSucursales.forEach(checkbox => checkbox.checked = true);
+        actualizarSelectorSucursales();
+    });
+    formularioSelectorSucursales.querySelector('[data-limpiar-sucursales]')?.addEventListener('click', function() {
+        checkboxesSucursales.forEach(checkbox => checkbox.checked = false);
+        actualizarSelectorSucursales();
+    });
+    checkboxesSucursales.forEach(checkbox => checkbox.addEventListener('change', actualizarSelectorSucursales));
+    selectorSucursalesReporte.addEventListener('click', function(event) {
+        if (event.target === selectorSucursalesReporte) cerrarSelectorSucursales();
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && selectorSucursalesReporte.classList.contains('is-open')) {
+            cerrarSelectorSucursales();
+        }
+    });
+    formularioSelectorSucursales.addEventListener('submit', function(event) {
+        if (!checkboxesSucursales.some(checkbox => checkbox.checked)) {
+            event.preventDefault();
+            mensajeSucursales.textContent = 'Debes seleccionar al menos una sucursal.';
+        }
+    });
+
+    actualizarSelectorSucursales();
+}
+
 /*
  * Sincroniza el control Días/Semanas/Meses con los parámetros tipo_rango, desde y hasta.
  * Se conecta con rangoPersonalizado() de ReporteController y evita enviar campos ocultos.

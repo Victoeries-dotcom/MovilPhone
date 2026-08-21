@@ -331,6 +331,135 @@ class ReporteRangeTest extends TestCase
     }
 
     /**
+     * Comprueba que el selector múltiple sume solo las sucursales marcadas.
+     * También confirma que la pestaña liste todas las sedes existentes para incluir futuras altas.
+     */
+    public function test_reporte_filtra_todas_las_cantidades_por_varias_sucursales_seleccionadas(): void
+    {
+        [$usuario, $izamal] = $this->crearSuperusuarioConSucursal();
+        $buctzotz = Sucursal::create(['nombre' => 'BUCTZOTZ']);
+        $tizimin = Sucursal::create(['nombre' => 'TIZIMÍN']);
+
+        $clientes = collect([
+            [$izamal, 'CLIENTE IZAMAL', '9991111111'],
+            [$buctzotz, 'CLIENTE BUCTZOTZ', '9992222222'],
+            [$tizimin, 'CLIENTE TIZIMÍN', '9993333333'],
+        ])->map(function (array $datos, int $indice): Cliente {
+            return Cliente::forceCreate([
+                'nombre' => $datos[1],
+                'telefono_principal' => $datos[2],
+                'sucursal_habitual_id' => $datos[0]->id,
+                'created_at' => "2026-07-1{$indice} 09:00:00",
+                'updated_at' => "2026-07-1{$indice} 09:00:00",
+            ]);
+        });
+
+        $sucursales = [$izamal, $buctzotz, $tizimin];
+        $totales = [100, 250, 900];
+        $cantidades = [2, 3, 9];
+
+        foreach ($sucursales as $indice => $sucursal) {
+            // Cada módulo recibe datos distintos para detectar si una consulta ignora la selección múltiple.
+            $inventario = Inventario::create([
+                'nombre' => 'PRODUCTO '.$sucursal->nombre,
+                'categoria' => 'ACCESORIO',
+                'sucursal_id' => $sucursal->id,
+                'cantidad_disponible' => $indice + 1,
+                'stock_minimo' => 5,
+                'precio_costo' => 10,
+                'precio_venta' => 50,
+                'proveedor' => 'PROVEEDOR '.$sucursal->nombre,
+            ]);
+
+            $venta = $this->crearVenta(
+                $sucursal,
+                $totales[$indice],
+                "2026-07-1{$indice} 12:00:00",
+                $clientes[$indice]->id
+            );
+
+            VentaDetalle::create([
+                'venta_id' => $venta->id,
+                'inventario_id' => $inventario->id,
+                'nombre_producto' => $inventario->nombre,
+                'cantidad' => $cantidades[$indice],
+                'precio_unitario' => 50,
+                'subtotal' => $totales[$indice],
+            ]);
+
+            $this->crearOrden(
+                $clientes[$indice],
+                $sucursal,
+                'SEL-2026-000'.($indice + 1),
+                'RECIBIDO',
+                "2026-07-1{$indice} 10:00:00"
+            );
+
+            MovimientoCaja::forceCreate([
+                'sucursal_id' => $sucursal->id,
+                'tipo' => 'INGRESO',
+                'categoria' => 'VENTA',
+                'monto' => $totales[$indice],
+                'descripcion' => 'INGRESO '.$sucursal->nombre,
+                'created_at' => "2026-07-1{$indice} 13:00:00",
+                'updated_at' => "2026-07-1{$indice} 13:00:00",
+            ]);
+        }
+
+        $respuesta = $this
+            ->actingAs($usuario)
+            ->withSession(['sucursal_id' => $izamal->id])
+            ->get(route('reportes.index', [
+                'periodo' => 'rango',
+                'tipo_rango' => 'dia',
+                'desde' => '2026-07-01',
+                'hasta' => '2026-07-31',
+                'sucursales' => [$izamal->id, $buctzotz->id],
+            ]));
+
+        $respuesta
+            ->assertOk()
+            ->assertSee('Seleccionar sucursales para generar el reporte')
+            ->assertSee('name="sucursales[]"', false)
+            ->assertSee('PRODUCTO IZAMAL')
+            ->assertSee('PRODUCTO BUCTZOTZ')
+            ->assertDontSee('PRODUCTO TIZIMÍN')
+            ->assertViewHas('sucursalesDisponibles', fn ($sucursales) => $sucursales->count() === 3)
+            ->assertViewHas('sucursalesSeleccionadasIds', fn (array $ids) => $ids === [$izamal->id, $buctzotz->id])
+            ->assertViewHas('todasSucursales', false)
+            ->assertViewHas('alcanceReporte', 'IZAMAL, BUCTZOTZ')
+            ->assertViewHas('ventas', fn ($ventas) => $ventas->count() === 2)
+            ->assertViewHas('productosExistencia', fn ($productos) => $productos->pluck('sucursal_id')->sort()->values()->all() === [$izamal->id, $buctzotz->id])
+            ->assertViewHas('general', fn (array $general) => $general['ventas'] === 2
+                && (float) $general['total_ventas'] === 350.0
+                && $general['ordenes'] === 2
+                && $general['clientes'] === 2
+                && $general['movimientos_caja'] === 2
+                && (float) $general['ingresos_caja'] === 350.0
+                && $general['productos_bajo_stock'] === 2
+            )
+            ->assertViewHas('graficas', fn (array $graficas) => (float) $graficas['productos']['cantidades']->sum() === 5.0
+                && (int) $graficas['ordenes']['cantidades']->sum() === 2
+            );
+    }
+
+    /**
+     * Impide que un identificador inexistente produzca un reporte con alcance ambiguo.
+     */
+    public function test_reporte_rechaza_una_sucursal_seleccionada_inexistente(): void
+    {
+        [$usuario, $sucursal] = $this->crearSuperusuarioConSucursal();
+
+        $this
+            ->actingAs($usuario)
+            ->withSession(['sucursal_id' => $sucursal->id])
+            ->from(route('reportes.index'))
+            ->get(route('reportes.index', ['sucursales' => [999999]]))
+            ->assertRedirect(route('reportes.index'))
+            ->assertSessionHasErrors('sucursales.0');
+    }
+
+    /**
      * Prepara el contexto mínimo autorizado para abrir Reportes.
      * Se conecta con RoleMiddleware y con la sucursal activa guardada en sesión.
      */

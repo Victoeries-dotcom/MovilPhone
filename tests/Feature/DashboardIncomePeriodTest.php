@@ -30,6 +30,7 @@ class DashboardIncomePeriodTest extends TestCase
 
         $this->movimiento($sucursal->id, 'INGRESO', 100, '2026-08-12 09:00:00');
         $this->movimiento($sucursal->id, 'INGRESO', 60, '2026-08-12 09:30:00', 'transferencia');
+        $this->movimiento($sucursal->id, 'INGRESO', 40, '2026-08-12 09:45:00', 'tarjeta');
         $this->movimiento($sucursal->id, 'INGRESO', 200, '2026-08-10 09:00:00');
         $this->movimiento($sucursal->id, 'INGRESO', 300, '2026-08-02 09:00:00');
         $this->movimiento($sucursal->id, 'INGRESO', 400, '2026-07-31 09:00:00');
@@ -42,15 +43,17 @@ class DashboardIncomePeriodTest extends TestCase
             ->assertOk()
             ->assertSee('Efectivo en caja')
             ->assertSee('Transferencias recibidas')
+            ->assertSee('Pagos con tarjeta')
             ->assertSee('Total egresos')
             ->assertSee('Balance')
             ->assertDontSee('Ingresos por periodo')
             ->assertDontSee('data-income-period', false)
-            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 160.0
+            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 200.0
                 && $indicadores['efectivo']['actual'] === 100.0
                 && $indicadores['transferencias']['actual'] === 60.0
+                && $indicadores['tarjeta']['actual'] === 40.0
                 && $indicadores['egresos']['actual'] === 900.0
-                && $indicadores['balance']['actual'] === -740.0
+                && $indicadores['balance']['actual'] === -700.0
             );
     }
 
@@ -72,17 +75,19 @@ class DashboardIncomePeriodTest extends TestCase
 
         $this->movimiento($sucursal->id, 'INGRESO', 175, '2026-08-12 09:00:00');
         $this->movimiento($sucursal->id, 'INGRESO', 100, '2026-08-12 09:30:00', 'transferencia');
+        $this->movimiento($sucursal->id, 'INGRESO', 50, '2026-08-12 09:45:00', 'tarjeta');
         $this->movimiento($sucursal->id, 'EGRESO', 40, '2026-08-12 10:00:00');
 
         $this->actingAs($superusuario)
             ->withSession($sesionSucursal)
             ->get(route('home'))
             ->assertOk()
-            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 275.0
+            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 325.0
                 && $indicadores['efectivo']['actual'] === 175.0
                 && $indicadores['transferencias']['actual'] === 100.0
+                && $indicadores['tarjeta']['actual'] === 50.0
                 && $indicadores['egresos']['actual'] === 40.0
-                && $indicadores['balance']['actual'] === 235.0
+                && $indicadores['balance']['actual'] === 285.0
             );
 
         $this->actingAs($superusuario)
@@ -90,12 +95,13 @@ class DashboardIncomePeriodTest extends TestCase
             ->get(route('reportes.index', ['periodo' => 'hoy']))
             ->assertOk()
             ->assertSee('Caja y Finanzas')
-            ->assertViewHas('general', fn (array $general) => (float) $general['ingresos_caja'] === 275.0
+            ->assertViewHas('general', fn (array $general) => (float) $general['ingresos_caja'] === 325.0
                 && (float) $general['efectivo_caja'] === 175.0
                 && (float) $general['transferencias_caja'] === 100.0
+                && (float) $general['tarjeta_caja'] === 50.0
                 && (float) $general['egresos_caja'] === 40.0
-                && (float) $general['balance_caja'] === 235.0
-                && $general['movimientos_caja'] === 3
+                && (float) $general['balance_caja'] === 285.0
+                && $general['movimientos_caja'] === 4
             );
     }
 

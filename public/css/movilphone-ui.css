@@ -1035,7 +1035,8 @@ body .dashboard-branch-empty p {
     font-size:13px;
     line-height:1.65;
 }
-body .dashboard-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+/* Nueve indicadores se distribuyen en dos filas amplias sin dejar una tarjeta aislada. */
+body .dashboard-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
 body .dashboard-kpi, body .dashboard-section { border:1px solid var(--ui-border); border-radius:8px; background:#18213a; box-shadow:var(--ui-shadow-sm); }
 body .dashboard-kpi { min-height:145px; padding:18px; transition:transform var(--ui-ease), border-color var(--ui-ease); }
 body .dashboard-kpi:hover { border-color:#4b587b; transform:translateY(-2px); }
@@ -1691,6 +1692,9 @@ html[data-ui-theme="light"] body .branch-table-link:hover { color:#15803d; }
 }
 
 /* Respuesta: redistribuye buscador, paneles y herramientas sin superponer contenido. */
+@media (max-width:1400px) {
+    body .dashboard-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
 @media (max-width:1180px) {
     body .global-search { width:min(330px,32vw); }
     body .topbar-branch { display:none; }

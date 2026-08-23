@@ -48,10 +48,10 @@ class ReporteRangeTest extends TestCase
     }
 
     /**
-     * Comprueba que un día histórico separe el efectivo y las transferencias recibidas.
+     * Comprueba que un día histórico separe efectivo, transferencias y pagos con tarjeta.
      * Se conecta con el calendario, movimientos_caja.metodo_pago y la sucursal activa.
      */
-    public function test_reporte_muestra_efectivo_y_transferencias_de_un_dia_historico(): void
+    public function test_reporte_muestra_metodos_de_pago_de_un_dia_historico(): void
     {
         [$usuario, $sucursal] = $this->crearSuperusuarioConSucursal();
         $otraSucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
@@ -73,6 +73,15 @@ class ReporteRangeTest extends TestCase
             'metodo_pago' => 'transferencia',
             'created_at' => '2026-07-10 15:00:00',
             'updated_at' => '2026-07-10 15:00:00',
+        ]);
+        MovimientoCaja::forceCreate([
+            'sucursal_id' => $sucursal->id,
+            'tipo' => 'INGRESO',
+            'categoria' => 'INGRESO HISTÓRICO',
+            'monto' => 75,
+            'metodo_pago' => 'tarjeta',
+            'created_at' => '2026-07-10 16:00:00',
+            'updated_at' => '2026-07-10 16:00:00',
         ]);
         MovimientoCaja::forceCreate([
             'sucursal_id' => $sucursal->id,
@@ -103,9 +112,11 @@ class ReporteRangeTest extends TestCase
             ->assertOk()
             ->assertSee('Efectivo en caja')
             ->assertSee('Transferencias recibidas')
+            ->assertSee('Pagos con tarjeta')
             ->assertViewHas('general', fn (array $general) => (float) $general['efectivo_caja'] === 125.0
                 && (float) $general['transferencias_caja'] === 275.0
-                && (float) $general['ingresos_caja'] === 400.0
+                && (float) $general['tarjeta_caja'] === 75.0
+                && (float) $general['ingresos_caja'] === 475.0
             );
     }
 
@@ -360,12 +371,13 @@ class ReporteRangeTest extends TestCase
             ->assertSee('PRODUCTO BUCTZOTZ')
             ->assertSee('PROVEEDOR IZAMAL')
             ->assertSee('PROVEEDOR BUCTZOTZ')
-            // El encabezado identifica las seis tarjetas financieras debajo de los indicadores operativos.
+            // El encabezado identifica las siete tarjetas financieras debajo de los indicadores operativos.
             ->assertSeeInOrder([
                 'Bajo stock',
                 'Caja y Finanzas',
                 'Efectivo en caja',
                 'Transferencias recibidas',
+                'Pagos con tarjeta',
                 'Total egresos',
                 'Balance',
                 'Total anticipos',

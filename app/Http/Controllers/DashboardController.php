@@ -37,7 +37,7 @@ class DashboardController extends Controller
         $ingresosAyer = (clone $movimientosAyer)
             ->where('tipo', 'INGRESO')
             ->sum('monto');
-        // Separa el dinero físico de las transferencias sin alterar el total usado por el balance.
+        // Separa los tres métodos de ingreso sin alterar el total usado por el balance.
         $efectivoHoy = (clone $movimientosHoy)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'efectivo')
@@ -54,6 +54,14 @@ class DashboardController extends Controller
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'transferencia')
             ->sum('monto');
+        $tarjetaHoy = (clone $movimientosHoy)
+            ->where('tipo', 'INGRESO')
+            ->where('metodo_pago', 'tarjeta')
+            ->sum('monto');
+        $tarjetaAyer = (clone $movimientosAyer)
+            ->where('tipo', 'INGRESO')
+            ->where('metodo_pago', 'tarjeta')
+            ->sum('monto');
         $egresosHoy = (clone $movimientosHoy)
             ->where('tipo', 'EGRESO')
             ->sum('monto');
@@ -68,6 +76,7 @@ class DashboardController extends Controller
             'ingresos' => $this->indicador((float) $ingresosHoy, (float) $ingresosAyer),
             'efectivo' => $this->indicador((float) $efectivoHoy, (float) $efectivoAyer),
             'transferencias' => $this->indicador((float) $transferenciasHoy, (float) $transferenciasAyer),
+            'tarjeta' => $this->indicador((float) $tarjetaHoy, (float) $tarjetaAyer),
             'egresos' => $this->indicador((float) $egresosHoy, (float) $egresosAyer),
             // El balance financiero siempre corresponde a ingresos menos egresos del mismo día.
             'balance' => $this->indicador(

@@ -459,7 +459,7 @@ html[data-ui-theme="light"] .reporte-selector-opcion small { color:#64748b; }
     </div>
 </header>
 
-{{-- Resumen financiero: separa el efectivo físico de las transferencias del periodo seleccionado. --}}
+{{-- Resumen financiero: separa los métodos de cobro del periodo seleccionado. --}}
 <div class="stats-grid" aria-label="Resumen financiero del periodo">
     <div class="stat-card">
         <div class="stat-label">Efectivo en caja</div>
@@ -470,6 +470,11 @@ html[data-ui-theme="light"] .reporte-selector-opcion small { color:#64748b; }
         <div class="stat-label">Transferencias recibidas</div>
         {{-- Incluye transferencias históricas que pertenezcan al día o rango consultado. --}}
         <div class="stat-num blue">${{ number_format($general['transferencias_caja'], 2) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pagos con tarjeta</div>
+        {{-- Incluye cobros con tarjeta del mismo periodo histórico y alcance de sucursales. --}}
+        <div class="stat-num blue">${{ number_format($general['tarjeta_caja'], 2) }}</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Total egresos</div>

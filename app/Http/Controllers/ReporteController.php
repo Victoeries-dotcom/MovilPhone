@@ -283,6 +283,10 @@ class ReporteController extends Controller
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'transferencia')
             ->sum('monto');
+        $tarjetaCaja = (clone $cajaQuery)
+            ->where('tipo', 'INGRESO')
+            ->where('metodo_pago', 'tarjeta')
+            ->sum('monto');
         $egresosCaja = (clone $cajaQuery)->where('tipo', 'EGRESO')->sum('monto');
 
         $general = [
@@ -294,6 +298,7 @@ class ReporteController extends Controller
             'ingresos_caja' => $ingresosCaja,
             'efectivo_caja' => $efectivoCaja,
             'transferencias_caja' => $transferenciasCaja,
+            'tarjeta_caja' => $tarjetaCaja,
             'egresos_caja' => $egresosCaja,
             'balance_caja' => $ingresosCaja - $egresosCaja,
             'anticipos_caja' => (clone $cajaQuery)->sum('anticipo'),

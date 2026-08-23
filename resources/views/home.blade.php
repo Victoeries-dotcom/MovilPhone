@@ -58,9 +58,10 @@
             $tarjetas = [
                 ['label' => 'Ventas', 'key' => 'ventas', 'icon' => 'shopping-bag', 'tone' => 'blue', 'money' => false],
                 ['label' => 'Total vendido', 'key' => 'vendido', 'icon' => 'badge-dollar-sign', 'tone' => 'green', 'money' => true],
-                // Efectivo y transferencias usan indicadores independientes calculados para hoy y ayer.
+                // Los tres métodos de cobro usan indicadores independientes calculados para hoy y ayer.
                 ['label' => 'Efectivo en caja', 'key' => 'efectivo', 'icon' => 'banknote', 'tone' => 'green', 'money' => true],
                 ['label' => 'Transferencias recibidas', 'key' => 'transferencias', 'icon' => 'landmark', 'tone' => 'cyan', 'money' => true],
+                ['label' => 'Pagos con tarjeta', 'key' => 'tarjeta', 'icon' => 'credit-card', 'tone' => 'violet', 'money' => true],
                 ['label' => 'Total egresos', 'key' => 'egresos', 'icon' => 'circle-minus', 'tone' => 'red', 'money' => true],
                 // El color del balance comunica si el resultado diario es positivo o negativo.
                 ['label' => 'Balance', 'key' => 'balance', 'icon' => 'scale', 'tone' => $indicadores['balance']['actual'] >= 0 ? 'green' : 'red', 'money' => true],

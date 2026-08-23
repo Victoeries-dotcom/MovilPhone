@@ -274,6 +274,15 @@ class ReporteController extends Controller
          * Estos valores provienen de movimientos_caja y sustituyen las tarjetas retiradas de Caja.
          */
         $ingresosCaja = (clone $cajaQuery)->where('tipo', 'INGRESO')->sum('monto');
+        // El desglose conserva el mismo periodo y alcance para consultar cualquier fecha histórica.
+        $efectivoCaja = (clone $cajaQuery)
+            ->where('tipo', 'INGRESO')
+            ->where('metodo_pago', 'efectivo')
+            ->sum('monto');
+        $transferenciasCaja = (clone $cajaQuery)
+            ->where('tipo', 'INGRESO')
+            ->where('metodo_pago', 'transferencia')
+            ->sum('monto');
         $egresosCaja = (clone $cajaQuery)->where('tipo', 'EGRESO')->sum('monto');
 
         $general = [
@@ -283,6 +292,8 @@ class ReporteController extends Controller
             'total_ventas' => $ventas->sum('total'),
             'movimientos_caja' => (clone $cajaQuery)->count(),
             'ingresos_caja' => $ingresosCaja,
+            'efectivo_caja' => $efectivoCaja,
+            'transferencias_caja' => $transferenciasCaja,
             'egresos_caja' => $egresosCaja,
             'balance_caja' => $ingresosCaja - $egresosCaja,
             'anticipos_caja' => (clone $cajaQuery)->sum('anticipo'),

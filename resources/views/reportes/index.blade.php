@@ -459,12 +459,17 @@ html[data-ui-theme="light"] .reporte-selector-opcion small { color:#64748b; }
     </div>
 </header>
 
-{{-- Resumen financiero: reutiliza el mismo diseño y queda debajo de los cinco indicadores operativos. --}}
+{{-- Resumen financiero: separa el efectivo físico de las transferencias del periodo seleccionado. --}}
 <div class="stats-grid" aria-label="Resumen financiero del periodo">
     <div class="stat-card">
-        <div class="stat-label">Total ingresos</div>
-        {{-- Suma únicamente ingresos del periodo y alcance seleccionados en Reportes. --}}
-        <div class="stat-num green">${{ number_format($general['ingresos_caja'], 2) }}</div>
+        <div class="stat-label">Efectivo en caja</div>
+        {{-- Suma únicamente ingresos en efectivo del periodo y alcance seleccionados. --}}
+        <div class="stat-num green">${{ number_format($general['efectivo_caja'], 2) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Transferencias recibidas</div>
+        {{-- Incluye transferencias históricas que pertenezcan al día o rango consultado. --}}
+        <div class="stat-num blue">${{ number_format($general['transferencias_caja'], 2) }}</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Total egresos</div>

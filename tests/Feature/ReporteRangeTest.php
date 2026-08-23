@@ -48,6 +48,68 @@ class ReporteRangeTest extends TestCase
     }
 
     /**
+     * Comprueba que un día histórico separe el efectivo y las transferencias recibidas.
+     * Se conecta con el calendario, movimientos_caja.metodo_pago y la sucursal activa.
+     */
+    public function test_reporte_muestra_efectivo_y_transferencias_de_un_dia_historico(): void
+    {
+        [$usuario, $sucursal] = $this->crearSuperusuarioConSucursal();
+        $otraSucursal = Sucursal::create(['nombre' => 'BUCTZOTZ']);
+
+        MovimientoCaja::forceCreate([
+            'sucursal_id' => $sucursal->id,
+            'tipo' => 'INGRESO',
+            'categoria' => 'INGRESO HISTÓRICO',
+            'monto' => 125,
+            'metodo_pago' => 'efectivo',
+            'created_at' => '2026-07-10 09:00:00',
+            'updated_at' => '2026-07-10 09:00:00',
+        ]);
+        MovimientoCaja::forceCreate([
+            'sucursal_id' => $sucursal->id,
+            'tipo' => 'INGRESO',
+            'categoria' => 'INGRESO HISTÓRICO',
+            'monto' => 275,
+            'metodo_pago' => 'transferencia',
+            'created_at' => '2026-07-10 15:00:00',
+            'updated_at' => '2026-07-10 15:00:00',
+        ]);
+        MovimientoCaja::forceCreate([
+            'sucursal_id' => $sucursal->id,
+            'tipo' => 'INGRESO',
+            'categoria' => 'FUERA DEL DÍA',
+            'monto' => 900,
+            'metodo_pago' => 'transferencia',
+            'created_at' => '2026-07-11 09:00:00',
+            'updated_at' => '2026-07-11 09:00:00',
+        ]);
+        MovimientoCaja::forceCreate([
+            'sucursal_id' => $otraSucursal->id,
+            'tipo' => 'INGRESO',
+            'categoria' => 'OTRA SUCURSAL',
+            'monto' => 800,
+            'metodo_pago' => 'transferencia',
+            'created_at' => '2026-07-10 10:00:00',
+            'updated_at' => '2026-07-10 10:00:00',
+        ]);
+
+        $this
+            ->actingAs($usuario)
+            ->withSession(['sucursal_id' => $sucursal->id])
+            ->get(route('reportes.index', [
+                'periodo' => 'fecha',
+                'fecha' => '2026-07-10',
+            ]))
+            ->assertOk()
+            ->assertSee('Efectivo en caja')
+            ->assertSee('Transferencias recibidas')
+            ->assertViewHas('general', fn (array $general) => (float) $general['efectivo_caja'] === 125.0
+                && (float) $general['transferencias_caja'] === 275.0
+                && (float) $general['ingresos_caja'] === 400.0
+            );
+    }
+
+    /**
      * Verifica que una semana ISO se expanda de lunes a domingo completos.
      * Se conecta con los controles input week y los límites created_at del reporte.
      */
@@ -253,6 +315,7 @@ class ReporteRangeTest extends TestCase
             'tipo' => 'INGRESO',
             'categoria' => 'VENTA',
             'monto' => 100,
+            'metodo_pago' => 'efectivo',
             'anticipo' => 25,
             'descripcion' => 'INGRESO IZAMAL',
             'os_id' => $ordenIzamal->id,
@@ -264,6 +327,7 @@ class ReporteRangeTest extends TestCase
             'tipo' => 'INGRESO',
             'categoria' => 'VENTA',
             'monto' => 250,
+            'metodo_pago' => 'transferencia',
             'descripcion' => 'INGRESO BUCTZOTZ',
             'created_at' => '2026-07-11 13:00:00',
             'updated_at' => '2026-07-11 13:00:00',
@@ -296,11 +360,12 @@ class ReporteRangeTest extends TestCase
             ->assertSee('PRODUCTO BUCTZOTZ')
             ->assertSee('PROVEEDOR IZAMAL')
             ->assertSee('PROVEEDOR BUCTZOTZ')
-            // El encabezado identifica las cinco tarjetas financieras debajo de los indicadores operativos.
+            // El encabezado identifica las seis tarjetas financieras debajo de los indicadores operativos.
             ->assertSeeInOrder([
                 'Bajo stock',
                 'Caja y Finanzas',
-                'Total ingresos',
+                'Efectivo en caja',
+                'Transferencias recibidas',
                 'Total egresos',
                 'Balance',
                 'Total anticipos',
@@ -320,6 +385,8 @@ class ReporteRangeTest extends TestCase
                 && $general['clientes'] === 2
                 && $general['movimientos_caja'] === 3
                 && (float) $general['ingresos_caja'] === 350.0
+                && (float) $general['efectivo_caja'] === 100.0
+                && (float) $general['transferencias_caja'] === 250.0
                 && (float) $general['egresos_caja'] === 50.0
                 && (float) $general['balance_caja'] === 300.0
                 && (float) $general['anticipos_caja'] === 25.0
@@ -400,6 +467,8 @@ class ReporteRangeTest extends TestCase
                 'tipo' => 'INGRESO',
                 'categoria' => 'VENTA',
                 'monto' => $totales[$indice],
+                // Alterna métodos para comprobar que el alcance también limita cada desglose financiero.
+                'metodo_pago' => $indice === 0 ? 'efectivo' : 'transferencia',
                 'descripcion' => 'INGRESO '.$sucursal->nombre,
                 'created_at' => "2026-07-1{$indice} 13:00:00",
                 'updated_at' => "2026-07-1{$indice} 13:00:00",
@@ -436,6 +505,8 @@ class ReporteRangeTest extends TestCase
                 && $general['clientes'] === 2
                 && $general['movimientos_caja'] === 2
                 && (float) $general['ingresos_caja'] === 350.0
+                && (float) $general['efectivo_caja'] === 100.0
+                && (float) $general['transferencias_caja'] === 250.0
                 && $general['productos_bajo_stock'] === 2
             )
             ->assertViewHas('graficas', fn (array $graficas) => (float) $graficas['productos']['cantidades']->sum() === 5.0

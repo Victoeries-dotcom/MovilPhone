@@ -29,6 +29,7 @@ class DashboardIncomePeriodTest extends TestCase
         $usuario = User::factory()->create(['rol' => 'usuario', 'sucursal_id' => $sucursal->id]);
 
         $this->movimiento($sucursal->id, 'INGRESO', 100, '2026-08-12 09:00:00');
+        $this->movimiento($sucursal->id, 'INGRESO', 60, '2026-08-12 09:30:00', 'transferencia');
         $this->movimiento($sucursal->id, 'INGRESO', 200, '2026-08-10 09:00:00');
         $this->movimiento($sucursal->id, 'INGRESO', 300, '2026-08-02 09:00:00');
         $this->movimiento($sucursal->id, 'INGRESO', 400, '2026-07-31 09:00:00');
@@ -39,14 +40,17 @@ class DashboardIncomePeriodTest extends TestCase
             ->withSession(['sucursal_id' => $sucursal->id, 'sucursal_nombre' => $sucursal->nombre])
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('Ingresos de caja')
+            ->assertSee('Efectivo en caja')
+            ->assertSee('Transferencias recibidas')
             ->assertSee('Total egresos')
             ->assertSee('Balance')
             ->assertDontSee('Ingresos por periodo')
             ->assertDontSee('data-income-period', false)
-            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 100.0
+            ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 160.0
+                && $indicadores['efectivo']['actual'] === 100.0
+                && $indicadores['transferencias']['actual'] === 60.0
                 && $indicadores['egresos']['actual'] === 900.0
-                && $indicadores['balance']['actual'] === -800.0
+                && $indicadores['balance']['actual'] === -740.0
             );
     }
 
@@ -66,7 +70,8 @@ class DashboardIncomePeriodTest extends TestCase
             'sucursal_nombre' => $sucursal->nombre,
         ];
 
-        $this->movimiento($sucursal->id, 'INGRESO', 275, '2026-08-12 09:00:00');
+        $this->movimiento($sucursal->id, 'INGRESO', 175, '2026-08-12 09:00:00');
+        $this->movimiento($sucursal->id, 'INGRESO', 100, '2026-08-12 09:30:00', 'transferencia');
         $this->movimiento($sucursal->id, 'EGRESO', 40, '2026-08-12 10:00:00');
 
         $this->actingAs($superusuario)
@@ -74,6 +79,8 @@ class DashboardIncomePeriodTest extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertViewHas('indicadores', fn (array $indicadores) => $indicadores['ingresos']['actual'] === 275.0
+                && $indicadores['efectivo']['actual'] === 175.0
+                && $indicadores['transferencias']['actual'] === 100.0
                 && $indicadores['egresos']['actual'] === 40.0
                 && $indicadores['balance']['actual'] === 235.0
             );
@@ -84,21 +91,29 @@ class DashboardIncomePeriodTest extends TestCase
             ->assertOk()
             ->assertSee('Caja y Finanzas')
             ->assertViewHas('general', fn (array $general) => (float) $general['ingresos_caja'] === 275.0
+                && (float) $general['efectivo_caja'] === 175.0
+                && (float) $general['transferencias_caja'] === 100.0
                 && (float) $general['egresos_caja'] === 40.0
                 && (float) $general['balance_caja'] === 235.0
-                && $general['movimientos_caja'] === 2
+                && $general['movimientos_caja'] === 3
             );
     }
 
     /** Crea un movimiento fechado para comprobar cada límite del periodo. */
-    private function movimiento(int $sucursalId, string $tipo, float $monto, string $fecha): void
-    {
+    private function movimiento(
+        int $sucursalId,
+        string $tipo,
+        float $monto,
+        string $fecha,
+        string $metodoPago = 'efectivo'
+    ): void {
         $movimiento = MovimientoCaja::create([
             'sucursal_id' => $sucursalId,
             'tipo' => $tipo,
             'categoria' => $tipo.' DE PRUEBA',
             'monto' => $monto,
-            'metodo_pago' => 'efectivo',
+            // El método permite demostrar que efectivo y transferencia se suman por separado.
+            'metodo_pago' => $metodoPago,
         ]);
         $movimiento->timestamps = false;
         $movimiento->created_at = $fecha;

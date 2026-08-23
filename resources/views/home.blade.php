@@ -12,14 +12,66 @@
         default => 'Buenas noches',
     };
     $primerNombre = \Illuminate\Support\Str::before(trim(auth()->user()->name), ' ');
-    $fechaPanel = ucfirst(now()->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY'));
+    // La fecha visible y los indicadores comparten el mismo día calculado por DashboardController.
+    $fechaPanel = ucfirst($diaPanel->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY'));
+    $fechaSupervision = $diaPanel->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
+    $alcancePanel = $sucursal ? 'la sucursal '.$sucursal->nombre : 'MovilPhone';
+    $descripcionPanel = $supervisionActiva
+        ? 'Estás supervisando la información del '.$fechaSupervision.' de '.$alcancePanel.'.'
+        : 'Aquí tienes el resumen operativo de '.$alcancePanel.'.';
 @endphp
 {{-- Cabecera operativa: recibe al usuario, identifica la sucursal y conserva las acciones autorizadas. --}}
 <div class="dashboard-header">
     <div class="dashboard-welcome">
         <span class="dashboard-eyebrow">RESUMEN OPERATIVO · {{ mb_strtoupper($sucursal->nombre ?? 'MOVILPHONE') }}</span>
         <h1 id="dashboardGreeting">{{ $saludoPanel }}, {{ $primerNombre }}</h1>
-        <p>Aquí tienes el resumen operativo de {{ $sucursal ? 'la sucursal '.$sucursal->nombre : 'MovilPhone' }}.</p>
+        <p>{{ $descripcionPanel }}</p>
+
+        {{-- Supervisión diaria: abre un selector limitado al mes actual y conserva la sucursal activa. --}}
+        @if($sucursal)
+            <div class="dashboard-supervision-row">
+                <details class="dashboard-supervision-picker" @if($errors->has('fecha_supervision')) open @endif>
+                    <summary class="dashboard-supervision-button">
+                        <i data-lucide="calendar-search" aria-hidden="true"></i>
+                        <span>Supervisión por día</span>
+                        <i data-lucide="chevron-down" class="dashboard-supervision-chevron" aria-hidden="true"></i>
+                    </summary>
+                    <div class="dashboard-supervision-popover">
+                        <form method="GET" action="{{ route('home') }}" class="dashboard-supervision-form">
+                            <label for="fecha_supervision">Día del mes actual</label>
+                            <input
+                                type="date"
+                                id="fecha_supervision"
+                                name="fecha_supervision"
+                                value="{{ old('fecha_supervision', $diaPanel->toDateString()) }}"
+                                min="{{ $inicioMesActual->toDateString() }}"
+                                max="{{ $hoy->toDateString() }}"
+                                required
+                            >
+                            <small>Consulta desde el primer día del mes hasta hoy.</small>
+                            @error('fecha_supervision')
+                                <span class="dashboard-supervision-error" role="alert">{{ $message }}</span>
+                            @enderror
+                            <div class="dashboard-supervision-actions">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i data-lucide="search" aria-hidden="true"></i><span>Consultar día</span>
+                                </button>
+                                @if($supervisionActiva)
+                                    <a href="{{ route('home') }}" class="btn btn-sm">Volver a hoy</a>
+                                @endif
+                            </div>
+                        </form>
+                    </div>
+                </details>
+
+                @if($supervisionActiva)
+                    <span class="dashboard-supervision-active">
+                        <i data-lucide="badge-check" aria-hidden="true"></i>
+                        Día seleccionado: {{ $fechaSupervision }}
+                    </span>
+                @endif
+            </div>
+        @endif
     </div>
     <div class="dashboard-header-side">
         <span class="dashboard-date"><i data-lucide="calendar-days"></i>{{ $fechaPanel }}</span>
@@ -52,13 +104,13 @@
         </div>
     </section>
 @else
-    {{-- Indicadores: comparan la actividad de hoy con ayer usando DashboardController. --}}
-    <section class="dashboard-kpis" aria-label="Indicadores de hoy">
+    {{-- Indicadores: comparan el día visible con el inmediatamente anterior usando DashboardController. --}}
+    <section class="dashboard-kpis" aria-label="Indicadores del {{ $fechaSupervision }}">
         @php
             $tarjetas = [
                 ['label' => 'Ventas', 'key' => 'ventas', 'icon' => 'shopping-bag', 'tone' => 'blue', 'money' => false],
                 ['label' => 'Total vendido', 'key' => 'vendido', 'icon' => 'badge-dollar-sign', 'tone' => 'green', 'money' => true],
-                // Los tres métodos de cobro usan indicadores independientes calculados para hoy y ayer.
+                // Los tres métodos de cobro usan indicadores independientes del día supervisado.
                 ['label' => 'Efectivo en caja', 'key' => 'efectivo', 'icon' => 'banknote', 'tone' => 'green', 'money' => true],
                 ['label' => 'Transferencias recibidas', 'key' => 'transferencias', 'icon' => 'landmark', 'tone' => 'cyan', 'money' => true],
                 ['label' => 'Pagos con tarjeta', 'key' => 'tarjeta', 'icon' => 'credit-card', 'tone' => 'violet', 'money' => true],
@@ -81,19 +133,19 @@
                 </div>
                 <span class="dashboard-kpi-label">{{ $tarjeta['label'] }}</span>
                 <strong>{{ $tarjeta['money'] ? '$'.number_format($dato['actual'], 2) : number_format($dato['actual']) }}</strong>
-                <small>Comparado con ayer</small>
+                <small>Comparado con el día anterior</small>
             </article>
         @endforeach
 
     </section>
 
     <div class="dashboard-grid-main">
-        {{-- Tendencia financiera: usa la serie de siete dias calculada desde movimientos_caja. --}}
+        {{-- Tendencia financiera: termina en el día supervisado y usa movimientos_caja. --}}
         <section class="dashboard-section dashboard-trend-section">
             <div class="dashboard-section-header">
                 <div>
                     <span class="dashboard-section-kicker">CAJA</span>
-                    <h2>Ingresos de los ultimos 7 dias</h2>
+                    <h2>{{ $supervisionActiva ? 'Ingresos hasta el '.$fechaSupervision : 'Ingresos de los últimos 7 días' }}</h2>
                 </div>
                 <a href="{{ route('caja.index') }}" class="btn btn-sm"><i data-lucide="arrow-up-right"></i><span>Ver caja</span></a>
             </div>
@@ -111,20 +163,20 @@
             </div>
         </section>
 
-        {{-- Pulso del taller: conecta los estados de OS, inventario y tecnicos disponibles. --}}
+        {{-- Pulso del taller: se identifica como actual porque inventario no conserva una fotografía histórica diaria. --}}
         <section class="dashboard-section">
             <div class="dashboard-section-header">
                 <div>
                     <span class="dashboard-section-kicker">TALLER</span>
-                    <h2>Pulso operativo</h2>
+                    <h2>Pulso operativo actual</h2>
                 </div>
-                <span class="dashboard-team"><i data-lucide="users"></i>{{ $tecnicos }} tecnicos</span>
+                <span class="dashboard-team"><i data-lucide="users"></i>{{ $tecnicos }} técnicos</span>
             </div>
             <div class="dashboard-pulse-list">
                 @foreach([
                     ['En espera', $operacion['espera'], 'clock-3', 'blue'],
-                    ['En diagnostico', $operacion['diagnostico'], 'scan-search', 'cyan'],
-                    ['En reparacion', $operacion['reparacion'], 'hammer', 'amber'],
+                    ['En diagnóstico', $operacion['diagnostico'], 'scan-search', 'cyan'],
+                    ['En reparación', $operacion['reparacion'], 'hammer', 'amber'],
                     ['Listos para recoger', $operacion['listos'], 'circle-check-big', 'green'],
                     ['Stock critico', $operacion['stock_bajo'], 'triangle-alert', 'red'],
                 ] as [$label, $value, $icon, $tone])
@@ -139,12 +191,12 @@
     </div>
 
     <div class="dashboard-grid-lower">
-        {{-- Tabla reciente: abre directamente la ficha de cada orden de la sucursal activa. --}}
+        {{-- Tabla de seguimiento: con filtro activo muestra solo las órdenes creadas durante el día. --}}
         <section class="dashboard-section dashboard-orders">
             <div class="dashboard-section-header">
                 <div>
                     <span class="dashboard-section-kicker">SEGUIMIENTO</span>
-                    <h2>Ordenes recientes</h2>
+                    <h2>{{ $supervisionActiva ? 'Órdenes del día' : 'Órdenes recientes' }}</h2>
                 </div>
                 @if(in_array(auth()->user()->rol, ['superusuario', 'usuario', 'tecnico']))
                     <a href="{{ route('ordenes.index') }}" class="dashboard-link">Ver todas <i data-lucide="arrow-right"></i></a>
@@ -161,7 +213,9 @@
                     <span class="dashboard-order-tech">{{ $orden->tecnico->name ?? 'SIN ASIGNAR' }}</span>
                 </a>
             @empty
-                <div class="dashboard-inline-empty">No hay ordenes registradas en esta sucursal.</div>
+                <div class="dashboard-inline-empty">
+                    {{ $supervisionActiva ? 'No se registraron órdenes durante el día seleccionado.' : 'No hay órdenes registradas en esta sucursal.' }}
+                </div>
             @endforelse
         </section>
 
@@ -170,7 +224,7 @@
             <div class="dashboard-section-header">
                 <div>
                     <span class="dashboard-section-kicker">AUDITORIA</span>
-                    <h2>Actividad reciente</h2>
+                    <h2>{{ $supervisionActiva ? 'Actividad del día' : 'Actividad reciente' }}</h2>
                 </div>
                 @if(auth()->user()->rol === 'superusuario')
                     <a href="{{ route('actividad.index') }}" class="dashboard-link">Ver actividad <i data-lucide="arrow-right"></i></a>
@@ -183,11 +237,16 @@
                         <div>
                             <strong>{{ $actividad->accion }} · {{ $actividad->modulo }}</strong>
                             <p>{{ $actividad->descripcion }}</p>
-                            <small>{{ $actividad->usuario->name ?? 'SISTEMA' }} · {{ $actividad->created_at->diffForHumans() }}</small>
+                            <small>
+                                {{ $actividad->usuario->name ?? 'SISTEMA' }} ·
+                                {{ $supervisionActiva ? $actividad->created_at->locale('es')->isoFormat('D MMM · HH:mm') : $actividad->created_at->diffForHumans() }}
+                            </small>
                         </div>
                     </div>
                 @empty
-                    <div class="dashboard-inline-empty">La actividad aparecera conforme el equipo use el sistema.</div>
+                    <div class="dashboard-inline-empty">
+                        {{ $supervisionActiva ? 'No se registró actividad durante el día seleccionado.' : 'La actividad aparecerá conforme el equipo use el sistema.' }}
+                    </div>
                 @endforelse
             </div>
         </section>

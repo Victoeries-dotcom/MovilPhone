@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Venta;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -19,77 +20,97 @@ class DashboardController extends Controller
      * Construye el panel operativo de la sucursal activa.
      * Se conecta con Ventas, Caja, Ordenes, Clientes, Inventario, Usuarios y Actividad.
      */
-    public function index()
+    public function index(Request $request)
     {
         $sucursalId = $this->sucursalActivaId();
         $sucursal = $sucursalId ? Sucursal::find($sucursalId) : null;
         $hoy = CarbonImmutable::today();
-        $ayer = $hoy->subDay();
+        $inicioMesActual = $hoy->startOfMonth();
 
-        $ventasHoy = $this->ventasEnRango($sucursalId, $hoy, $hoy->endOfDay());
-        $ventasAyer = $this->ventasEnRango($sucursalId, $ayer, $ayer->endOfDay());
+        // El filtro solo admite días transcurridos del mes actual para evitar consultas ambiguas o futuras.
+        $datosFiltro = $request->validate([
+            'fecha_supervision' => [
+                'nullable',
+                'date_format:Y-m-d',
+                'after_or_equal:'.$inicioMesActual->toDateString(),
+                'before_or_equal:'.$hoy->toDateString(),
+            ],
+        ], [
+            'fecha_supervision.date_format' => 'Selecciona una fecha válida.',
+            'fecha_supervision.after_or_equal' => 'Selecciona un día del mes actual.',
+            'fecha_supervision.before_or_equal' => 'Solo puedes supervisar hasta el día de hoy.',
+        ]);
+
+        $supervisionActiva = filled($datosFiltro['fecha_supervision'] ?? null);
+        $diaPanel = $supervisionActiva
+            ? CarbonImmutable::parse($datosFiltro['fecha_supervision'])->startOfDay()
+            : $hoy;
+        $diaAnterior = $diaPanel->subDay();
+
+        $ventasDia = $this->ventasEnRango($sucursalId, $diaPanel, $diaPanel->endOfDay());
+        $ventasDiaAnterior = $this->ventasEnRango($sucursalId, $diaAnterior, $diaAnterior->endOfDay());
         // Las cifras de Caja comparten fecha y sucursal para que ingresos, egresos y balance sean consistentes.
-        $movimientosHoy = $this->movimientosEnRango($sucursalId, $hoy, $hoy->endOfDay());
-        $movimientosAyer = $this->movimientosEnRango($sucursalId, $ayer, $ayer->endOfDay());
-        $ingresosHoy = (clone $movimientosHoy)
+        $movimientosDia = $this->movimientosEnRango($sucursalId, $diaPanel, $diaPanel->endOfDay());
+        $movimientosDiaAnterior = $this->movimientosEnRango($sucursalId, $diaAnterior, $diaAnterior->endOfDay());
+        $ingresosDia = (clone $movimientosDia)
             ->where('tipo', 'INGRESO')
             ->sum('monto');
-        $ingresosAyer = (clone $movimientosAyer)
+        $ingresosDiaAnterior = (clone $movimientosDiaAnterior)
             ->where('tipo', 'INGRESO')
             ->sum('monto');
         // Separa los tres métodos de ingreso sin alterar el total usado por el balance.
-        $efectivoHoy = (clone $movimientosHoy)
+        $efectivoDia = (clone $movimientosDia)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'efectivo')
             ->sum('monto');
-        $efectivoAyer = (clone $movimientosAyer)
+        $efectivoDiaAnterior = (clone $movimientosDiaAnterior)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'efectivo')
             ->sum('monto');
-        $transferenciasHoy = (clone $movimientosHoy)
+        $transferenciasDia = (clone $movimientosDia)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'transferencia')
             ->sum('monto');
-        $transferenciasAyer = (clone $movimientosAyer)
+        $transferenciasDiaAnterior = (clone $movimientosDiaAnterior)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'transferencia')
             ->sum('monto');
-        $tarjetaHoy = (clone $movimientosHoy)
+        $tarjetaDia = (clone $movimientosDia)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'tarjeta')
             ->sum('monto');
-        $tarjetaAyer = (clone $movimientosAyer)
+        $tarjetaDiaAnterior = (clone $movimientosDiaAnterior)
             ->where('tipo', 'INGRESO')
             ->where('metodo_pago', 'tarjeta')
             ->sum('monto');
-        $egresosHoy = (clone $movimientosHoy)
+        $egresosDia = (clone $movimientosDia)
             ->where('tipo', 'EGRESO')
             ->sum('monto');
-        $egresosAyer = (clone $movimientosAyer)
+        $egresosDiaAnterior = (clone $movimientosDiaAnterior)
             ->where('tipo', 'EGRESO')
             ->sum('monto');
 
-        // Las tarjetas comparan hoy contra ayer y conservan el mismo filtro de sucursal.
+        // Las tarjetas comparan el día supervisado contra su día anterior y conservan la sucursal activa.
         $indicadores = [
-            'ventas' => $this->indicador($ventasHoy->count(), $ventasAyer->count()),
-            'vendido' => $this->indicador((float) $ventasHoy->sum('total'), (float) $ventasAyer->sum('total')),
-            'ingresos' => $this->indicador((float) $ingresosHoy, (float) $ingresosAyer),
-            'efectivo' => $this->indicador((float) $efectivoHoy, (float) $efectivoAyer),
-            'transferencias' => $this->indicador((float) $transferenciasHoy, (float) $transferenciasAyer),
-            'tarjeta' => $this->indicador((float) $tarjetaHoy, (float) $tarjetaAyer),
-            'egresos' => $this->indicador((float) $egresosHoy, (float) $egresosAyer),
+            'ventas' => $this->indicador($ventasDia->count(), $ventasDiaAnterior->count()),
+            'vendido' => $this->indicador((float) $ventasDia->sum('total'), (float) $ventasDiaAnterior->sum('total')),
+            'ingresos' => $this->indicador((float) $ingresosDia, (float) $ingresosDiaAnterior),
+            'efectivo' => $this->indicador((float) $efectivoDia, (float) $efectivoDiaAnterior),
+            'transferencias' => $this->indicador((float) $transferenciasDia, (float) $transferenciasDiaAnterior),
+            'tarjeta' => $this->indicador((float) $tarjetaDia, (float) $tarjetaDiaAnterior),
+            'egresos' => $this->indicador((float) $egresosDia, (float) $egresosDiaAnterior),
             // El balance financiero siempre corresponde a ingresos menos egresos del mismo día.
             'balance' => $this->indicador(
-                (float) $ingresosHoy - (float) $egresosHoy,
-                (float) $ingresosAyer - (float) $egresosAyer
+                (float) $ingresosDia - (float) $egresosDia,
+                (float) $ingresosDiaAnterior - (float) $egresosDiaAnterior
             ),
             'ordenes' => $this->indicador(
-                $this->ordenesEnRango($sucursalId, $hoy, $hoy->endOfDay())->count(),
-                $this->ordenesEnRango($sucursalId, $ayer, $ayer->endOfDay())->count()
+                $this->ordenesEnRango($sucursalId, $diaPanel, $diaPanel->endOfDay())->count(),
+                $this->ordenesEnRango($sucursalId, $diaAnterior, $diaAnterior->endOfDay())->count()
             ),
             'clientes' => $this->indicador(
-                $this->clientesEnRango($sucursalId, $hoy, $hoy->endOfDay())->count(),
-                $this->clientesEnRango($sucursalId, $ayer, $ayer->endOfDay())->count()
+                $this->clientesEnRango($sucursalId, $diaPanel, $diaPanel->endOfDay())->count(),
+                $this->clientesEnRango($sucursalId, $diaAnterior, $diaAnterior->endOfDay())->count()
             ),
         ];
 
@@ -115,9 +136,9 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        // La serie de siete dias se conecta con Caja para mostrar tendencia real de ingresos.
-        $tendencia = collect(range(6, 0))->map(function (int $dias) use ($hoy, $sucursalId) {
-            $fecha = $hoy->subDays($dias);
+        // La serie termina en el día supervisado y se conecta con Caja para mostrar su contexto inmediato.
+        $tendencia = collect(range(6, 0))->map(function (int $dias) use ($diaPanel, $sucursalId) {
+            $fecha = $diaPanel->subDays($dias);
 
             return [
                 'etiqueta' => $fecha->locale('es')->isoFormat('dd D'),
@@ -130,12 +151,16 @@ class DashboardController extends Controller
         $ordenesRecientes = OrdenServicio::with(['cliente', 'tecnico'])
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
             ->when(! $sucursalId, fn (Builder $query) => $query->whereRaw('1 = 0'))
+            // Al supervisar una fecha, muestra únicamente las órdenes registradas durante ese día.
+            ->when($supervisionActiva, fn (Builder $query) => $query->whereBetween('created_at', [$diaPanel, $diaPanel->endOfDay()]))
             ->latest()
             ->limit(6)
             ->get();
 
         $actividadReciente = AdminActivity::with(['usuario', 'sucursal'])
             ->when($sucursalId, fn (Builder $query) => $query->where('sucursal_id', $sucursalId))
+            // La auditoría sí conserva fecha, por eso puede limitarse de forma precisa al día elegido.
+            ->when($supervisionActiva, fn (Builder $query) => $query->whereBetween('created_at', [$diaPanel, $diaPanel->endOfDay()]))
             ->latest()
             ->limit(6)
             ->get();
@@ -152,7 +177,11 @@ class DashboardController extends Controller
             'tendencia',
             'ordenesRecientes',
             'actividadReciente',
-            'tecnicos'
+            'tecnicos',
+            'diaPanel',
+            'hoy',
+            'inicioMesActual',
+            'supervisionActiva'
         ));
     }
 

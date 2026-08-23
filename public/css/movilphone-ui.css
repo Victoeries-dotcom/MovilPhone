@@ -3511,6 +3511,34 @@ body .dashboard-header-side { display:flex; align-items:flex-end; flex-direction
 body .dashboard-date { display:flex; align-items:center; gap:7px; color:#9ba8bd; font-size:10px; font-weight:650; }
 body .dashboard-date svg { width:14px; color:#ef6971; }
 
+/* Supervisión por día: abre un filtro compacto sin apartar al usuario del resumen operativo. */
+body .dashboard-supervision-row { position:relative; z-index:12; display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin-top:12px; }
+body .dashboard-supervision-picker { position:relative; }
+body .dashboard-supervision-picker > summary { list-style:none; }
+body .dashboard-supervision-picker > summary::-webkit-details-marker { display:none; }
+body .dashboard-supervision-button { display:inline-flex; min-height:38px; align-items:center; gap:8px; padding:8px 12px; border:1px solid #3a4663; border-radius:10px; background:#17213a; color:#eef2fb; box-shadow:0 7px 18px rgba(5,10,24,.16); font-size:11px; font-weight:760; cursor:pointer; user-select:none; transition:border-color var(--ui-ease), background var(--ui-ease), transform var(--ui-ease); }
+body .dashboard-supervision-button:hover { border-color:#ef6971; background:#1c2844; transform:translateY(-1px); }
+body .dashboard-supervision-button svg { width:15px; height:15px; color:#ef6971; }
+body .dashboard-supervision-button .dashboard-supervision-chevron { width:13px; margin-left:2px; color:#93a0b8; transition:transform var(--ui-ease); }
+body .dashboard-supervision-picker[open] .dashboard-supervision-chevron { transform:rotate(180deg); }
+body .dashboard-supervision-popover { position:absolute; top:calc(100% + 8px); left:0; width:min(330px,calc(100vw - 40px)); padding:15px; border:1px solid #36425f; border-radius:13px; background:#121c33; box-shadow:0 22px 50px rgba(3,8,20,.34); }
+body .dashboard-supervision-form { display:grid; gap:8px; }
+body .dashboard-supervision-form label { color:#dce3f0; font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+body .dashboard-supervision-form input { width:100%; border-color:#3a4663 !important; background:#17213a !important; color:#f5f7ff !important; color-scheme:dark; }
+body .dashboard-supervision-form > small { color:#8290a9; font-size:9px; }
+body .dashboard-supervision-error { color:#ff8f9c; font-size:10px; font-weight:700; }
+body .dashboard-supervision-actions { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-top:3px; }
+body .dashboard-supervision-active { display:inline-flex; align-items:center; gap:6px; color:#67d6a4; font-size:10px; font-weight:750; }
+body .dashboard-supervision-active svg { width:14px; height:14px; }
+html[data-ui-theme="light"] body .dashboard-supervision-button { border-color:#d5deea; background:#fff; color:#17213d; box-shadow:0 7px 18px rgba(15,31,61,.08); }
+html[data-ui-theme="light"] body .dashboard-supervision-button:hover { border-color:#ef6971; background:#fff7f7; }
+html[data-ui-theme="light"] body .dashboard-supervision-popover { border-color:#dbe3ef; background:#fff; box-shadow:0 22px 50px rgba(15,31,61,.16); }
+html[data-ui-theme="light"] body .dashboard-supervision-form label { color:#334155; }
+html[data-ui-theme="light"] body .dashboard-supervision-form input { border-color:#d5deea !important; background:#fff !important; color:#17213d !important; color-scheme:light; }
+html[data-ui-theme="light"] body .dashboard-supervision-form > small { color:#64748b; }
+html[data-ui-theme="light"] body .dashboard-supervision-error { color:#c62835; }
+html[data-ui-theme="light"] body .dashboard-supervision-active { color:#16855a; }
+
 /* Página de perfil: integra la cuenta de Breeze con la plantilla profesional de MovilPhone. */
 body .profile-page { max-width:1280px; margin:0 auto; }
 body .profile-page-eyebrow,
@@ -3630,6 +3658,13 @@ html[data-ui-theme="light"] body textarea::placeholder { color:#758398; opacity:
     body .dashboard-header-side { width:100%; align-items:stretch; }
     body .dashboard-date { order:2; justify-content:flex-start; }
     body .dashboard-actions { order:1; }
+    /* En móvil el selector ocupa el ancho disponible y desplaza el contenido para conservar legibilidad. */
+    body .dashboard-supervision-row { align-items:stretch; flex-direction:column; }
+    body .dashboard-supervision-picker,
+    body .dashboard-supervision-button { width:100%; }
+    body .dashboard-supervision-button { justify-content:center; }
+    body .dashboard-supervision-popover { position:relative; top:auto; width:100%; margin-top:8px; }
+    body .dashboard-supervision-active { justify-content:center; }
     body .profile-overview { grid-template-columns:auto 1fr; }
     body .profile-overview-meta { grid-column:1 / -1; align-items:flex-start; }
     body .profile-danger-card { grid-template-columns:1fr; }

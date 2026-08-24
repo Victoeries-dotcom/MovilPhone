@@ -18,8 +18,8 @@
     <div>
         <strong>Respaldo automatico programado</strong>
         <p>Laravel genera una copia diaria a las 02:00 y conserva las catorce mas recientes.</p>
-        {{-- El JSON sirve para restaurar; el Excel facilita consultar la información por secciones. --}}
-        <p>Descarga el JSON como respaldo completo o usa Excel para revisar los datos organizados.</p>
+        {{-- Ambos formatos conservan los mismos datos; el Excel los distribuye en hojas para facilitar su consulta. --}}
+        <p>JSON y Excel contienen los mismos datos completos. El Excel los organiza por secciones y debe protegerse porque incluye información sensible.</p>
     </div>
 </div>
 

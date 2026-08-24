@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
@@ -37,23 +36,6 @@ class SystemBackupExcelService
         'admin_activities' => 'Actividad',
         'configuraciones' => 'Configuración',
         'device_catalog_entries' => 'Catálogo de equipos',
-    ];
-
-    /** Estas tablas son necesarias para Laravel, pero no aportan información útil al reporte. */
-    private const TABLAS_TECNICAS = [
-        'cache',
-        'cache_locks',
-        'failed_jobs',
-        'job_batches',
-        'jobs',
-        'migrations',
-        'password_reset_tokens',
-        'sessions',
-    ];
-
-    /** Evita colocar credenciales o tokens de acceso dentro de un documento de consulta. */
-    private const COLUMNAS_SENSIBLES = [
-        'users' => ['password', 'remember_token'],
     ];
 
     /**
@@ -121,7 +103,7 @@ class SystemBackupExcelService
             application: 'MovilPhone',
             creator: 'MovilPhone',
             lastModifiedBy: 'MovilPhone',
-            description: 'Excel de consulta generado desde un respaldo JSON privado.',
+            description: 'Excel completo generado desde un respaldo JSON privado.',
             language: 'es-MX',
         ));
 
@@ -129,7 +111,7 @@ class SystemBackupExcelService
         $escritor->openToFile($rutaExcel);
 
         try {
-            $tablas = $this->tablasPermitidas($contenido['tablas']);
+            $tablas = $this->tablasOrdenadas($contenido['tablas']);
             $this->escribirResumen($escritor, $contenido['metadata'], $tablas);
 
             foreach ($tablas as $tabla => $filas) {
@@ -149,35 +131,35 @@ class SystemBackupExcelService
         $hoja = $escritor->getCurrentSheet();
         $hoja->setName('Resumen');
         $this->configurarVista($hoja, 5);
-        $hoja->setColumnWidth(30, 1);
-        $hoja->setColumnWidth(55, 2);
+        $hoja->setColumnWidth(32, 1);
+        $hoja->setColumnWidth(45, 2);
+        $hoja->setColumnWidth(18, 3);
 
         $escritor->addRow(Row::fromValues(['RESPALDO MOVILPHONE', ''], $this->estiloTitulo()));
         $escritor->addRow(Row::fromValues([
             'Uso del archivo',
-            'Documento de consulta. Conserva el JSON original para restaurar el sistema.',
+            'Copia completa del JSON organizada por hojas. Contiene información técnica y sensible; protégela como el respaldo original.',
         ], $this->estiloAviso()));
         $escritor->addRow(Row::fromValues(['', '']));
-        $escritor->addRow(Row::fromValues(['Dato', 'Valor'], $this->estiloEncabezado()));
+        $escritor->addRow(Row::fromValues(['Campo JSON', 'Valor'], $this->estiloEncabezado()));
 
-        $datos = [
-            ['Aplicación', $metadata['aplicacion'] ?? 'MovilPhone'],
-            ['Base de datos', $metadata['base_datos'] ?? ''],
-            ['Creado en', $metadata['creado_en'] ?? ''],
-            ['Origen', $metadata['origen'] ?? ''],
-            ['Versión del respaldo', $metadata['version'] ?? ''],
-        ];
-
-        foreach ($datos as $indice => $fila) {
-            $escritor->addRow(Row::fromValues($fila, $this->estiloFila($indice % 2 === 1)));
+        $indice = 0;
+        foreach ($metadata as $campo => $valor) {
+            [$valorCelda, $estiloCelda] = $this->valorCelda((string) $campo, $valor);
+            $escritor->addRow(new Row([
+                Cell::fromValue((string) $campo, $this->estiloTexto()),
+                Cell::fromValue($valorCelda, $estiloCelda),
+            ], $this->estiloFila($indice % 2 === 1)));
+            $indice++;
         }
 
         $escritor->addRow(Row::fromValues(['', '']));
-        $escritor->addRow(Row::fromValues(['Sección', 'Registros'], $this->estiloEncabezado()));
+        $escritor->addRow(Row::fromValues(['Tabla JSON', 'Hoja Excel', 'Registros'], $this->estiloEncabezado()));
 
         $indice = 0;
         foreach ($tablas as $tabla => $filas) {
             $escritor->addRow(Row::fromValues([
+                $tabla,
                 $this->nombreHoja($tabla),
                 count($filas),
             ], $this->estiloFila($indice % 2 === 1)));
@@ -188,8 +170,12 @@ class SystemBackupExcelService
     /** Agrega título, encabezados, filtros y filas tipadas a una sección del respaldo. */
     private function escribirSeccion(Writer $escritor, string $tabla, array $filas): void
     {
-        $filasLimpias = array_map(fn (array $fila) => $this->limpiarFila($tabla, $fila), $filas);
-        $encabezados = $this->encabezados($filasLimpias);
+        // Cada fila y columna del JSON se conserva; la separación por hojas solo mejora su lectura.
+        $filasCompletas = array_map(
+            fn (mixed $fila): array => is_array($fila) ? $fila : (array) $fila,
+            $filas
+        );
+        $encabezados = $this->encabezados($filasCompletas);
         $totalColumnas = max(1, count($encabezados));
 
         $escritor->addRow(Row::fromValues(
@@ -197,7 +183,7 @@ class SystemBackupExcelService
             $this->estiloTitulo()
         ));
         $escritor->addRow(Row::fromValues(
-            array_pad(['Registros', count($filasLimpias)], $totalColumnas, ''),
+            array_pad(['Registros', count($filasCompletas)], $totalColumnas, ''),
             $this->estiloAviso()
         ));
 
@@ -209,9 +195,9 @@ class SystemBackupExcelService
         }
 
         $escritor->addRow(Row::fromValues($encabezados, $this->estiloEncabezado()));
-        $this->configurarAnchos($escritor, $encabezados, $filasLimpias);
+        $this->configurarAnchos($escritor, $encabezados, $filasCompletas);
 
-        foreach ($filasLimpias as $indice => $fila) {
+        foreach ($filasCompletas as $indice => $fila) {
             $alternada = $indice % 2 === 1;
             $celdas = [];
             foreach ($encabezados as $columna) {
@@ -225,37 +211,26 @@ class SystemBackupExcelService
             0,
             3,
             count($encabezados) - 1,
-            3 + count($filasLimpias)
+            3 + count($filasCompletas)
         ));
     }
 
-    /** Excluye infraestructura y ordena primero las secciones reconocidas por el sistema. */
-    private function tablasPermitidas(array $tablas): array
+    /** Conserva todas las tablas y ordena primero las secciones reconocidas por el sistema. */
+    private function tablasOrdenadas(array $tablas): array
     {
-        $permitidas = array_filter(
+        $ordenadas = array_filter(
             $tablas,
-            fn (mixed $filas, string $tabla) => is_array($filas) && ! in_array($tabla, self::TABLAS_TECNICAS, true),
-            ARRAY_FILTER_USE_BOTH
+            fn (mixed $filas): bool => is_array($filas)
         );
 
-        uksort($permitidas, function (string $izquierda, string $derecha): int {
+        uksort($ordenadas, function (string $izquierda, string $derecha): int {
             $orden = array_flip(array_keys(self::SECCIONES));
 
             return ($orden[$izquierda] ?? PHP_INT_MAX) <=> ($orden[$derecha] ?? PHP_INT_MAX)
                 ?: $izquierda <=> $derecha;
         });
 
-        return $permitidas;
-    }
-
-    /** Elimina únicamente columnas sensibles; todos los demás campos operativos se conservan. */
-    private function limpiarFila(string $tabla, array $fila): array
-    {
-        foreach (self::COLUMNAS_SENSIBLES[$tabla] ?? [] as $columna) {
-            unset($fila[$columna]);
-        }
-
-        return $fila;
+        return $ordenadas;
     }
 
     /** Reúne encabezados estables incluso si filas posteriores agregan campos opcionales. */
@@ -273,26 +248,21 @@ class SystemBackupExcelService
         return $encabezados;
     }
 
-    /** Mantiene identificadores como texto y aplica formatos reales a fechas y cantidades monetarias. */
+    /** Conserva el valor del JSON y aplica formato visual sin modificar su contenido. */
     private function valorCelda(string $columna, mixed $valor): array
     {
         if (is_array($valor) || is_object($valor)) {
-            $valor = json_encode($valor, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $valor = json_encode(
+                $valor,
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
         }
 
-        if ($valor !== null && $this->esIdentificador($columna)) {
-            return [(string) $valor, $this->estiloTexto()];
+        if (is_string($valor) && $this->esIdentificador($columna)) {
+            return [$valor, $this->estiloTexto()];
         }
 
-        if (is_string($valor) && $valor !== '' && $this->esFecha($columna)) {
-            try {
-                return [CarbonImmutable::parse($valor), $this->estiloFecha(str_ends_with($columna, '_at'))];
-            } catch (Throwable) {
-                // Si un dato histórico no es una fecha válida, se conserva literalmente y no se pierde.
-            }
-        }
-
-        if ($valor !== null && is_numeric($valor) && $this->esMoneda($columna)) {
+        if ((is_int($valor) || is_float($valor)) && $this->esMoneda($columna)) {
             return [(float) $valor, $this->estiloMoneda()];
         }
 
@@ -404,11 +374,6 @@ class SystemBackupExcelService
     private function estiloTexto(): Style
     {
         return (new Style)->setFormat('@');
-    }
-
-    private function estiloFecha(bool $incluyeHora): Style
-    {
-        return (new Style)->setFormat($incluyeHora ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy');
     }
 
     private function estiloMoneda(): Style

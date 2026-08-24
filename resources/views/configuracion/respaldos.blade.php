@@ -15,7 +15,12 @@
 
 <div class="backup-notice">
     <i data-lucide="shield-check"></i>
-    <div><strong>Respaldo automatico programado</strong><p>Laravel genera una copia diaria a las 02:00 y conserva las catorce mas recientes.</p></div>
+    <div>
+        <strong>Respaldo automatico programado</strong>
+        <p>Laravel genera una copia diaria a las 02:00 y conserva las catorce mas recientes.</p>
+        {{-- El JSON sirve para restaurar; el Excel facilita consultar la información por secciones. --}}
+        <p>Descarga el JSON como respaldo completo o usa Excel para revisar los datos organizados.</p>
+    </div>
 </div>
 
 <table>
@@ -29,6 +34,7 @@
                 <td>{{ number_format($respaldo['tamano'] / 1024, 1) }} KB</td>
                 <td>
                     <a class="btn btn-sm" href="{{ route('respaldos.download', $respaldo['nombre']) }}"><i data-lucide="download"></i><span>Descargar</span></a>
+                    <a class="btn btn-sm btn-success" href="{{ route('respaldos.excel', $respaldo['nombre']) }}"><i data-lucide="file-spreadsheet"></i><span>Excel</span></a>
                     <form method="POST" action="{{ route('respaldos.destroy', $respaldo['nombre']) }}" style="display:inline" onsubmit="return confirmarEliminacionSistema(event, 'el respaldo', @js($respaldo['nombre']), 'se eliminara solamente este archivo de respaldo')">
                         @csrf @method('DELETE')
                         <button class="btn btn-danger btn-sm" type="submit"><i data-lucide="trash-2"></i><span>Eliminar</span></button>

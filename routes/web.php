@@ -138,6 +138,8 @@ Route::middleware('auth')->group(function () {
         Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
         Route::get('configuracion/respaldos', [BackupController::class, 'index'])->name('respaldos.index');
         Route::post('configuracion/respaldos', [BackupController::class, 'store'])->name('respaldos.store');
+        // Convierte cada JSON a un Excel de consulta sin sustituir el respaldo restaurable.
+        Route::get('configuracion/respaldos/{archivo}/excel', [BackupController::class, 'downloadExcel'])->name('respaldos.excel');
         Route::get('configuracion/respaldos/{archivo}', [BackupController::class, 'download'])->name('respaldos.download');
         Route::delete('configuracion/respaldos/{archivo}', [BackupController::class, 'destroy'])->name('respaldos.destroy');
     });

@@ -3,14 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Support\AdminActivityLogger;
+use App\Support\SystemBackupExcelService;
 use App\Support\SystemBackupService;
 use Illuminate\Support\Facades\Storage;
 
 class BackupController extends Controller
 {
-    public function __construct(private readonly SystemBackupService $backups)
-    {
-    }
+    public function __construct(
+        private readonly SystemBackupService $backups,
+        private readonly SystemBackupExcelService $excel
+    ) {}
 
     /** Muestra respaldos privados y se conecta con configuracion.respaldos. */
     public function index()
@@ -42,6 +44,23 @@ class BackupController extends Controller
         return Storage::disk('local')->download($ruta);
     }
 
+    /** Convierte el JSON seleccionado en un Excel temporal separado por secciones operativas. */
+    public function downloadExcel(string $archivo)
+    {
+        $ruta = $this->safePath($archivo);
+        abort_unless(Storage::disk('local')->exists($ruta), 404);
+
+        $rutaExcel = $this->excel->create($ruta);
+        $nombreExcel = pathinfo($archivo, PATHINFO_FILENAME).'.xlsx';
+
+        // El temporal se elimina después de enviarse; el respaldo JSON privado permanece intacto.
+        return response()->download(
+            $rutaExcel,
+            $nombreExcel,
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        )->deleteFileAfterSend(true);
+    }
+
     /** Elimina un respaldo seleccionado y mantiene intacta la base de datos activa. */
     public function destroy(string $archivo)
     {
@@ -56,6 +75,7 @@ class BackupController extends Controller
     private function safePath(string $archivo): string
     {
         abort_unless($archivo === basename($archivo) && str_ends_with($archivo, '.json'), 404);
+
         return 'backups/'.$archivo;
     }
 }

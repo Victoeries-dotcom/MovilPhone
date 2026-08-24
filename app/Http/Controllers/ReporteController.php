@@ -396,9 +396,13 @@ class ReporteController extends Controller
             default => 'Día',
         };
 
+        // Convierte la selección técnica en un resumen legible para pantalla, impresión y PDF.
+        $periodoResumen = $this->resumirPeriodo($periodo, $tipoRango, $inicio, $fin);
+
         return view('reportes.index', compact(
             'periodo',
             'periodoEtiqueta',
+            'periodoResumen',
             'fechaSeleccionada',
             'tipoRango',
             'valoresRango',
@@ -420,6 +424,76 @@ class ReporteController extends Controller
             'ordenesPorEstado',
             'graficas'
         ));
+    }
+
+    /**
+     * Explica el periodo con nombres de meses, números de semana y fechas completas.
+     * Se conecta con el encabezado visible al imprimir para identificar exactamente el reporte.
+     */
+    private function resumirPeriodo(
+        string $periodo,
+        string $tipoRango,
+        Carbon $inicio,
+        Carbon $fin
+    ): array {
+        $seleccion = match ($periodo) {
+            'semana' => 'Últimos 7 días',
+            'mes' => 'Mes actual: '.$this->formatearMes($inicio),
+            'fecha' => 'Día seleccionado',
+            'rango' => match ($tipoRango) {
+                'semana' => $this->describirSemanas($inicio, $fin),
+                'mes' => $this->describirMeses($inicio, $fin),
+                default => 'Rango de días seleccionado',
+            },
+            'acumulado' => 'Acumulado histórico',
+            default => 'Hoy',
+        };
+
+        $fechaInicio = $this->formatearFecha($inicio);
+        $fechaFin = $this->formatearFecha($fin);
+        $fechas = $inicio->isSameDay($fin)
+            ? 'Fecha incluida: '.$fechaInicio
+            : 'Fechas incluidas: del '.$fechaInicio.' al '.$fechaFin;
+
+        return compact('seleccion', 'fechas');
+    }
+
+    /**
+     * Nombra una o varias semanas ISO para conservar el mismo significado del input week.
+     */
+    private function describirSemanas(Carbon $inicio, Carbon $fin): string
+    {
+        $semanaInicial = 'semana '.$inicio->isoWeek().' de '.$inicio->isoWeekYear();
+        $semanaFinal = 'semana '.$fin->isoWeek().' de '.$fin->isoWeekYear();
+
+        return $semanaInicial === $semanaFinal
+            ? 'Semana seleccionada: '.$semanaInicial
+            : 'Semanas seleccionadas: '.$semanaInicial.' a '.$semanaFinal;
+    }
+
+    /**
+     * Nombra los meses seleccionados con su año para evitar ambigüedad entre periodos anuales.
+     */
+    private function describirMeses(Carbon $inicio, Carbon $fin): string
+    {
+        $mesInicial = $this->formatearMes($inicio);
+        $mesFinal = $this->formatearMes($fin);
+
+        return $mesInicial === $mesFinal
+            ? 'Mes seleccionado: '.$mesInicial
+            : 'Meses seleccionados: '.$mesInicial.' a '.$mesFinal;
+    }
+
+    /** Devuelve una fecha completa en español sin ceros iniciales. */
+    private function formatearFecha(Carbon $fecha): string
+    {
+        return $fecha->copy()->locale('es')->translatedFormat('j \\d\\e F \\d\\e Y');
+    }
+
+    /** Devuelve el nombre del mes y su año en español. */
+    private function formatearMes(Carbon $fecha): string
+    {
+        return $fecha->copy()->locale('es')->translatedFormat('F \\d\\e Y');
     }
 
     /**

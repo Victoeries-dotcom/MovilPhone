@@ -28,6 +28,15 @@
 .reporte-rango-submit { min-height:42px; white-space:nowrap; }
 .reporte-rango-error { margin:0; color:#dc2626; font-size:11px; font-weight:700; }
 .reporte-sucursal { margin-top:4px; font-size:12px; color:#2563eb; font-weight:700; }
+/* Destaca el periodo exacto tanto en pantalla como en la hoja impresa o PDF. */
+.reporte-periodo-resumen {
+    display:grid; gap:3px; max-width:760px; margin-top:.55rem; padding:.7rem .85rem;
+    border:1px solid #cbdcf5; border-left:4px solid #2563eb; border-radius:7px;
+    background:#f6f9ff; color:#0f1f3d;
+}
+.reporte-periodo-etiqueta { color:#2563eb; font-size:9px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.reporte-periodo-seleccion { font-size:14px; font-weight:800; line-height:1.3; }
+.reporte-periodo-fechas { color:#334155; font-size:12px; font-weight:650; line-height:1.4; }
 /* Pestaña modal: permite elegir varias sucursales sin perder el periodo visible del reporte. */
 .reporte-selector-panel { width:min(100%,680px) !important; max-height:min(760px,calc(100vh - 2rem)); padding:0 !important; overflow:hidden; }
 .reporte-selector-cabecera { padding:1.4rem 4rem 1.15rem 1.4rem; border-bottom:1px solid var(--ui-border,#dfe6ef); }
@@ -177,6 +186,15 @@ html[data-ui-theme="light"] .reporte-selector-opcion small { color:#64748b; }
     .reporte-grafica::after { display:none; }
     .reporte-grafica-ordenes { grid-column:1 / -1; }
     .grafica-barras-scroll { overflow:visible; }
+    /* Conserva el resumen grande y contrastado cuando el navegador reduce el resto del reporte. */
+    .page-header { align-items:flex-start; padding-bottom:.65rem; border-bottom:1px solid #cbd5e1; }
+    .reporte-periodo-resumen {
+        max-width:none; padding:.55rem .7rem; border-color:#94a3b8; border-left-color:#2563eb;
+        background:#f8fafc !important; print-color-adjust:exact; -webkit-print-color-adjust:exact;
+    }
+    .reporte-periodo-etiqueta { font-size:10px; }
+    .reporte-periodo-seleccion { font-size:15px; }
+    .reporte-periodo-fechas { color:#0f1f3d; font-size:13px; }
 }
 </style>
 
@@ -201,15 +219,11 @@ html[data-ui-theme="light"] .reporte-selector-opcion small { color:#64748b; }
 <div class="page-header">
     <div>
         <h1>Reportes</h1>
-        <div class="page-title-sub">
-            {{-- El subtítulo muestra el rango exacto que se está consultando en la base de datos. --}}
-            @if($periodo === 'acumulado')
-                Actividad acumulada del {{ $inicio->format('d/m/Y') }} al {{ $fin->format('d/m/Y') }}
-            @elseif($periodo === 'fecha')
-                Actividad del {{ $inicio->format('d/m/Y') }}
-            @else
-                Actividad del {{ $inicio->format('d/m/Y') }} al {{ $fin->format('d/m/Y') }}
-            @endif
+        {{-- El resumen permanece visible al imprimir e identifica meses, semanas y fechas reales. --}}
+        <div class="reporte-periodo-resumen" aria-label="Periodo seleccionado para el reporte">
+            <span class="reporte-periodo-etiqueta">Periodo del reporte</span>
+            <strong class="reporte-periodo-seleccion">{{ $periodoResumen['seleccion'] }}</strong>
+            <span class="reporte-periodo-fechas">{{ $periodoResumen['fechas'] }}</span>
         </div>
         {{-- Confirma si las tarjetas consultan una sucursal o la suma completa del sistema. --}}
         <div class="reporte-sucursal">

@@ -40,7 +40,9 @@ class ReporteRangeTest extends TestCase
 
         $respuesta
             ->assertOk()
-            ->assertSee('Actividad del 05/07/2026 al 15/07/2026')
+            // El encabezado impreso debe identificar el tipo de selección y sus fechas completas.
+            ->assertSee('Rango de días seleccionado')
+            ->assertSee('Fechas incluidas: del 5 de julio de 2026 al 15 de julio de 2026')
             ->assertViewHas('general', fn (array $general) => $general['ventas_mostradas'] === 1
                 && (float) $general['total_ventas_mostrado'] === 125.0
                 && $general['ventas_es_acumulado'] === false
@@ -140,6 +142,9 @@ class ReporteRangeTest extends TestCase
 
         $respuesta
             ->assertOk()
+            // La hoja impresa nombra las semanas elegidas y no solo sus límites numéricos.
+            ->assertSee('Semanas seleccionadas: semana 29 de 2026 a semana 30 de 2026')
+            ->assertSee('Fechas incluidas: del 13 de julio de 2026 al 26 de julio de 2026')
             ->assertViewHas('inicio', fn ($inicio) => $inicio->format('Y-m-d H:i:s') === '2026-07-13 00:00:00')
             ->assertViewHas('fin', fn ($fin) => $fin->format('Y-m-d H:i:s') === '2026-07-26 23:59:59');
     }
@@ -164,6 +169,9 @@ class ReporteRangeTest extends TestCase
 
         $respuesta
             ->assertOk()
+            // La hoja impresa nombra los meses elegidos para que el periodo sea inequívoco.
+            ->assertSee('Meses seleccionados: junio de 2026 a julio de 2026')
+            ->assertSee('Fechas incluidas: del 1 de junio de 2026 al 31 de julio de 2026')
             ->assertViewHas('inicio', fn ($inicio) => $inicio->format('Y-m-d H:i:s') === '2026-06-01 00:00:00')
             ->assertViewHas('fin', fn ($fin) => $fin->format('Y-m-d H:i:s') === '2026-07-31 23:59:59');
     }

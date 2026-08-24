@@ -138,6 +138,53 @@ class UsuarioPasswordTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'retirado@ejemplo.com']);
     }
 
+    /** Confirma que alta y edición expliquen las vistas reales disponibles para Super Usuario. */
+    public function test_forms_show_the_superuser_access_summary_when_its_role_is_selected(): void
+    {
+        $sucursal = Sucursal::create(['nombre' => 'IZAMAL']);
+        $admin = User::factory()->create([
+            'rol' => 'superusuario',
+            'sucursal_id' => $sucursal->id,
+        ]);
+
+        /*
+         * Esta lista refleja el menú administrativo existente. Las comprobaciones validan
+         * el contenido informativo sin sustituir la autorización del middleware por texto visual.
+         */
+        $accesosSuperusuario = [
+            'Panel principal',
+            'Órdenes de servicio',
+            'Clientes',
+            'Inventario',
+            'Caja y corte de caja',
+            'Categorías',
+            'Ventas',
+            'Usuarios',
+            'Sucursales',
+            'Actividad',
+            'Reportes',
+            'Configuración y respaldos',
+        ];
+
+        $respuestas = [
+            $this->actingAs($admin)->get(route('usuarios.create')),
+            $this->actingAs($admin)->get(route('usuarios.edit', $admin)),
+        ];
+
+        foreach ($respuestas as $respuesta) {
+            $respuesta
+                ->assertOk()
+                ->assertSee('data-rol-info="superusuario"', false)
+                ->assertSee('Este rol tendrá acceso administrativo a:')
+                // JavaScript enlaza el valor de users.rol con un solo panel visible.
+                ->assertSee('panel.dataset.rolInfo === rol', false);
+
+            foreach ($accesosSuperusuario as $acceso) {
+                $respuesta->assertSee('<li>'.$acceso.'</li>', false);
+            }
+        }
+    }
+
     /**
      * Verifica que el administrador global vea el control de contraseña,
      * pueda actualizarla sin elegir sucursal y utilice la nueva clave en LoginRequest.

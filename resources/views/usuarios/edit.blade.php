@@ -3,7 +3,7 @@
 @section('content')
 
 <style>
-    /* Panel informativo de accesos: aparece cuando el rol seleccionado es "Usuario". */
+    /* Panel informativo de accesos: explica las vistas reales del rol seleccionado sin modificar permisos. */
     .usuario-rol-info {
         display: none;
         background: #eff6ff;
@@ -31,6 +31,13 @@
 
     .usuario-rol-info li {
         margin-bottom: 2px;
+    }
+
+    /* La lista administrativa aprovecha el ancho del formulario y mantiene una lectura rápida. */
+    .usuario-rol-info--administrativo ul {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 24px;
     }
 
     .usuario-edit-hint {
@@ -94,6 +101,7 @@
     .usuario-password-update.visible { display: grid; }
 
     @media (max-width: 720px) {
+        .usuario-rol-info--administrativo ul { grid-template-columns: 1fr; }
         .usuario-password-update { grid-template-columns: 1fr; }
     }
 </style>
@@ -149,8 +157,8 @@
                 </select>
             </div>
 
-            {{-- Panel informativo: se muestra solo cuando el rol elegido es "Usuario". --}}
-            <div class="usuario-rol-info" id="usuario-rol-info">
+            {{-- Cada panel describe únicamente las vistas que el backend ya autoriza para ese rol. --}}
+            <div class="usuario-rol-info" data-rol-info="usuario">
                 <strong>Este rol solo tendrá acceso a:</strong>
                 <ul>
                     <li>Panel principal</li>
@@ -160,6 +168,24 @@
                     <li>Caja</li>
                     <li>Ventas</li>
                     <li>Categorías</li>
+                </ul>
+            </div>
+
+            <div class="usuario-rol-info usuario-rol-info--administrativo" data-rol-info="superusuario">
+                <strong>Este rol tendrá acceso administrativo a:</strong>
+                <ul>
+                    <li>Panel principal</li>
+                    <li>Órdenes de servicio</li>
+                    <li>Clientes</li>
+                    <li>Inventario</li>
+                    <li>Caja y corte de caja</li>
+                    <li>Categorías</li>
+                    <li>Ventas</li>
+                    <li>Usuarios</li>
+                    <li>Sucursales</li>
+                    <li>Actividad</li>
+                    <li>Reportes</li>
+                    <li>Configuración y respaldos</li>
                 </ul>
             </div>
 
@@ -217,11 +243,12 @@
 @endphp
 
 <script>
-    /* Muestra u oculta el panel de accesos permitidos según el rol elegido. */
+    /* Muestra el panel que corresponde al rol y oculta los demás resúmenes de acceso. */
     function usuarioToggleRolInfo() {
         const rol = document.getElementById('u_rol').value;
-        const info = document.getElementById('usuario-rol-info');
-        info.classList.toggle('visible', rol === 'usuario');
+        document.querySelectorAll('[data-rol-info]').forEach((panel) => {
+            panel.classList.toggle('visible', panel.dataset.rolInfo === rol);
+        });
 
         // Usuario y Super Usuario autentican en LoginRequest; por eso ambos pueden reemplazar su contraseña.
         const rolesConAcceso = ['usuario', 'superusuario'];

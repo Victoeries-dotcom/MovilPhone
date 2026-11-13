@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Acceso | MovilPhone</title>
+    <title>C EXPRESS | Acceso</title>
 
     {{-- Figtree conserva la tipografía profesional del sistema y Vite carga los componentes de Laravel Breeze. --}}
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -17,9 +17,9 @@
     <main class="auth-page">
         <section class="auth-brand" aria-label="Presentación de MovilPhone">
             <div class="auth-brand-content">
-                {{-- El logotipo proviene del archivo de referencia y no participa en el proceso de autenticación. --}}
+                {{-- El logo se consulta desde la identidad global para mantenerse sincronizado en cada cambio. --}}
                 <div class="auth-logo-lockup">
-                    <img src="{{ asset('images/movilphone-logo-final.png') }}" alt="The Movil Phone Company">
+                    <img src="{{ route('branding.logo') }}" alt="Logo de C EXPRESS">
                 </div>
 
                 <span>Sistema de taller</span>
@@ -36,11 +36,11 @@
         <section class="auth-access" aria-label="Acceso al sistema">
             {{-- En móviles sustituye el panel lateral para mantener visible la marca sin reducir el formulario. --}}
             <div class="auth-mobile-brand">
-                <img src="{{ asset('images/movilphone-logo-final.png') }}" alt="MovilPhone Company">
+                <img src="{{ route('branding.logo') }}" alt="Logo de C EXPRESS">
             </div>
 
             <div class="auth-card">{{ $slot }}</div>
-            <p class="auth-copy">© {{ date('Y') }} MovilPhone · Sistema de administración del taller</p>
+            <p class="auth-copy">© {{ date('Y') }} C EXPRESS · Sistema de administración del taller</p>
         </section>
     </main>
 
@@ -65,7 +65,7 @@
             flex-direction: column;
             justify-content: space-between;
             padding: clamp(2rem, 5vw, 5rem);
-            background: linear-gradient(145deg, #050505, #171717);
+            background: linear-gradient(145deg, #0b684f 0%, #0d5471 52%, #153f8a 100%);
             color: #fff;
         }
         .auth-brand::before {
@@ -78,8 +78,8 @@
             border: 1px solid rgba(255, 255, 255, .07);
             border-radius: 50%;
             box-shadow:
-                0 0 0 70px rgba(255, 255, 255, .025),
-                0 0 0 140px rgba(255, 255, 255, .018);
+                0 0 0 70px rgba(255, 255, 255, .035),
+                0 0 0 140px rgba(255, 255, 255, .025);
         }
         .auth-brand::after {
             content: "";
@@ -88,7 +88,7 @@
             bottom: 0;
             width: 100%;
             height: 4px;
-            background: linear-gradient(90deg, #dc2626 0 40%, #111 40% 72%, #16a34a 72%);
+            background: linear-gradient(90deg, #16a34a, #0891b2, #2563eb);
         }
         .auth-brand-content {
             position: relative;
@@ -118,7 +118,7 @@
             left: 17px;
             height: 2px;
             border-radius: 99px;
-            background: linear-gradient(90deg, #dc2626 0 42%, #171717 42% 72%, #16a34a 72%);
+            background: linear-gradient(90deg, #16a34a, #0891b2, #2563eb);
         }
         .auth-logo-lockup img {
             width: 100%;

@@ -3,7 +3,7 @@
     <div class="login-heading">
         <span>Acceso seguro</span>
         <h2>Bienvenido de nuevo</h2>
-        <p>Ingresa tus datos para abrir el panel de MovilPhone.</p>
+        <p>Ingresa tus datos para abrir el panel de C EXPRESS.</p>
     </div>
 
     {{-- Muestra mensajes de recuperación o sesión enviados por los controladores de Laravel Breeze. --}}
@@ -235,7 +235,7 @@
             gap: .65rem;
             border: 0;
             border-radius: 10px;
-            background: #090909;
+            background: linear-gradient(105deg, #0b684f, #0d5471 55%, #1d4ed8);
             color: #fff;
             font-size: 11px;
             font-weight: 800;
@@ -246,8 +246,8 @@
         }
         .login-button:hover {
             transform: translateY(-1px);
-            background: #202020;
-            box-shadow: 0 9px 20px rgba(0, 0, 0, .15);
+            background: linear-gradient(105deg, #09553f, #0b4562 55%, #1e40af);
+            box-shadow: 0 9px 20px rgba(13, 84, 113, .25);
         }
         .login-button svg {
             width: 17px;

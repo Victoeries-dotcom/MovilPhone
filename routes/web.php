@@ -22,6 +22,8 @@ require __DIR__.'/auth.php';
 
 // La pagina offline se conecta con el service worker y permanece disponible sin autenticacion.
 Route::view('/offline', 'offline')->name('offline');
+// El login también necesita consultar el logo global antes de que el usuario se autentique.
+Route::get('branding/logo', [BrandingController::class, 'logo'])->name('branding.logo');
 
 Route::middleware('auth')->group(function () {
     /* Panel y utilidades globales: todos los roles autenticados conservan acceso. */
@@ -36,7 +38,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // La lectura del logo es global; el cambio queda protegido por el rol administrador.
-    Route::get('branding/logo', [BrandingController::class, 'logo'])->name('branding.logo');
     Route::middleware('role:superusuario')->post('branding/logo', [BrandingController::class, 'updateLogo'])
         ->name('branding.logo.update');
 

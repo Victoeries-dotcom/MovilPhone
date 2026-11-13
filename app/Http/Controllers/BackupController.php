@@ -6,6 +6,8 @@ use App\Support\AdminActivityLogger;
 use App\Support\SystemBackupExcelService;
 use App\Support\SystemBackupService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BackupController extends Controller
 {
@@ -33,6 +35,31 @@ class BackupController extends Controller
         );
 
         return back()->with('success', 'Respaldo creado correctamente.');
+    }
+
+    /** Respalda y luego elimina únicamente los registros operativos, previa confirmación escrita. */
+    public function clearOperationalData(Request $request)
+    {
+        abort_unless($request->user()->rol === 'superusuario', 403);
+        $request->validate(['confirmacion' => ['required', 'in:ELIMINAR DATOS']]);
+
+        // La limpieza no comienza si no pudo crearse el respaldo completo de la base activa.
+        $backupPath = $this->backups->create('previo-limpieza');
+
+        DB::transaction(function (): void {
+            // El orden respeta las llaves foráneas de movimientos, órdenes, ventas y detalles.
+            foreach (['movimientos_caja', 'historial_estados', 'ordenes_servicio', 'venta_detalles', 'ventas', 'inventario', 'clientes'] as $table) {
+                DB::table($table)->delete();
+            }
+            // Conserva el registro de esta acción como primera actividad posterior a la limpieza.
+            if (\Illuminate\Support\Facades\Schema::hasTable('admin_activities')) {
+                DB::table('admin_activities')->delete();
+            }
+        });
+
+        AdminActivityLogger::registrar('SISTEMA', 'LIMPIEZA', 'Se eliminaron datos operativos. Respaldo: '.basename($backupPath));
+
+        return back()->with('success', 'Datos operativos eliminados. Se conservaron usuarios, sucursales, catálogos, configuración, logo y el respaldo previo.');
     }
 
     /** Descarga un respaldo validado sin permitir rutas fuera de storage/app/private/backups. */

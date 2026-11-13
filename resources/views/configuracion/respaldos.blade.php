@@ -23,6 +23,19 @@
     </div>
 </div>
 
+{{-- Limpia exclusivamente datos operativos; requiere frase exacta y respaldo previo automático. --}}
+<section class="card" style="margin:20px 0;border:1px solid #fecaca">
+    <h2 style="color:#991b1b">Borrar datos operativos</h2>
+    <p>Elimina clientes, órdenes e historial, ventas y detalles, inventario, movimientos de caja y devoluciones. Conserva usuarios, sucursales, categorías y catálogos, configuración, logo y archivos de respaldo.</p>
+    <form method="POST" action="{{ route('respaldos.datos.clear') }}" onsubmit="return confirm('Se creará un respaldo completo y luego se borrarán los datos operativos. ¿Deseas continuar?')">
+        @csrf @method('DELETE')
+        <label for="confirmacion-limpieza">Escribe <strong>ELIMINAR DATOS</strong> para confirmar</label>
+        <input id="confirmacion-limpieza" name="confirmacion" required autocomplete="off" pattern="ELIMINAR DATOS" title="Escribe exactamente ELIMINAR DATOS">
+        @error('confirmacion')<small class="brand-logo-error">{{ $message }}</small>@enderror
+        <button class="btn btn-danger" type="submit">Borrar todos los datos operativos</button>
+    </form>
+</section>
+
 <table>
     <thead><tr><th>Archivo</th><th>Origen</th><th>Fecha</th><th>Tamano</th><th>Acciones</th></tr></thead>
     <tbody>

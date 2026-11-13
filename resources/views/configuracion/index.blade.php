@@ -10,7 +10,8 @@
     <a href="{{ route('respaldos.index') }}" class="btn"><i data-lucide="database-backup"></i><span>Respaldos</span></a>
 </div>
 
-<form method="POST" action="{{ route('configuracion.update') }}" class="settings-layout">
+<div class="settings-layout">
+<form method="POST" action="{{ route('configuracion.update') }}" id="configuracion-form">
     @csrf
     @method('PUT')
 
@@ -40,6 +41,14 @@
                 <label for="negocio_direccion">Direccion</label>
                 <input id="negocio_direccion" name="negocio_direccion" value="{{ old('negocio_direccion', $configuracion['negocio_direccion'] ?? '') }}">
             </div>
+            @if(auth()->user()?->rol === 'superusuario')
+                <div class="form-group full-width">
+                    <label>Logotipo de la empresa</label>
+                    {{-- El selector usa su propio formulario, separado del guardado de los demás ajustes. --}}
+                    <input form="brand-logo-form" id="brand-logo-file" type="file" name="logo" accept="image/png,image/jpeg,image/webp" required>
+                    @error('logo')<small class="brand-logo-error">{{ $message }}</small>@enderror
+                </div>
+            @endif
         </div>
     </section>
 
@@ -89,6 +98,14 @@
         <button class="btn btn-primary" type="submit"><i data-lucide="save"></i><span>Guardar configuracion</span></button>
     </div>
 </form>
+@if(auth()->user()?->rol === 'superusuario')
+    <form method="POST" action="{{ route('branding.logo.update') }}" enctype="multipart/form-data" id="brand-logo-form">
+        @csrf
+        <button class="btn btn-primary" type="submit">Cambiar logo</button>
+        <small>Selecciona una imagen JPG, PNG o WebP (máximo 2 MB). Se mostrará a todos los usuarios y sucursales.</small>
+    </form>
+@endif
+</div>
 
 <script>
     // Sincroniza el selector visual con el codigo hexadecimal enviado a ConfiguracionController.

@@ -22,6 +22,11 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
+        // El técnico entra a su bandeja y no ejecuta consultas del panel administrativo.
+        if (auth()->user()?->rol === 'tecnico') {
+            return redirect()->route('ordenes.index');
+        }
+
         $sucursalId = $this->sucursalActivaId();
         $sucursal = $sucursalId ? Sucursal::find($sucursalId) : null;
         $hoy = CarbonImmutable::today();

@@ -26,15 +26,8 @@ Route::view('/offline', 'offline')->name('offline');
 Route::get('branding/logo', [BrandingController::class, 'logo'])->name('branding.logo');
 
 Route::middleware('auth')->group(function () {
-    /* Panel y utilidades globales: todos los roles autenticados conservan acceso. */
-    Route::get('/', function () {
-        // El técnico entra directamente a su bandeja y no recibe acceso al panel general.
-        if (auth()->user()?->rol === 'tecnico') {
-            return redirect()->route('ordenes.index');
-        }
-
-        return app()->call([DashboardController::class, 'index']);
-    })->name('home');
+    /* El controlador envía al técnico a Órdenes y sirve el panel a los demás roles. */
+    Route::get('/', [DashboardController::class, 'index'])->name('home');
     // Alias de compatibilidad: conecta Laravel Breeze con el mismo panel principal profesional.
     Route::redirect('/dashboard', '/')->name('dashboard');
     Route::middleware('role:superusuario,usuario,capturista,vendedor')->group(function () {

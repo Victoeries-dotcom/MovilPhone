@@ -38,6 +38,12 @@
         .sidebar { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--menu-fondo); padding: 0; display: flex; flex-direction: column; box-shadow: 2px 0 8px rgba(0,0,0,0.2); overflow-y: auto; }
         .brand { padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--menu-bordes); }
         .brand-name { color: white; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        /* Presenta el control de logo sin reducir el tamaño de la imagen de marca. */
+        .brand-logo-change-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+        .brand-logo-change { padding: 5px 10px; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; background: rgba(255,255,255,0.1); color: white; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+        .brand-logo-change:hover { background: rgba(255,255,255,0.2); }
+        .brand-logo-file { display: none; }
+        .brand-logo-error { display: block; margin-top: 6px; color: #fecaca; font-size: 11px; }
         .brand-sub { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
         /* Presenta la sucursal activa y conecta el botón con el selector dinámico del menú. */
         .branch-switcher-row { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
@@ -151,11 +157,26 @@
         --}}
         <a href="{{ route('home') }}" class="brand-logo-link" aria-label="Ir al panel principal de MovilPhone">
             <img
-                src="{{ asset('images/movilphone-logo-final.png') }}"
+                src="{{ route('branding.logo') }}"
                 class="brand-company-logo"
                 alt="The Movil Phone Company"
             >
         </a>
+        @auth
+            @if(auth()->user()->rol === 'superusuario')
+                {{-- El botón abre los archivos del equipo y carga automáticamente la imagen elegida. --}}
+                <div class="brand-logo-change-row">
+                    <form method="POST" action="{{ route('branding.logo.update') }}" enctype="multipart/form-data" id="brand-logo-form">
+                        @csrf
+                        <input class="brand-logo-file" id="brand-logo-file" type="file" name="logo" accept="image/png,image/jpeg,image/webp">
+                        <button class="brand-logo-change" type="button" onclick="document.getElementById('brand-logo-file').click()">Cambiar</button>
+                    </form>
+                </div>
+                @error('logo')
+                    <small class="brand-logo-error">{{ $message }}</small>
+                @enderror
+            @endif
+        @endauth
         <div class="brand-sub">{{ $configuracionGlobal['negocio_subtitulo'] ?? 'Sistema de Taller' }}</div>
         @auth
             {{-- Muestra la sucursal activa y permite al Super Usuario cambiarla sin salir de la pantalla actual. --}}
@@ -560,5 +581,13 @@
 {{-- Interacciones globales: conectan Lucide y la UI al mismo servidor que entrega la vista actual. --}}
 <script src="/js/lucide.min.js?v=1.25.0" defer></script>
 <script src="/js/movilphone-ui.js?v=20260818-professional-shell" defer></script>
+<script>
+    // Al elegir una imagen, la carga se inicia sin requerir otro botón de confirmación.
+    document.getElementById('brand-logo-file')?.addEventListener('change', function () {
+        if (this.files.length) {
+            document.getElementById('brand-logo-form').requestSubmit();
+        }
+    });
+</script>
 </body>
 </html>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminActivityController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConfiguracionController;
@@ -33,6 +34,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // La lectura del logo es global; el cambio queda protegido por el rol administrador.
+    Route::get('branding/logo', [BrandingController::class, 'logo'])->name('branding.logo');
+    Route::middleware('role:superusuario')->post('branding/logo', [BrandingController::class, 'updateLogo'])
+        ->name('branding.logo.update');
 
     /* Clientes se comparte entre taller y ventas; el middleware verifica users.rol en el backend. */
     Route::middleware('role:superusuario,usuario,tecnico,vendedor')->group(function () {

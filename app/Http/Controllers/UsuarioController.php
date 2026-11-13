@@ -63,8 +63,8 @@ class UsuarioController extends Controller
             // users.rol se limita a los tres perfiles vigentes, incluso ante solicitudes manipuladas.
             'rol' => 'required|in:superusuario,tecnico,usuario',
             'sucursal_id' => 'required|exists:sucursales,id',
-            // Solo el rol "usuario" tiene login real, por eso la contraseña se exige nada más en ese caso.
-            'password' => 'required_if:rol,usuario|nullable|string|min:6|confirmed',
+            // Usuario y Técnico inician sesión, por eso ambos requieren contraseña inicial.
+            'password' => 'required_if:rol,usuario,tecnico|nullable|string|min:6|confirmed',
         ]);
 
         $usuario = User::create([
@@ -72,9 +72,9 @@ class UsuarioController extends Controller
             'telefono' => $request->telefono,
             'correo_contacto' => $request->correo_contacto,
             'email' => $request->email,
-            // Si el rol es "usuario" se guarda la contraseña que definió el admin en el wizard.
-            // Para los demás roles (sin acceso al sistema) se genera una aleatoria como antes.
-            'password' => $request->rol === 'usuario'
+            // Usuario y Técnico guardan la contraseña definida por el administrador.
+            // Los demás perfiles sin inicio de sesión conservan una clave aleatoria.
+            'password' => in_array($request->rol, ['usuario', 'tecnico'], true)
                 ? Hash::make($request->password)
                 : Hash::make(Str::random(32)),
             'rol' => $request->rol,
@@ -104,10 +104,10 @@ class UsuarioController extends Controller
         ]);
 
         /*
-         * Usuario y Super Usuario se conectan con LoginRequest. Si otro perfil se convierte
+         * Usuario, Técnico y Super Usuario se conectan con LoginRequest. Si otro perfil se convierte
          * en uno de ellos, exige una contraseña inicial; al editar uno existente es opcional.
          */
-        $rolesConAcceso = ['usuario', 'superusuario'];
+        $rolesConAcceso = ['usuario', 'superusuario', 'tecnico'];
         $reglaPassword = in_array($request->rol, $rolesConAcceso, true)
             && ! in_array($usuario->rol, $rolesConAcceso, true)
             ? 'required|string|min:6|confirmed'

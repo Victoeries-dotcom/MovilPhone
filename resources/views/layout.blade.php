@@ -197,10 +197,6 @@
     <div class="nav-section">Menú</div>
 
     @auth
-        {{-- Panel principal: todos los roles ven indicadores correspondientes a su sucursal activa. --}}
-        <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">
-            <span class="icon"><i data-lucide="layout-dashboard"></i></span> Panel principal
-        </a>
         @php
             /*
              * Permisos del menú: usa siempre users.rol de la cuenta autenticada.
@@ -208,6 +204,12 @@
              */
             $rolMenu = auth()->user()->rol;
         @endphp
+        @if($rolMenu !== 'tecnico')
+            {{-- Los técnicos aterrizan en Órdenes y no ven el panel general. --}}
+            <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">
+                <span class="icon"><i data-lucide="layout-dashboard"></i></span> Panel principal
+            </a>
+        @endif
         @if($rolMenu === 'superusuario')
             <a href="{{ route('ordenes.index') }}" class="nav-link {{ request()->is('ordenes*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="wrench"></i></span> Órdenes de Servicio
@@ -263,15 +265,9 @@
                 <span class="icon"><i data-lucide="contact"></i></span> Clientes
             </a>
         @elseif($rolMenu === 'tecnico')
-            {{-- Técnico: se conecta con las rutas de taller y caja autorizadas por RoleMiddleware. --}}
+            {{-- Técnico: la bandeja de órdenes es su único módulo visible. --}}
             <a href="{{ route('ordenes.index') }}" class="nav-link {{ request()->is('ordenes*') ? 'active' : '' }}">
                 <span class="icon"><i data-lucide="wrench"></i></span> Órdenes de Servicio
-            </a>
-            <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->is('clientes*') ? 'active' : '' }}">
-                <span class="icon"><i data-lucide="contact"></i></span> Clientes
-            </a>
-            <a href="{{ route('caja.index') }}" class="nav-link {{ request()->is('caja*') ? 'active' : '' }}">
-                <span class="icon"><i data-lucide="wallet-cards"></i></span> Caja
             </a>
         @elseif($rolMenu === 'usuario')
             {{-- Usuario de sucursal: conserva los siete módulos operativos definidos para su trabajo diario. --}}

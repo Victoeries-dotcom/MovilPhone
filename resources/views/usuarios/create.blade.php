@@ -293,6 +293,16 @@
                     </ul>
                 </div>
 
+                {{-- Resume el alcance del técnico y aclara que su cuenta sí inicia sesión. --}}
+                <div class="usuario-rol-info" data-rol-info="tecnico">
+                    <strong>Este rol tendrá acceso únicamente a:</strong>
+                    <ul>
+                        <li>Órdenes de servicio de su sucursal</li>
+                        <li>Ver y editar órdenes existentes</li>
+                        <li>Cambiar el estado de las órdenes</li>
+                    </ul>
+                </div>
+
                 <select class="usuario-input" name="sucursal_id" id="u_sucursal" required>
                     <option value="">Selecciona una sucursal</option>
                     @foreach($sucursales as $sucursal)
@@ -422,7 +432,7 @@ function usuarioToggleRolInfo() {
     });
 }
 
-/* Al salir del paso 4: enlaza el rol Usuario con su contraseña o avanza al resumen. */
+/* Al salir del paso 4: pide credencial a los roles con acceso al sistema. */
 function usuarioAfterRol() {
     if (!usuarioValidarPaso(4)) return;
 
@@ -432,7 +442,7 @@ function usuarioAfterRol() {
 
     document.getElementById('usuario-step-4').classList.remove('active');
 
-    if (rol === 'usuario') {
+    if (['usuario', 'tecnico'].includes(rol)) {
         passwordField.setAttribute('required', 'required');
         confirmField.setAttribute('required', 'required');
         document.getElementById('usuario-step-5').classList.add('active');
@@ -493,7 +503,7 @@ function usuarioPrepararResumen() {
     document.getElementById('r_telefono').textContent = document.getElementById('u_telefono').value || '-';
     document.getElementById('r_rol').textContent = rol.options[rol.selectedIndex].text;
     document.getElementById('r_sucursal').textContent = sucursal.options[sucursal.selectedIndex].text;
-    document.getElementById('r_password').textContent = rol.value === 'usuario' ? 'Definida' : 'No aplica (sin acceso al sistema)';
+    document.getElementById('r_password').textContent = ['usuario', 'tecnico'].includes(rol.value) ? 'Definida' : 'No aplica (sin acceso al sistema)';
 
     document.getElementById('usuario-step-6').classList.add('active');
     usuarioBuildProgress(6);

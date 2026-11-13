@@ -97,10 +97,10 @@ $anticipoDisponible = (float) ($ordenServicio->anticipo ?? 0);
         @csrf
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             @foreach($transiciones as $t)
-                @if($t === 'RECHAZADO')
+                @if($t === 'RECHAZADO' && auth()->user()?->rol !== 'tecnico')
                     {{-- Rechazar necesita motivo y posible devolución, por eso abre un modal separado. --}}
                     <button type="button" class="btn btn-danger" onclick="abrirRechazoDetalle()">→ {{ $t }}</button>
-                @else
+                @elseif($t !== 'RECHAZADO')
                     <button type="submit" name="estado" value="{{ $t }}" class="btn btn-success">→ {{ $t }}</button>
                 @endif
             @endforeach

@@ -27,22 +27,33 @@ Route::get('branding/logo', [BrandingController::class, 'logo'])->name('branding
 
 Route::middleware('auth')->group(function () {
     /* Panel y utilidades globales: todos los roles autenticados conservan acceso. */
-    Route::get('/', [DashboardController::class, 'index'])->name('home');
+    Route::get('/', function () {
+        // El técnico entra directamente a su bandeja y no recibe acceso al panel general.
+        if (auth()->user()?->rol === 'tecnico') {
+            return redirect()->route('ordenes.index');
+        }
+
+        return app()->call([DashboardController::class, 'index']);
+    })->name('home');
     // Alias de compatibilidad: conecta Laravel Breeze con el mismo panel principal profesional.
     Route::redirect('/dashboard', '/')->name('dashboard');
-    Route::get('buscar', [GlobalSearchController::class, 'index'])->name('buscar.global');
-    Route::get('buscar/{tipo}/{id}', [GlobalSearchController::class, 'quickView'])->name('buscar.detalle');
+    Route::middleware('role:superusuario,usuario,capturista,vendedor')->group(function () {
+        Route::get('buscar', [GlobalSearchController::class, 'index'])->name('buscar.global');
+        Route::get('buscar/{tipo}/{id}', [GlobalSearchController::class, 'quickView'])->name('buscar.detalle');
+    });
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::middleware('role:superusuario,usuario,capturista,vendedor')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
 
     // La lectura del logo es global; el cambio queda protegido por el rol administrador.
     Route::middleware('role:superusuario')->post('branding/logo', [BrandingController::class, 'updateLogo'])
         ->name('branding.logo.update');
 
     /* Clientes se comparte entre taller y ventas; el middleware verifica users.rol en el backend. */
-    Route::middleware('role:superusuario,usuario,tecnico,vendedor')->group(function () {
+    Route::middleware('role:superusuario,usuario,vendedor')->group(function () {
         Route::resource('clientes', ClienteController::class);
     });
 
@@ -97,13 +108,13 @@ Route::middleware('auth')->group(function () {
         Route::post('caja/hora-corte', [MovimientoCajaController::class, 'guardarHoraCorte'])->name('caja.horaCorte');
     });
 
-    /* Eliminar movimientos de Caja queda fuera del rol Usuario, incluso al intentar la URL directa. */
-    Route::middleware('role:superusuario,tecnico')->group(function () {
+    /* Eliminar movimientos de Caja queda reservado al Super Usuario. */
+    Route::middleware('role:superusuario')->group(function () {
         Route::delete('caja/{movimientoCaja}', [MovimientoCajaController::class, 'destroy'])->name('caja.destroy');
     });
 
-    /* Caja se conecta con usuarios del taller y mantiene el corte exclusivo para admin. */
-    Route::middleware('role:superusuario,usuario,tecnico')->group(function () {
+    /* Caja se conecta con usuarios administrativos y mantiene el corte exclusivo para admin. */
+    Route::middleware('role:superusuario,usuario')->group(function () {
         Route::post('caja/egreso-rapido', [MovimientoCajaController::class, 'registrarEgreso'])->name('caja.egreso');
         Route::post('caja/ingreso-rapido', [MovimientoCajaController::class, 'registrarIngreso'])->name('caja.ingreso');
         Route::get('caja/{movimientoCaja}/ticket', [MovimientoCajaController::class, 'ticket'])->name('caja.ticket');

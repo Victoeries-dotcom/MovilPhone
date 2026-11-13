@@ -28,8 +28,8 @@ class OrdenServicioController extends Controller
      */
     public function index(Request $request)
     {
-        // Usa la sucursal elegida en el menú; la asignada al usuario funciona como respaldo.
-        $sucursalActivaId = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+        // El técnico siempre queda limitado a su sucursal asignada, aunque cambie la sesión.
+        $sucursalActivaId = $this->sucursalActivaId();
         $sucursalActiva = $sucursalActivaId ? Sucursal::find($sucursalActivaId) : null;
 
         $query = OrdenServicio::with(['cliente', 'sucursal', 'tecnico']);
@@ -211,6 +211,8 @@ class OrdenServicioController extends Controller
     // Mostrar formulario de nueva OS
     public function create()
     {
+        // El técnico solo administra órdenes existentes; se bloquea también el acceso directo a Nueva OS.
+        abort_if(auth()->user()?->rol === 'tecnico', 403);
         // El formulario recibe únicamente datos de la sucursal activa para evitar opciones cruzadas.
         $sucursalId = $this->sucursalActivaId();
         $sucursales = Sucursal::whereKey($sucursalId)->get();
@@ -226,6 +228,8 @@ class OrdenServicioController extends Controller
     // Guardar nueva OS
     public function store(Request $request)
     {
+        // Evita que el técnico cree órdenes enviando manualmente la petición del formulario.
+        abort_if(auth()->user()?->rol === 'tecnico', 403);
         // Crea la llave telefónica solo cuando el cliente proporciona un número de contacto.
         $telefonoNormalizado = $request->filled('cliente_telefono')
             ? Cliente::normalizarTelefono($request->cliente_telefono)
@@ -383,6 +387,8 @@ class OrdenServicioController extends Controller
      */
     public function sticker(OrdenServicio $ordenServicio)
     {
+        // La impresión de stickers queda para personal administrativo.
+        abort_if(auth()->user()?->rol === 'tecnico', 403);
         $this->asegurarSucursalActiva($ordenServicio);
         $ordenServicio->load(['cliente', 'sucursal']);
 
@@ -405,7 +411,7 @@ class OrdenServicioController extends Controller
 
         // El mismo catálogo alimenta el selector para superusuario, usuario y cualquier sucursal futura.
         $estados = OrdenServicio::ESTADOS;
-        $puedeCambiarEstado = in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true);
+        $puedeCambiarEstado = in_array(auth()->user()?->rol, ['superusuario', 'usuario', 'tecnico'], true);
 
         return view('ordenes.edit', compact('ordenServicio', 'tecnicos', 'estados', 'puedeCambiarEstado'));
     }
@@ -432,8 +438,8 @@ class OrdenServicioController extends Controller
             'tipo_dispositivo' => 'required|string',
             'cliente_telefono_extra' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'imei' => 'nullable|string|max:255',
-            // Solo superusuario y usuario pueden enviar uno de los estados oficiales.
-            'estado' => in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true)
+            // Superusuario, usuario y técnico pueden cambiar el estado desde la edición.
+            'estado' => in_array(auth()->user()?->rol, ['superusuario', 'usuario', 'tecnico'], true)
                 ? ['required', Rule::in(array_keys(OrdenServicio::ESTADOS))]
                 : ['prohibited'],
             // Repite la restriccion del selector para impedir asignaciones manipuladas desde el navegador.
@@ -483,8 +489,8 @@ class OrdenServicioController extends Controller
         });
 
         $estadoAnterior = $ordenServicio->estado;
-        // Los demás roles conservan el estado actual aunque manipulen manualmente la petición.
-        $estadoEditado = in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true)
+        // Los roles autorizados conservan exactamente el estado validado recibido del formulario.
+        $estadoEditado = in_array(auth()->user()?->rol, ['superusuario', 'usuario', 'tecnico'], true)
             ? $request->estado
             : $estadoAnterior;
 
@@ -609,6 +615,8 @@ class OrdenServicioController extends Controller
      */
     public function entregar(Request $request, OrdenServicio $ordenServicio)
     {
+        // Cobros y entrega final siguen reservados al personal administrativo.
+        abort_if(auth()->user()?->rol === 'tecnico', 403);
         $this->asegurarSucursalActiva($ordenServicio);
         if ($ordenServicio->estado !== 'TERMINADO') {
             throw ValidationException::withMessages([
@@ -695,6 +703,8 @@ class OrdenServicioController extends Controller
      */
     public function ticketEntrega(OrdenServicio $ordenServicio)
     {
+        // El ticket incluye datos de cobro y solo puede consultarlo personal autorizado.
+        abort_if(auth()->user()?->rol === 'tecnico', 403);
         $this->asegurarSucursalActiva($ordenServicio);
         $ordenServicio->load(['cliente', 'sucursal', 'tecnico']);
         $tecnicoEntrega = session('tecnico_entrega', $ordenServicio->tecnico->name ?? '—');
@@ -724,6 +734,8 @@ class OrdenServicioController extends Controller
      */
     public function rechazar(Request $request, OrdenServicio $ordenServicio)
     {
+        // El rechazo del técnico cambia el estado sin permitirle registrar devoluciones de Caja.
+        abort_if(auth()->user()?->rol === 'tecnico', 403);
         $request->validate([
             'motivo' => 'required|string|max:500',
             'devolucion' => 'nullable|numeric|min:0',
@@ -962,7 +974,10 @@ class OrdenServicioController extends Controller
      */
     private function sucursalActivaId(): ?int
     {
-        $id = session('sucursal_id') ?: auth()->user()?->sucursal_id;
+        // El técnico no puede ampliar su alcance cambiando la sucursal guardada en sesión.
+        $id = auth()->user()?->rol === 'tecnico'
+            ? auth()->user()?->sucursal_id
+            : (session('sucursal_id') ?: auth()->user()?->sucursal_id);
 
         return $id ? (int) $id : null;
     }

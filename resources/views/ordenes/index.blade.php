@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-{{-- Cabecera operativa: reúne Garantía, Caja y la creación de una nueva orden. --}}
+{{-- La cabecera muestra acciones administrativas solo a roles que pueden usarlas. --}}
 <div class="page-header orders-page-header">
     <div>
         <h1>Órdenes de Servicio</h1>
@@ -9,6 +9,7 @@
             Sucursal: <strong>{{ $sucursalActiva?->nombre ?? 'Sin seleccionar' }}</strong>
         </p>
     </div>
+      @if(auth()->user()?->rol !== 'tecnico')
       <div class="orders-page-actions">
           {{-- Super Usuario y usuario comparten la edición global; los demás roles conservan el filtro operativo. --}}
           @if(in_array(auth()->user()?->rol, ['superusuario', 'usuario'], true))
@@ -35,6 +36,7 @@
             <span>Nueva OS</span>
         </a>
     </div>
+      @endif
 </div>
 
 {{-- Indicadores: muestran los conteos calculados por OrdenServicioController::index para la sucursal seleccionada. --}}
@@ -199,13 +201,13 @@
                 <a href="{{ route('ordenes.show', $orden) }}" class="btn">
                     <i data-lucide="eye" aria-hidden="true"></i><span>Ver detalle</span>
                 </a>
-                @if($orden->estado === 'RECIBIDO')
+                @if($orden->estado === 'RECIBIDO' && auth()->user()?->rol !== 'tecnico')
                     {{-- El sticker se imprime al recibir el equipo y se conecta con ordenes.sticker. --}}
                     <a href="{{ route('ordenes.sticker', $orden) }}" class="btn">
                         <i data-lucide="tag" aria-hidden="true"></i><span>Sticker</span>
                     </a>
                 @endif
-                @if($orden->estado === 'TERMINADO')
+                @if($orden->estado === 'TERMINADO' && auth()->user()?->rol !== 'tecnico')
                     {{-- Entregar abre el flujo que registra técnico, cobro final y movimiento de Caja. --}}
                     <button type="button" class="btn btn-success"
                         onclick="abrirModalEntregar({{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ $orden->precioServicio() }}, {{ (float) ($orden->anticipo ?? 0) }}, {{ (float) ($orden->pago_final ?? 0) }}, {{ $orden->tecnico_id ?? 'null' }})">
@@ -223,7 +225,9 @@
                                 onchange="manejarCambioEstadoOrden(this, {{ $orden->id }}, '{{ addslashes($orden->numero_os) }}', {{ (float) ($orden->anticipo ?? 0) }})">
                                 <option value="">Cambiar estado</option>
                                 @foreach($estadosRapidos as $estadoRapido => $labelEstado)
+                                    @if($estadoRapido !== 'RECHAZADO' || auth()->user()?->rol !== 'tecnico')
                                     <option value="{{ $estadoRapido }}" {{ $orden->estado === $estadoRapido ? 'disabled' : '' }}>{{ $labelEstado }}</option>
+                                    @endif
                                 @endforeach
                             </select>
                         </span>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>{{ $configuracionGlobal['negocio_nombre'] ?? 'MovilPhone' }} · Sistema de Taller</title>
+    <title>C EXPRESS</title>
     {{-- Metadatos globales: conectan peticiones AJAX y modo instalable con la misma sesion Laravel. --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="{{ $configuracionGlobal['color_primario'] ?? '#1650c5' }}">

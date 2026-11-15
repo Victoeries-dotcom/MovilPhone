@@ -80,8 +80,8 @@
         .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 1rem; font-size: 13px; }
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-        .btn { padding: 7px 14px; border-radius: 6px; border: 1px solid #ddd; background: white; color: #1a1a1a; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; transition: all 0.15s; }
-        .btn:hover { background: #f5f5f4; }
+        .btn { padding: 7px 14px; border-radius: 6px; border: 1px solid #bfdbfe; background: white; color: #1a1a1a; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; transition: all 0.15s; }
+        .btn:hover { background: #f5f5f4; border-color: #93c5fd; }
         .btn-primary { background: #0f1f3d; color: white; border-color: #265f86; }
         .btn-primary:hover { background: #1e3a8a; border-color: #1e3a8a; }
         .btn-danger { color: #dc2626; border-color: #fca5a5; }
